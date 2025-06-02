@@ -79,21 +79,15 @@
         </header>
         <!--========== END HEADER ==========-->
 
-        <!-- Wrapper for slides -->
-        <div class="carousel-inner" role="listbox">
-            <div class="item active">
-                <img class="img-responsive" src="img/1920x1080/01.jpg" alt="Slider Image">
-                <div class="container">
-                    <div class="carousel-centered">
-                        <div class="margin-b-40">
-                            <p style="color:#000;">Bienvenidos a la Segunda Edición del Cartaglow.<br/>Cartaglow es un torneo mixto de un día de tipo HAT.</p>
-                            <h1 style="color:#ff66c4;"class="carousel-title">Cartaglow 2025</h1>
-                        </div>
-                    </div>
-                </div>
+
+        <div class="image-container">
+            <img style="object-fit: cover;" src="img/1920x1080/01.jpg" alt="Fondo">
+            <div class="overlay-text">   
+                <h1 style="color:#ff66c4;"class="carousel-title">Cartaglow 2025</h1>
+                <p style="color:#000;">Bienvenidos a la Segunda Edición del Cartaglow.<br/>Cartaglow es un torneo mixto de un día de tipo HAT.</p>
             </div>
         </div>
-        <!--========== SLIDER ==========-->
+  
 
         <!--========== PAGE LAYOUT ==========-->
         <!-- Service -->
@@ -250,7 +244,8 @@
                 <div class="row margin-b-40">
                     <div class="col-sm-6">
                         <h2>Showcase</h2>
-                        <p>Nuestras fotos favoritas del 2024.</p>
+                        <p>Nuestras fotos favoritas del 2024. Enlace con fotografías<a href="https://estebanmejias.pixieset.com/cartaglowhat2024" target="_blank">acá</a></p>
+                        <p>* Fotografías por Esteban Mejías</p>
                     </div>
                 </div>
                 <!--// end row -->
@@ -355,4 +350,69 @@
 
     </body>
     <!-- END BODY -->
+     <style>
+    /* Navbar fijo arriba */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 60px;
+      background-color: #333;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 1000;
+    }
+
+    /* Espacio para que el contenido no quede debajo del navbar */
+    .spacer {
+      height: 60px;
+    }
+
+    /* Contenedor de la imagen con overlay de texto */
+    .image-container {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .image-container img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Texto encima de la imagen */
+    .overlay-text {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      color: white;
+      text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.7);
+    }
+
+    .overlay-text h1 {
+      margin: 0;
+      font-size: 2.5em;
+    }
+
+    .overlay-text p {
+      margin: 0.5em 0 0;
+      font-size: 1.2em;
+    }
+
+    @media (max-width: 600px) {
+      .overlay-text h1 {
+        font-size: 1.5em;
+      }
+      .overlay-text p {
+        font-size: 1em;
+      }
+    }
+  </style>
 </html>
