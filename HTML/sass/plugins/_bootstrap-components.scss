@@ -49,8 +49,8 @@
 }
 
 .carousel-title {
-    @include font($size: 80px, $weight: 700);
-    color: $color-white;
+    @include font($size: 70px, $weight: 700);
+    color: $color-base;
     line-height: 1.1;
     text-transform: uppercase;
 }

@@ -155,7 +155,7 @@
 		@include position(relative);
 		display: block;
 		@include font($size: 13px, $weight: 600, $family: $font-family-base);
-        color: $color-white;
+        color: $color-accent;
 		text-transform: uppercase;
 		line-height: 55px;
 		padding: 20px;
@@ -235,7 +235,7 @@
     /* Navbar Nav */
     .header {
         .nav-item-child {
-            color: $color-heading;
+            color: $color-accent;
             line-height: 1.4;
             padding: 12px 12px 12px 15px;
         }
@@ -309,7 +309,7 @@
             }
 
             .nav-item-child {
-                color: $color-heading;
+                color: $color-accent;
                 @include cubic-transition($delay: 0, $duration: 300ms, $property: (all));
             }
         }

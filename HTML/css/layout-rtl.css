@@ -803,7 +803,7 @@ fieldset[disabled] .btn-theme {
   	[Text Colors]
 ------------------------------------------------------------------*/
 .color-base {
-  color: #17bed2;
+  color: #00FFEF;
 }
 
 .color-white {
@@ -828,6 +828,10 @@ fieldset[disabled] .btn-theme {
 
 .color-sky-light {
   color: #fafafa;
+}
+
+.color-accent {
+  color: #ff66c4;
 }
 
 /*------------------------------------------------------------------
