@@ -82,6 +82,10 @@
 
         <div class="content-section" >
 
+            <h1>Estadísticas Cartaglow 2024</h1>
+            <p>Resumen completo de la primera edición de Cartaglow: resultados de partidos, tabla de posiciones y estadísticas individuales de todos los jugadores y jugadoras.</p>
+
+
             <h2>Tabla de Posiciones</h2>
             <table>
                 <tr><th>Equipo</th><th  class="col-narrow" >W</th><th  class="col-narrow" >L</th><th  class="col-narrow" >GF</th><th  class="col-narrow" >GC</th><th class="col-narrow" >GD</th></tr>
@@ -95,31 +99,31 @@
             <h2>Resultados de los Juegos</h2>
                 <h3>Ronda 1</h3>
                 <table>
-                    <tr><th class="col-narrow">Round</th><th>Casa</th><th class="col-narrow" >Marcador</th><th>Visita</th></tr>
+                    <tr><th>Round</th><th>Casa</th><th>Marcador</th><th>Visita</th></tr>
                     <tr><td>R1</td><td>Negro</td><td>1 - <b>6</b></td><td><b>Azul</b></td></tr>
                     <tr><td>R1</td><td><b>Naranja</b></td><td><b>6</b> - 2</td><td>Rojo</td></tr>
                 </table>
                 <h3>Ronda 2</h3>
                 <table>
-                    <tr><th class="col-narrow">Round</th><th>Casa</th><th class="col-narrow" >Marcador</th><th>Visita</th></tr>
+                    <tr><th>Round</th><th>Casa</th><th>Marcador</th><th>Visita</th></tr>
                     <tr><td>R2</td><td><b>Negro</b></td><td><b>5</b> - 4</td><td>Naranja</td></tr>
                     <tr><td>R2</td><td>Blanco</td><td>3 - <b>7</b></td><td><b>Rojo</b></td></tr>
                 </table>
                 <h3>Ronda 3</h3>
                 <table>
-                    <tr><th class="col-narrow">Round</th><th>Casa</th><th class="col-narrow" >Marcador</th><th>Visita</th></tr>
+                    <tr><th>Round</th><th>Casa</th><th>Marcador</th><th>Visita</th></tr>
                     <tr><td>R3</td><td><b>Rojo</b></td><td><b>3</b> - 2</td><td>Azul</td></tr>
                     <tr><td>R3</td><td>Blanco</td><td>2 - <b>7</b></td><td><b>Naranja</b></td></tr>
                 </table>
                 <h3>Ronda 4</h3>
                 <table>
-                    <tr><th class="col-narrow">Round</th><th>Casa</th><th class="col-narrow" >Marcador</th><th>Visita</th></tr>
+                    <tr><th>Round</th><th>Casa</th><th>Marcador</th><th>Visita</th></tr>
                     <tr><td>R4</td><td>Negro</td><td>4 - <b>5</b></td><td><b>Rojo</b></td></tr>
                     <tr><td>R4</td><td>Blanco</td><td>1 - <b>4</b></td><td><b>Azul</b></td></tr>
                 </table>
                 <h3>Ronda 5</h3>
                 <table>
-                    <tr><th class="col-narrow">Round</th><th>Casa</th><th class="col-narrow" >Marcador</th><th>Visita</th></tr>
+                    <tr><th>Round</th><th>Casa</th><th>Marcador</th><th>Visita</th></tr>
                     <tr><td>R5</td><td>Blanco</td><td>3 - <b>4</b></td><td><b>Negro</b></td></tr>
                     <tr><td>R5</td><td>Naranja</td><td>3 - <b>5</b></td><td><b>Azul</b></td></tr>
                 </table>
@@ -127,6 +131,7 @@
 
             <div name="Stats individuales">
                 <h2>Estadisticas Generales - individuales</h2>
+                <p>Usá los filtros para buscar por equipo, género, goles, asistencias o puntos.</p>
                 <div class="filters">
                     <label for="teamFilter">Equipo:</label>
                     <select id="teamFilter">
@@ -170,7 +175,7 @@
                         <th data-type="string" data-col="0">Jugador</th>
                         <th data-type="string" data-col="1">Equipo</th>
                         <th data-type="gender" data-col="2">Género</th>
-                        <th data-type="number" data-col="3">PTS</th>
+                        <th class="pts-col" data-type="number" data-col="3">PTS</th>
                         <th data-type="number" data-col="4">Goles</th>
                         <th data-type="number" data-col="5">Asistencias</th>
                     </tr>
@@ -298,56 +303,15 @@
 
         <!--========== FOOTER ==========-->
         <footer class="footer">
-            <!-- Links -->
-            <div class="footer-seperator">
-                <div class="content-lg container">
-                    <div class="row">
-                        <div class="col-sm-2 sm-margin-b-50">
-                            <!-- List -->
-                            <ul class="list-unstyled footer-list">
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">Home</a></li>
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">About</a></li>
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">Products</a></li>
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">Pricing</a></li>
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">Clients</a></li>
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">Careers</a></li>
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">Contact</a></li>
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">Terms</a></li>
-                            </ul>
-                            <!-- End List -->
-                        </div>
-                        <div class="col-sm-4 sm-margin-b-30">
-                            <!-- List -->
-                            <ul class="list-unstyled footer-list">
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">Twitter</a></li>
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">Facebook</a></li>
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">Instagram</a></li>
-                                <li class="footer-list-item"><a class="footer-list-link" href="#">YouTube</a></li>
-                            </ul>
-                            <!-- End List -->
-                        </div>
-                        <div class="col-sm-5 sm-margin-b-30">
-                            <h2 class="color-white">Send Us A Note</h2>
-                            <input type="text" class="form-control footer-input margin-b-20" placeholder="Name" required>
-                            <input type="email" class="form-control footer-input margin-b-20" placeholder="Email" required>
-                            <input type="text" class="form-control footer-input margin-b-20" placeholder="Phone" required>
-                            <textarea class="form-control footer-input margin-b-30" rows="6" placeholder="Message" required></textarea>
-                            <button type="submit" class="btn-theme btn-theme-sm btn-base-bg text-uppercase">Submit</button>
-                        </div>
-                    </div>
-                    <!--// end row -->
-                </div>
-            </div>
-            <!-- End Links -->
 
             <!-- Copyright -->
             <div class="content container">
                 <div class="row">
                     <div class="col-xs-6">
-                        <img class="footer-logo" src="img/logo.png" alt="Asentus Logo">
+                        <img class="footer-logo" src="img/logo.png" alt="Cartaglow Logo">
                     </div>
                     <div class="col-xs-6 text-right">
-                        <p class="margin-b-0"><a class="color-base fweight-700" href="http://keenthemes.com/preview/asentus/">Asentus</a> Theme Powered by: <a class="color-base fweight-700" href="http://www.keenthemes.com/">KeenThemes.com</a></p>
+                        <p class="margin-b-0"><a class="color-base fweight-700" >Cartaglow</p>
                     </div>
                 </div>
                 <!--// end row -->
@@ -355,6 +319,7 @@
             <!-- End Copyright -->
         </footer>
         <!--========== END FOOTER ==========-->
+
 
         <!-- Back To Top -->
         <a href="javascript:void(0);" class="js-back-to-top back-to-top">Top</a>
@@ -405,6 +370,12 @@
     }
     .content-section {
         padding-top: 120px;
+    }
+    th.sorted-asc::after {
+        content: " ▲";
+        }
+    th.sorted-desc::after {
+        content: " ▼";
     }
   </style>
 
