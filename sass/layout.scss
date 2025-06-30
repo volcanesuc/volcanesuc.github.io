@@ -2,7 +2,7 @@
 
 	MASTER STYLESHEET
 
-	Project:        Metronic "Asentus" Frontend Freebie - Responsive HTML Template Based On Twitter Bootstrap 3.3.4
+	Project:        Volcanes Ultimate - Responsive HTML Template Based On Twitter Bootstrap 3.3.4
 	Version:        1.0
 	Author:         KeenThemes
 	Primary use:    Corporate, Business Themes.
@@ -17,57 +17,50 @@
 // Custom
 // =================================================================
 
-@import 'mixins'; // Mixins
-@import 'variables'; // Variables
-
+@import "mixins"; // Mixins
+@import "variables"; // Variables
 
 // Base
 // =================================================================
 
-@import 'base/base'; // Base
-
+@import "base/base"; // Base
 
 // Components
 // =================================================================
 
-@import 'components/blockquote'; // Blockquote
-@import 'components/button'; // Button
-
+@import "components/blockquote"; // Blockquote
+@import "components/button"; // Button
 
 // Gui
 // =================================================================
 
-@import 'gui/pricing'; // Pricing
-@import 'gui/promo-section'; // Promo Section
-@import 'gui/service'; // Service
-@import 'gui/work'; // Work
-
+@import "gui/pricing"; // Pricing
+@import "gui/promo-section"; // Promo Section
+@import "gui/service"; // Service
+@import "gui/work"; // Work
 
 // Layout
 // =================================================================
 
-@import 'layout/footer'; // Footer
-@import 'layout/header'; // Header
-
+@import "layout/footer"; // Footer
+@import "layout/header"; // Header
 
 // Pages
 // =================================================================
 
-@import 'pages/contact'; // Contact
-
+@import "pages/contact"; // Contact
 
 // Plugins
 // =================================================================
 
-@import 'plugins/back-to-top'; // Back To Top
-@import 'plugins/bootstrap-components'; // Bootstrap Components
-@import 'plugins/gmap'; // Google Map
-@import 'plugins/masonry'; // Masonry
-@import 'plugins/swiper'; // Swiper
-
+@import "plugins/back-to-top"; // Back To Top
+@import "plugins/bootstrap-components"; // Bootstrap Components
+@import "plugins/gmap"; // Google Map
+@import "plugins/masonry"; // Masonry
+@import "plugins/swiper"; // Swiper
 
 // Utils
 // =================================================================
 
-@import 'utils/colors'; // Colors
-@import 'utils/helpers'; // Helpers
+@import "utils/colors"; // Colors
+@import "utils/helpers"; // Helpers
