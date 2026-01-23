@@ -65,6 +65,13 @@
       margin-bottom: 10px;
       font-weight: bold;
     }
+    .right-corner-fixed {
+      position: fixed;
+      bottom: 0; /* Aligns to the bottom edge */
+      right: 0;  /* Aligns to the right edge */ 
+      padding: 10px;
+      z-index: 1000; /* Ensures it's on top of other content */
+    }
   </style>
 </head>
 <body>
@@ -87,6 +94,7 @@
     <input type="password" id="adminPass" placeholder="Clave admin" />
     <button id="loginBtn">Entrar</button>
   </div>
+  <div class="right-corner-fixed">Version 0.4</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
