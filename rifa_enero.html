@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rifa 0–99</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f6f7f9;
+      padding: 20px;
+    }
+    h1 { text-align: center; }
+    .login {
+      max-width: 300px;
+      margin: 0 auto 20px;
+      display: flex;
+      gap: 10px;
+    }
+    input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      background: #1677ff;
+      color: white;
+      cursor: pointer;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 10px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .number {
+      padding: 15px 0;
+      text-align: center;
+      border-radius: 10px;
+      background: #ffffff;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      user-select: none;
+    }
+    .number.vendido {
+      background: #ff4d4f;
+      color: white;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+    .number.disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .status {
+      text-align: center;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎟️ Rifa Volcanes - Fondos Torneo Centroamericano</h1>
+
+  <div class="grid" id="grid"></div>
+
+  <br><br>
+  <div class="status" id="status">Modo visitante (solo lectura)</div>
+
+    <div class="login">
+    <input type="password" id="adminPass" placeholder="Clave admin" />
+    <button id="loginBtn">Entrar</button>
+  </div>
+
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // 🔥 CONFIGURA ESTO CON TU PROYECTO DE FIREBASE
+    const firebaseConfig = {
+       apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
+       authDomain: "rifavolcanes.firebaseapp.com",
+       projectId: "rifavolcanes",
+    };
+
+    const ADMIN_PASSWORD = "admin123"; // 🔐 cambia esto
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const grid = document.getElementById("grid");
+    const status = document.getElementById("status");
+    const loginBtn = document.getElementById("loginBtn");
+    const adminPass = document.getElementById("adminPass");
+
+    let isAdmin = false;
+
+    loginBtn.onclick = () => {
+      if (adminPass.value === ADMIN_PASSWORD) {
+        isAdmin = true;
+        status.innerText = "Modo admin (puedes marcar vendidos)";
+        status.style.color = "green";
+      } else {
+        alert("Clave incorrecta");
+      }
+    };
+
+    for (let i = 0; i < 100; i++) {
+      const div = document.createElement("div");
+      div.className = "number disabled";
+      div.innerText = i;
+
+      div.onclick = async () => {
+        if (!isAdmin || div.classList.contains("vendido")) return;
+        await setDoc(doc(db, "rifa", i.toString()), { vendido: true });
+      };
+
+      grid.appendChild(div);
+
+      onSnapshot(doc(db, "rifa", i.toString()), (snapshot) => {
+        if (snapshot.exists() && snapshot.data().vendido) {
+          div.classList.add("vendido");
+        }
+        if (isAdmin) div.classList.remove("disabled");
+      });
+    }
+  </script>
+</body>
+</html>
