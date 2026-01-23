@@ -94,7 +94,7 @@
     <input type="password" id="adminPass" placeholder="Clave admin" />
     <button id="loginBtn">Entrar</button>
   </div>
-  <div class="right-corner-fixed">Version 0.4</div>
+  <div class="right-corner-fixed">Version 0.5</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -146,16 +146,35 @@
       div.innerText = i;
 
       div.onclick = async () => {
-        if (!isAdmin || div.classList.contains("vendido")) return;
+      if (!isAdmin) return;
 
-        const nombre = prompt(`Nombre del comprador del número ${i}:`);
-        if (!nombre) return;
+      let nombreActual = "";
 
-        await setDoc(doc(db, "rifa", i.toString()), {
+      const snap = await new Promise((resolve) => {
+        onSnapshot(doc(db, "rifa", i.toString()), resolve);
+      });
+
+      if (snap.exists() && snap.data().nombre) {
+        nombreActual = snap.data().nombre;
+      }
+
+      const nombre = prompt(
+        `Asignar / editar nombre para el número ${i}:`,
+        nombreActual
+      );
+
+      if (!nombre) return;
+
+      await setDoc(
+        doc(db, "rifa", i.toString()),
+        {
           vendido: true,
           nombre: nombre
-        });
-      };
+        },
+        { merge: true }
+      );
+    };
+
 
       grid.appendChild(div);
 
