@@ -3,45 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <title>Dashboard asistencia</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
 </head>
-<body>
+<body class="bg-light">
+  <div class="container py-4">
 
-  <h1>📊 Asistencia a entrenos</h1>
+    <h1>📊 Asistencia a entrenos</h1>
 
-  <label>
-    Mes:
-    <input type="month" id="monthFilter">
-  </label>
+    <!-- Filtro por mes -->
+    <div class="row align-items-end mb-4">
+        <div class="col-md-4">
+            <label class="form-label">Mes</label>
+            <input type="month" id="monthFilter" class="form-control">
+        </div>
+        <div class="col-md-2">
+            <button id="clearFilter" class="btn btn-secondary w-100">
+            Ver todo
+            </button>
+        </div>
+    </div>
 
-  <button id="clearFilter">Ver todo</button>
+    <hr>
 
-  <hr>
+    <h4>Entrenos</h4>
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered">
+            <thead class="table-light">
+            <tr>
+                <th>Fecha</th>
+                <th>Presentes</th>
+            </tr>
+            </thead>
+            <tbody id="trainingsTable"></tbody>
+        </table>
+    </div>
 
-  <h2>Entrenos</h2>
-  <table border="1" cellpadding="6">
-    <thead>
-      <tr>
-        <th>Fecha</th>
-        <th>Asistencia</th>
-      </tr>
-    </thead>
-    <tbody id="trainingsTable"></tbody>
-  </table>
 
-  <hr>
+    <hr>
 
-  <h2>Ranking jugadores</h2>
-  <table border="1" cellpadding="6">
-    <thead>
-      <tr>
-        <th>Jugador</th>
-        <th>Entrenamientos Asistidos</th>
-        <th>Porcentaje de Participación</th>
-      </tr>
-    </thead>
-    <tbody id="playersTable"></tbody>
-  </table>
+    <h4>Ranking jugadores</h4>
 
-  <script type="module" src="./js/attendance_dashboard.js"></script>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead class="table-dark">
+            <tr>
+                <th>Jugador</th>
+                <th>Asistencias</th>
+                <th>% Asistencia</th>
+            </tr>
+            </thead>
+            <tbody id="playersTable"></tbody>
+        </table>
+    </div>
+
+    <script type="module" src="./js/attendance_dashboard.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+    </script>
+    </div>
 </body>
 </html>
