@@ -9,7 +9,7 @@ const trainingsTable = document.getElementById("trainingsTable");
 const playersTable = document.getElementById("playersTable");
 
 async function loadDashboard() {
-  // 1️⃣ cargar jugadores
+  // 1️⃣ jugadores
   const playersSnap = await getDocs(collection(db, "club_players"));
   const players = {};
   playersSnap.forEach(d => {
@@ -19,14 +19,19 @@ async function loadDashboard() {
     };
   });
 
-  // 2️⃣ cargar entrenos
+  // 2️⃣ entrenos
   const trainingsSnap = await getDocs(collection(db, "club_trainings"));
   const trainings = {};
   trainingsSnap.forEach(d => {
-    trainings[d.id] = { date: d.id, count: 0 };
+    trainings[d.id] = {
+      date: d.id,
+      count: 0
+    };
   });
 
-  // 3️⃣ cargar asistencia
+  const totalTrainings = Object.keys(trainings).length;
+
+  // 3️⃣ asistencia
   const attendanceSnap = await getDocs(collection(db, "club_attendance"));
 
   attendanceSnap.forEach(d => {
@@ -42,8 +47,10 @@ async function loadDashboard() {
   });
 
   renderTrainings(Object.values(trainings));
-  renderPlayers(Object.values(players));
+  renderPlayers(Object.values(players), totalTrainings);
 }
+
+/* ========= RENDER ========= */
 
 function renderTrainings(list) {
   trainingsTable.innerHTML = "";
@@ -60,16 +67,22 @@ function renderTrainings(list) {
     });
 }
 
-function renderPlayers(list) {
+function renderPlayers(list, totalTrainings) {
   playersTable.innerHTML = "";
 
   list
     .sort((a, b) => b.count - a.count)
     .forEach(p => {
+      const percent =
+        totalTrainings === 0
+          ? 0
+          : Math.round((p.count / totalTrainings) * 100);
+
       playersTable.innerHTML += `
         <tr>
           <td>${p.name}</td>
           <td>${p.count}</td>
+          <td>${percent}%</td>
         </tr>
       `;
     });
