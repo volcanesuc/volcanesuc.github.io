@@ -8,49 +8,86 @@ import {
 const trainingsTable = document.getElementById("trainingsTable");
 const playersTable = document.getElementById("playersTable");
 
-async function loadDashboard() {
-  // 1️⃣ jugadores
+const monthFilter = document.getElementById("monthFilter");
+const clearFilterBtn = document.getElementById("clearFilter");
+
+let allTrainings = {};
+let allPlayers = {};
+let allAttendance = [];
+
+/* ================= LOAD DATA ================= */
+
+async function loadData() {
+  // jugadores
   const playersSnap = await getDocs(collection(db, "club_players"));
-  const players = {};
   playersSnap.forEach(d => {
-    players[d.id] = {
+    allPlayers[d.id] = {
       name: d.data().name,
       count: 0
     };
   });
 
-  // 2️⃣ entrenos
+  // entrenos
   const trainingsSnap = await getDocs(collection(db, "club_trainings"));
-  const trainings = {};
   trainingsSnap.forEach(d => {
-    trainings[d.id] = {
+    allTrainings[d.id] = {
       date: d.id,
       count: 0
     };
   });
 
-  const totalTrainings = Object.keys(trainings).length;
-
-  // 3️⃣ asistencia
+  // asistencia
   const attendanceSnap = await getDocs(collection(db, "club_attendance"));
-
   attendanceSnap.forEach(d => {
-    const { trainingId, playerId } = d.data();
+    allAttendance.push(d.data());
+  });
 
-    if (trainings[trainingId]) {
-      trainings[trainingId].count++;
+  applyFilter();
+}
+
+/* ================= FILTER ================= */
+
+function applyFilter() {
+  // reset
+  const trainings = {};
+  const players = {};
+
+  Object.keys(allTrainings).forEach(k => {
+    trainings[k] = { ...allTrainings[k], count: 0 };
+  });
+
+  Object.keys(allPlayers).forEach(k => {
+    players[k] = { ...allPlayers[k], count: 0 };
+  });
+
+  const selectedMonth = monthFilter.value; // yyyy-mm
+
+  const filteredTrainings = selectedMonth
+    ? Object.values(trainings).filter(t => t.date.startsWith(selectedMonth))
+    : Object.values(trainings);
+
+  const validTrainingIds = new Set(filteredTrainings.map(t => t.date));
+
+  allAttendance.forEach(a => {
+    if (!validTrainingIds.has(a.trainingId)) return;
+
+    if (trainings[a.trainingId]) {
+      trainings[a.trainingId].count++;
     }
 
-    if (players[playerId]) {
-      players[playerId].count++;
+    if (players[a.playerId]) {
+      players[a.playerId].count++;
     }
   });
 
-  renderTrainings(Object.values(trainings));
-  renderPlayers(Object.values(players), totalTrainings);
+  renderTrainings(filteredTrainings);
+  renderPlayers(
+    Object.values(players),
+    filteredTrainings.length
+  );
 }
 
-/* ========= RENDER ========= */
+/* ================= RENDER ================= */
 
 function renderTrainings(list) {
   trainingsTable.innerHTML = "";
@@ -88,4 +125,15 @@ function renderPlayers(list, totalTrainings) {
     });
 }
 
-loadDashboard();
+/* ================= EVENTS ================= */
+
+monthFilter.onchange = applyFilter;
+
+clearFilterBtn.onclick = () => {
+  monthFilter.value = "";
+  applyFilter();
+};
+
+/* ================= INIT ================= */
+
+loadData();
