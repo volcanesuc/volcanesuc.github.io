@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard asistencia</title>
+</head>
+<body>
+
+  <h1>📊 Asistencia a entrenos</h1>
+
+  <h2>Entrenos</h2>
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Presentes</th>
+      </tr>
+    </thead>
+    <tbody id="trainingsTable"></tbody>
+  </table>
+
+  <hr>
+
+  <h2>Ranking jugadores</h2>
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Jugador</th>
+        <th>Asistencias</th>
+      </tr>
+    </thead>
+    <tbody id="playersTable"></tbody>
+  </table>
+
+  <script type="module" src="./js/attendance_dashboard.js"></script>
+</body>
+</html>
