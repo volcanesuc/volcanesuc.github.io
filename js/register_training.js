@@ -1,91 +1,38 @@
+/* ================= IMPORTS ================= */
+
 import { db } from "./firebase.js";
 
 import {
+  collection,
+  getDocs,
+  addDoc,
   doc,
   setDoc,
-  addDoc,
-  collection,
   serverTimestamp,
   query,
   where,
-  getDocs
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/* ================= DOM ================= */
 
 const tableBody = document.getElementById("playersTable");
 const sortNameBtn = document.getElementById("sortName");
 const sortNumberBtn = document.getElementById("sortNumber");
 
-let players = [];
-let sortState = {
-  field: "name",
-  asc: true
-};
-
-async function loadPlayers() {
-  tableBody.innerHTML = `<tr><td colspan="3">Cargando...</td></tr>`;
-
-  const snapshot = await getDocs(collection(db, "club_players"));
-
-  players = snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
-
-  renderTable();
-}
-
-function renderTable() {
-  tableBody.innerHTML = "";
-
-  const sorted = [...players].sort((a, b) => {
-    let valA = a[sortState.field];
-    let valB = b[sortState.field];
-
-    if (sortState.field === "name") {
-      valA = valA.toLowerCase();
-      valB = valB.toLowerCase();
-    }
-
-    if (valA < valB) return sortState.asc ? -1 : 1;
-    if (valA > valB) return sortState.asc ? 1 : -1;
-    return 0;
-  });
-
-  sorted.forEach(p => {
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>
-        <input type="checkbox"
-          data-player-id="${p.id}"
-          data-player-name="${p.name}">
-      </td>
-      <td>${p.name}</td>
-      <td>${p.number}</td>
-    `;
-
-    tableBody.appendChild(tr);
-  });
-}
-
-// 🔁 Sorting
-sortNameBtn.onclick = () => toggleSort("name");
-sortNumberBtn.onclick = () => toggleSort("number");
-
-function toggleSort(field) {
-  if (sortState.field === field) {
-    sortState.asc = !sortState.asc;
-  } else {
-    sortState.field = field;
-    sortState.asc = true;
-  }
-  renderTable();
-}
-
 const attendanceText = document.getElementById("attendanceText");
 const processBtn = document.getElementById("processBtn");
 
-// 🔤 helpers
+const saveBtn = document.getElementById("saveBtn");
+const trainingDateInput = document.getElementById("trainingDate");
+
+/* ================= STATE ================= */
+
+let players = [];
+let sortState = { field: "name", asc: true };
+
+/* ================= HELPERS ================= */
+
 function normalize(str) {
   return str
     .toLowerCase()
@@ -95,98 +42,130 @@ function normalize(str) {
     .trim();
 }
 
+/* ================= LOAD PLAYERS ================= */
+
+async function loadPlayers() {
+  const snapshot = await getDocs(collection(db, "club_players"));
+
+  players = snapshot.docs.map(d => ({
+    id: d.id,
+    ...d.data()
+  }));
+
+  renderTable();
+}
+
+/* ================= RENDER ================= */
+
+function renderTable() {
+  tableBody.innerHTML = "";
+
+  const sorted = [...players].sort((a, b) => {
+    let A = a[sortState.field];
+    let B = b[sortState.field];
+
+    if (sortState.field === "name") {
+      A = A.toLowerCase();
+      B = B.toLowerCase();
+    }
+
+    return sortState.asc ? (A > B ? 1 : -1) : (A < B ? 1 : -1);
+  });
+
+  sorted.forEach(p => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td><input type="checkbox"
+        data-player-id="${p.id}"
+        data-player-name="${p.name}"></td>
+      <td>${p.name}</td>
+      <td>${p.number}</td>
+    `;
+
+    tableBody.appendChild(tr);
+  });
+}
+
+/* ================= SORT ================= */
+
+sortNameBtn.onclick = () => toggleSort("name");
+sortNumberBtn.onclick = () => toggleSort("number");
+
+function toggleSort(field) {
+  sortState.field === field
+    ? (sortState.asc = !sortState.asc)
+    : (sortState = { field, asc: true });
+
+  renderTable();
+}
+
+/* ================= TEXT MATCH ================= */
+
 processBtn.onclick = () => {
-  const raw = attendanceText.value;
-  if (!raw) return;
-
-  const tokens = normalize(raw)
+  const tokens = normalize(attendanceText.value)
     .split(/\s+|\n|,/)
-    .filter(t => t.length >= 3); // evita ruido tipo "de"
+    .filter(t => t.length >= 3);
 
-  // recorrer jugadores visibles
   document
     .querySelectorAll("input[type=checkbox][data-player-name]")
     .forEach(cb => {
-      const playerName = normalize(cb.dataset.playerName);
-
-      const match = tokens.some(token =>
-        playerName.includes(token) || token.includes(playerName)
-      );
-
-      if (match) cb.checked = true;
+      const name = normalize(cb.dataset.playerName);
+      if (tokens.some(t => name.includes(t))) cb.checked = true;
     });
 };
 
-
-const saveBtn = document.getElementById("saveBtn");
-const trainingDateInput = document.getElementById("trainingDate");
+/* ================= SAVE TRAINING ================= */
 
 saveBtn.onclick = async () => {
   const date = trainingDateInput.value;
-
-  if (!date) {
-    alert("Elegí una fecha");
-    return;
-  }
+  if (!date) return alert("Elegí una fecha");
 
   saveBtn.disabled = true;
-  saveBtn.innerText = "Guardando...";
 
   try {
-    /* 1️⃣ crear o reutilizar entreno (1 por fecha) */
-    const trainingRef = doc(db, "club_trainings", date);
-
+    // 1️⃣ entreno
     await setDoc(
-      trainingRef,
-      {
-        date,
-        createdAt: serverTimestamp()
-      },
+      doc(db, "club_trainings", date),
+      { date, createdAt: serverTimestamp() },
       { merge: true }
     );
 
-    /* 2️⃣ borrar asistencia previa de ese entreno (si existe) */
-    const existing = await getDocs(
+    // 2️⃣ borrar asistencia previa
+    const prev = await getDocs(
       query(
         collection(db, "club_attendance"),
         where("trainingId", "==", date)
       )
     );
 
-    for (const d of existing.docs) {
-      await d.ref.delete();
+    for (const d of prev.docs) {
+      await deleteDoc(d.ref);
     }
 
-    /* 3️⃣ guardar presentes */
-    const checkboxes = document.querySelectorAll(
-      "input[type=checkbox][data-player-id]"
+    // 3️⃣ guardar presentes
+    const checked = document.querySelectorAll(
+      "input[type=checkbox][data-player-id]:checked"
     );
 
-    let count = 0;
-
-    for (const cb of checkboxes) {
-      if (!cb.checked) continue;
-
+    for (const cb of checked) {
       await addDoc(collection(db, "club_attendance"), {
         trainingId: date,
         playerId: cb.dataset.playerId,
         present: true
       });
-
-      count++;
     }
 
-    alert(`Entreno guardado ✅ (${count} presentes)`);
+    alert(`Entreno guardado ✅ (${checked.length} presentes)`);
 
-  } catch (err) {
-    console.error(err);
+  } catch (e) {
+    console.error(e);
     alert("❌ Error guardando entreno");
   } finally {
     saveBtn.disabled = false;
-    saveBtn.innerText = "Guardar entreno";
   }
 };
 
+/* ================= INIT ================= */
 
-// 🚀 init
 loadPlayers();
