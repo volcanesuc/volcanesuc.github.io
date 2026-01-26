@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Registrar entreno</title>
+</head>
+<body>
+
+  <h1>Nuevo entreno</h1>
+
+  <h3>Pegar lista rápida</h3>
+  <textarea
+    id="attendanceText"
+    rows="6"
+    placeholder="Pega aquí la lista de asistentes"
+  ></textarea>
+  <br>
+  <button id="processBtn">Procesar texto</button>
+
+  <hr>
+
+  <h3>Checklist manual</h3>
+  <div id="playersList"></div>
+
+  <hr>
+
+  <button id="saveBtn">Guardar entreno</button>
+
+  <!-- 🔥 ESTE ES EL IMPORTANTE -->
+  <script type="module" src="./js/register_training.js"></script>
+</body>
+</html>

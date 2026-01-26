@@ -72,6 +72,12 @@
       padding: 10px;
       z-index: 1000; /* Ensures it's on top of other content */
     }
+    .number.pendiente {
+      background-color: #fadb14 !important; /* amarillo */
+      color: #000 !important;
+      text-decoration: none !important;
+      cursor: not-allowed !important;
+    }
   </style>
 </head>
 <body>
@@ -88,13 +94,19 @@
 
   <br><br>
 
+  <div class="status" id="contadorVendidos">Vendidos: 0</div>
+  <div class="status" id="contadorDisponibles">Disponibles: 100</div>
+  <div class="status" id="contadorPendientes">Pendientes de pago: 0</div>
+
+  <br>
+
   <div class="status" id="status">Modo visitante (solo lectura)</div>
 
   <div class="login">
     <input type="password" id="adminPass" placeholder="Clave admin" />
     <button id="loginBtn">Entrar</button>
   </div>
-  <div class="right-corner-fixed">Version 0.5</div>
+  <div class="right-corner-fixed">Version 0.6</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -118,9 +130,21 @@
 
     let isAdmin = false;
 
+    let vendidos = 0;
+    let pendientes = 0;
+
+    const contadorVendidos = document.getElementById("contadorVendidos");
+    const contadorDisponibles = document.getElementById("contadorDisponibles");
+    const contadorPendientes = document.getElementById("contadorPendientes");
+
+    const estadoNumeros = {}; // memoria local
+
     loginBtn.onclick = () => {
       if (adminPass.value === ADMIN_PASSWORD) {
         isAdmin = true;
+        document.querySelectorAll(".number").forEach((div, index) => {
+          onSnapshot(doc(db, "rifa", index.toString()), () => {});
+        });
         document.querySelectorAll(".number").forEach((div, index) => {
         onSnapshot(doc(db, "rifa", index.toString()), (snapshot) => {
           if (
@@ -179,18 +203,59 @@
       grid.appendChild(div);
 
       onSnapshot(doc(db, "rifa", i.toString()), (snapshot) => {
+        let vendido = false;
+        let nombre = "";
+
+        // limpiar estado visual SIEMPRE
+        div.classList.remove("vendido", "pendiente");
+
         if (snapshot.exists() && snapshot.data().vendido) {
-          div.classList.add("vendido");
-          if (isAdmin && snapshot.data().nombre) {
-            div.innerText = `${i}\n${snapshot.data().nombre}`;
-            div.title = `Asignado a: ${snapshot.data().nombre}`;
+          vendido = true;
+          nombre = snapshot.data().nombre || "";
+
+          const esPendiente = nombre.toLowerCase().includes("(p)");
+
+          if (esPendiente) {
+            div.classList.add("pendiente");
+          } else {
+            div.classList.add("vendido");
+          }
+
+          if (isAdmin && nombre) {
+            div.innerText = `${i}\n${nombre}`;
+            div.title = `Asignado a: ${nombre}`;
           } else {
             div.innerText = i;
             div.title = "Número vendido";
           }
+        } else {
+          div.innerText = i;
+          div.title = "";
         }
+
+        // estado local
+        estadoNumeros[i] = { vendido, nombre };
+
+        // recalcular contadores
+        vendidos = 0;
+        pendientes = 0;
+
+        Object.values(estadoNumeros).forEach((n) => {
+          if (n.vendido) {
+            vendidos++;
+            if (n.nombre.toLowerCase().includes("(p)")) {
+              pendientes++;
+            }
+          }
+        });
+
+        contadorVendidos.innerText = `Vendidos: ${vendidos}`;
+        contadorDisponibles.innerText = `Disponibles: ${100 - vendidos}`;
+        contadorPendientes.innerText = `Pendientes de pago: ${pendientes}`;
+
         if (isAdmin) div.classList.remove("disabled");
       });
+
     }
   </script>
 </body>
