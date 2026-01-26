@@ -4,259 +4,95 @@
   <meta charset="UTF-8" />
   <title>Rifa Volcanes</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f6f7f9;
-      padding: 20px;
-    }
-    h1 { text-align: center; }
-    .login {
-      max-width: 300px;
-      margin: 0 auto 20px;
-      display: flex;
-      gap: 10px;
-    }
-    input {
-      flex: 1;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: none;
-      background: #1677ff;
-      color: white;
-      cursor: pointer;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(10, 1fr);
-      gap: 10px;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-    .number {
-      padding: 12px 0;
-      text-align: center;
-      border-radius: 10px;
-      background: #ffffff;
-      cursor: pointer;
-      font-weight: bold;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      user-select: none;
-      white-space: pre-line;
-      font-size: 14px;
-    }
-    .number.vendido {
-      background: #ff4d4f;
-      color: white;
-      cursor: not-allowed;
-      text-decoration: line-through;
-    }
-    .number.disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-    .status {
-      text-align: center;
-      margin-bottom: 10px;
-      font-weight: bold;
-    }
-    .right-corner-fixed {
-      position: fixed;
-      bottom: 0; /* Aligns to the bottom edge */
-      right: 0;  /* Aligns to the right edge */ 
-      padding: 10px;
-      z-index: 1000; /* Ensures it's on top of other content */
-    }
-    .number.pendiente {
-      background-color: #fadb14 !important; /* amarillo */
-      color: #000 !important;
-      text-decoration: none !important;
-      cursor: not-allowed !important;
-    }
-  </style>
+
+  <!-- Bootstrap -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- CSS propio -->
+  <link rel="stylesheet" href="./css/rifa.css" />
 </head>
-<body>
-  <h1>🎟️🌋 Rifa Volcanes - Fondos Torneo Centroamericano</h1>
 
-  <div class="status">SINPE: 70567463</div>
-  <div class="status">Costo del número: 2000 colones</div>
-  <div class="status">Premio: 100mil colones al primer lugar</div>
-  <div class="status">Sorteo con Lotería Nacional 1ero de Febrero 2026</div>
+<body class="bg-light">
+  <div class="container py-4">
 
-  <br>
+    <h1 class="text-center mb-4">
+      🎟️🌋 Rifa Volcanes – Fondos Torneo Centroamericano
+    </h1>
 
-  <div class="grid" id="grid"></div>
+    <div class="text-center mb-3 fw-bold">
+      SINPE: 70567463 <br />
+      Costo: ₡2000 <br />
+      Premio: ₡100.000 <br />
+      Sorteo: Lotería Nacional – 1 Febrero 2026
+    </div>
 
-  <br><br>
+    <!-- CONTADORES -->
+    <div class="row text-center my-4">
+      <div class="col">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6 class="text-muted">Vendidos</h6>
+            <h3 id="contadorVendidos" class="text-danger">0</h3>
+          </div>
+        </div>
+      </div>
 
-  <div class="status" id="contadorVendidos">Vendidos: 0</div>
-  <div class="status" id="contadorDisponibles">Disponibles: 100</div>
-  <div class="status" id="contadorPendientes">Pendientes de pago: 0</div>
+      <div class="col">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6 class="text-muted">Disponibles</h6>
+            <h3 id="contadorDisponibles" class="text-success">100</h3>
+          </div>
+        </div>
+      </div>
 
-  <br>
+      <div class="col">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6 class="text-muted">Pendientes</h6>
+            <h3 id="contadorPendientes" class="text-warning">0</h3>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <div class="status" id="status">Modo visitante (solo lectura)</div>
+    <!-- GRID -->
+    <div
+      id="grid"
+      class="row row-cols-5 row-cols-md-10 g-2 justify-content-center"
+    ></div>
 
-  <div class="login">
-    <input type="password" id="adminPass" placeholder="Clave admin" />
-    <button id="loginBtn">Entrar</button>
+    <!-- ESTADO -->
+    <p id="status" class="text-center mt-3 fw-bold text-secondary">
+      Modo visitante (solo lectura)
+    </p>
+
+    <!-- LOGIN -->
+    <div class="card shadow-sm mx-auto mt-4" style="max-width: 350px;">
+      <div class="card-body">
+        <input
+          type="password"
+          id="adminPass"
+          class="form-control mb-2"
+          placeholder="Clave admin"
+        />
+        <div class="d-grid">
+          <button id="loginBtn" class="btn btn-primary">
+            Entrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-end text-muted mt-4">
+      Versión 0.6
+    </div>
   </div>
-  <div class="right-corner-fixed">Version 0.6</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
-      authDomain: "rifavolcanes.firebaseapp.com",
-      projectId: "rifavolcanes",
-    };
-
-    const ADMIN_PASSWORD = "admin123";
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const grid = document.getElementById("grid");
-    const status = document.getElementById("status");
-    const loginBtn = document.getElementById("loginBtn");
-    const adminPass = document.getElementById("adminPass");
-
-    let isAdmin = false;
-
-    let vendidos = 0;
-    let pendientes = 0;
-
-    const contadorVendidos = document.getElementById("contadorVendidos");
-    const contadorDisponibles = document.getElementById("contadorDisponibles");
-    const contadorPendientes = document.getElementById("contadorPendientes");
-
-    const estadoNumeros = {}; // memoria local
-
-    loginBtn.onclick = () => {
-      if (adminPass.value === ADMIN_PASSWORD) {
-        isAdmin = true;
-        document.querySelectorAll(".number").forEach((div, index) => {
-          onSnapshot(doc(db, "rifa", index.toString()), () => {});
-        });
-        document.querySelectorAll(".number").forEach((div, index) => {
-        onSnapshot(doc(db, "rifa", index.toString()), (snapshot) => {
-          if (
-            snapshot.exists() &&
-            snapshot.data().vendido &&
-            snapshot.data().nombre
-          ) {
-            div.innerText = `${index}\n${snapshot.data().nombre}`;
-            div.title = `Asignado a: ${snapshot.data().nombre}`;
-          }
-        });
-      });
-        status.innerText = "Modo admin (puedes marcar vendidos)";
-        status.style.color = "green";
-      } else {
-        alert("Clave incorrecta");
-      }
-    };
-
-    for (let i = 0; i < 100; i++) {
-      const div = document.createElement("div");
-      div.className = "number disabled";
-      div.innerText = i;
-
-      div.onclick = async () => {
-      if (!isAdmin) return;
-
-      let nombreActual = "";
-
-      const snap = await new Promise((resolve) => {
-        onSnapshot(doc(db, "rifa", i.toString()), resolve);
-      });
-
-      if (snap.exists() && snap.data().nombre) {
-        nombreActual = snap.data().nombre;
-      }
-
-      const nombre = prompt(
-        `Asignar / editar nombre para el número ${i}:`,
-        nombreActual
-      );
-
-      if (!nombre) return;
-
-      await setDoc(
-        doc(db, "rifa", i.toString()),
-        {
-          vendido: true,
-          nombre: nombre
-        },
-        { merge: true }
-      );
-    };
-
-
-      grid.appendChild(div);
-
-      onSnapshot(doc(db, "rifa", i.toString()), (snapshot) => {
-        let vendido = false;
-        let nombre = "";
-
-        // limpiar estado visual SIEMPRE
-        div.classList.remove("vendido", "pendiente");
-
-        if (snapshot.exists() && snapshot.data().vendido) {
-          vendido = true;
-          nombre = snapshot.data().nombre || "";
-
-          const esPendiente = nombre.toLowerCase().includes("(p)");
-
-          if (esPendiente) {
-            div.classList.add("pendiente");
-          } else {
-            div.classList.add("vendido");
-          }
-
-          if (isAdmin && nombre) {
-            div.innerText = `${i}\n${nombre}`;
-            div.title = `Asignado a: ${nombre}`;
-          } else {
-            div.innerText = i;
-            div.title = "Número vendido";
-          }
-        } else {
-          div.innerText = i;
-          div.title = "";
-        }
-
-        // estado local
-        estadoNumeros[i] = { vendido, nombre };
-
-        // recalcular contadores
-        vendidos = 0;
-        pendientes = 0;
-
-        Object.values(estadoNumeros).forEach((n) => {
-          if (n.vendido) {
-            vendidos++;
-            if (n.nombre.toLowerCase().includes("(p)")) {
-              pendientes++;
-            }
-          }
-        });
-
-        contadorVendidos.innerText = `Vendidos: ${vendidos}`;
-        contadorDisponibles.innerText = `Disponibles: ${100 - vendidos}`;
-        contadorPendientes.innerText = `Pendientes de pago: ${pendientes}`;
-
-        if (isAdmin) div.classList.remove("disabled");
-      });
-
-    }
-  </script>
+  <!-- JS -->
+  <script type="module" src="./js/rifa.js"></script>
 </body>
 </html>
