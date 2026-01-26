@@ -1,107 +1,45 @@
 import { db } from "./firebase.js";
-import { collection,
-  getDocs,
-  addDoc,
-  Timestamp } from
-  "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-let playersState = [];
-
-function normalize(str) {
-  return str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
-}
+const playersListDiv = document.getElementById("playersList");
 
 async function loadPlayers() {
-  const snap = await getDocs(collection(db, "club_players"));
+  playersListDiv.innerHTML = "Cargando jugadores...";
 
-  playersState = snap.docs
-    .map(d => ({
-      id: d.id,
-      ...d.data(),
-      present: false
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  try {
+    const snapshot = await getDocs(collection(db, "club_players"));
 
-  renderPlayerList();
-}
+    if (snapshot.empty) {
+      playersListDiv.innerHTML = "No hay jugadores cargados";
+      return;
+    }
 
-function renderPlayerList() {
-  const container = document.getElementById("playersList");
-  container.innerHTML = "";
+    playersListDiv.innerHTML = "";
 
-  playersState.forEach((p, index) => {
-    const label = document.createElement("label");
-    label.style.display = "block";
+    snapshot.forEach(doc => {
+      const p = doc.data();
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = p.present;
+      const label = document.createElement("label");
+      label.style.display = "block";
 
-    checkbox.addEventListener("change", e => {
-      playersState[index].present = e.target.checked;
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.dataset.playerId = doc.id;
+      checkbox.dataset.playerName = p.name;
+
+      label.appendChild(checkbox);
+      label.append(` ${p.name} (#${p.number})`);
+
+      playersListDiv.appendChild(label);
     });
 
-    label.appendChild(checkbox);
-    label.append(` ${p.name}`);
-    container.appendChild(label);
-  });
-}
-
-function parseNames(text) {
-  return text
-    .split(/\n|,/)
-    .map(n => normalize(n))
-    .filter(n => n.length > 2);
-}
-
-function applyTextAttendance(text) {
-  const names = parseNames(text);
-
-  playersState = playersState.map(p => ({
-    ...p,
-    present: names.includes(p.normalized)
-  }));
-
-  renderPlayerList();
-}
-
-document
-  .getElementById("processBtn")
-  .addEventListener("click", () => {
-    const text = document.getElementById("attendanceText").value;
-    applyTextAttendance(text);
-  });
-
-document
-  .getElementById("saveBtn")
-  .addEventListener("click", saveTraining);
-
-  async function saveTraining() {
-  const trainingRef = await addDoc(collection(db, "club_trainings"), {
-    date: new Date().toISOString().slice(0, 10),
-    createdAt: Timestamp.now()
-  });
-
-  const writes = [];
-
-  playersState.forEach(p => {
-    if (p.present) {
-      writes.push(
-        addDoc(collection(db, "club_attendance"), {
-          trainingId: trainingRef.id,
-          playerId: p.id,
-          status: "present"
-        })
-      );
-    }
-  });
-
-  await Promise.all(writes);
-  alert("Entreno guardado ✅");
+  } catch (err) {
+    console.error(err);
+    playersListDiv.innerHTML = "❌ Error cargando jugadores";
+  }
 }
 
 loadPlayers();
