@@ -9,8 +9,11 @@ import {
 } from
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import { CONFIG } from "./config.js";
-
+const firebaseConfig = {
+  apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
+  authDomain: "rifavolcanes.firebaseapp.com",
+  projectId: "rifavolcanes",
+};
 
 const ADMIN_PASSWORD = "admin123";
 
@@ -28,9 +31,6 @@ const contadorPendientes = document.getElementById("contadorPendientes");
 
 let isAdmin = false;
 const estadoNumeros = {};   // { i: { vendido, nombre, btn } }
-
-document.getElementById("version").innerText =
-  `Versión ${CONFIG.version}`;
 
 function renderNumero(i) {
   const estado = estadoNumeros[i];
@@ -78,21 +78,13 @@ loginBtn.onclick = () => {
   });
 };
 
-if (!CONFIG.rifaActiva) {
-  status.innerText = CONFIG.mensajeFueraDeRifa;
-  status.className = "text-center fw-bold text-danger";
-
-  loginBtn.disabled = true;
-  adminPass.disabled = true;
-}
-
 for (let i = 0; i < 100; i++) {
   const btn = document.createElement("button");
   btn.className = "number btn btn-outline-secondary w-100 disabled";
   btn.innerText = i;
 
   btn.onclick = async () => {
-    if (!isAdmin || !CONFIG.rifaActiva) return;
+    if (!isAdmin) return;
 
     const actual = estadoNumeros[i]?.nombre || "";
     const nombre = prompt(`Asignar / editar nombre para el número ${i}:`, actual);
