@@ -29,14 +29,24 @@ async function savePlayer() {
 
   try {
     await addDoc(collection(db, "club_players"), player);
-    status.textContent = "✅ Jugador guardado";
+    showMessage("Jugador guardado ✅", "success");
 
     document.getElementById("nameInput").value = "";
     document.getElementById("numberInput").value = "";
   } catch (err) {
     console.error(err);
-    status.textContent = "❌ Error al guardar";
+    showMessage("Error guardando jugador ❌", "danger");
   }
+}
+
+const statusMsg = document.getElementById("statusMsg");
+
+function showMessage(text, type = "success") {
+  statusMsg.innerHTML = `
+    <div class="alert alert-${type}" role="alert">
+      ${text}
+    </div>
+  `;
 }
 
 document
