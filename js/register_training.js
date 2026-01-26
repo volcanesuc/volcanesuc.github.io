@@ -5,42 +5,76 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const playersListDiv = document.getElementById("playersList");
+const tableBody = document.getElementById("playersTable");
+const sortNameBtn = document.getElementById("sortName");
+const sortNumberBtn = document.getElementById("sortNumber");
+
+let players = [];
+let sortState = {
+  field: "name",
+  asc: true
+};
 
 async function loadPlayers() {
-  playersListDiv.innerHTML = "Cargando jugadores...";
+  tableBody.innerHTML = `<tr><td colspan="3">Cargando...</td></tr>`;
 
-  try {
-    const snapshot = await getDocs(collection(db, "club_players"));
+  const snapshot = await getDocs(collection(db, "club_players"));
 
-    if (snapshot.empty) {
-      playersListDiv.innerHTML = "No hay jugadores cargados";
-      return;
-    }
+  players = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
 
-    playersListDiv.innerHTML = "";
-
-    snapshot.forEach(doc => {
-      const p = doc.data();
-
-      const label = document.createElement("label");
-      label.style.display = "block";
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.dataset.playerId = doc.id;
-      checkbox.dataset.playerName = p.name;
-
-      label.appendChild(checkbox);
-      label.append(` ${p.name} (#${p.number})`);
-
-      playersListDiv.appendChild(label);
-    });
-
-  } catch (err) {
-    console.error("Firestore error:", err);
-    playersListDiv.innerHTML = "❌ Error cargando jugadores";
-  }
+  renderTable();
 }
 
+function renderTable() {
+  tableBody.innerHTML = "";
+
+  const sorted = [...players].sort((a, b) => {
+    let valA = a[sortState.field];
+    let valB = b[sortState.field];
+
+    if (sortState.field === "name") {
+      valA = valA.toLowerCase();
+      valB = valB.toLowerCase();
+    }
+
+    if (valA < valB) return sortState.asc ? -1 : 1;
+    if (valA > valB) return sortState.asc ? 1 : -1;
+    return 0;
+  });
+
+  sorted.forEach(p => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>
+        <input type="checkbox"
+          data-player-id="${p.id}"
+          data-player-name="${p.name}">
+      </td>
+      <td>${p.name}</td>
+      <td>${p.number}</td>
+    `;
+
+    tableBody.appendChild(tr);
+  });
+}
+
+// 🔁 Sorting
+sortNameBtn.onclick = () => toggleSort("name");
+sortNumberBtn.onclick = () => toggleSort("number");
+
+function toggleSort(field) {
+  if (sortState.field === field) {
+    sortState.asc = !sortState.asc;
+  } else {
+    sortState.field = field;
+    sortState.asc = true;
+  }
+  renderTable();
+}
+
+// 🚀 init
 loadPlayers();
