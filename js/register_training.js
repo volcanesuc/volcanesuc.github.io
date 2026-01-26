@@ -1,10 +1,9 @@
 import { db } from "./firebase.js";
-import {
-  collection,
+import { collection,
   getDocs,
   addDoc,
-  Timestamp
-} from "firebase/firestore";
+  Timestamp } from
+  "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let playersState = [];
 
