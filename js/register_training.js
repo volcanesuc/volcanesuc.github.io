@@ -1,4 +1,5 @@
 import { db } from "./firebase.js";
+
 import {
   collection,
   getDocs
@@ -37,7 +38,7 @@ async function loadPlayers() {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("Firestore error:", err);
     playersListDiv.innerHTML = "❌ Error cargando jugadores";
   }
 }
