@@ -83,7 +83,30 @@ for (let i = 0; i < 100; i++) {
       btn.classList.remove("btn-outline-secondary");
       btn.classList.add(pendiente ? "btn-warning" : "btn-danger");
 
-      btn.innerText = isAdmin && nombre ? `${i}\n${nombre}` : i;
+      if (snap.exists() && snap.data().vendido) {
+        vendido = true;
+        nombre = snap.data().nombre || "";
+
+        const pendiente = nombre.toLowerCase().includes("(p)");
+
+        btn.classList.remove("btn-outline-secondary");
+        btn.classList.add(pendiente ? "btn-warning" : "btn-danger");
+
+        if (isAdmin) {
+            btn.innerText = nombre
+            ? `${i}\n${nombre}`
+            : i;
+            btn.title = nombre ? `Asignado a: ${nombre}` : "";
+        } else {
+            btn.innerText = i;
+            btn.title = "Número vendido";
+        }
+
+        } else {
+        btn.innerText = i;
+        btn.title = "";
+        }
+
     } else {
       btn.innerText = i;
     }

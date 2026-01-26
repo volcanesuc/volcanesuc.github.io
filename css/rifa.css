@@ -18,3 +18,13 @@
 .number.disabled {
   cursor: not-allowed;
 }
+
+.number {
+  line-height: 1.2;
+}
+
+.number br + * {
+  font-size: 0.75rem;
+  font-weight: normal;
+}
+
