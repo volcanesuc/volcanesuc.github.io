@@ -76,5 +76,41 @@ function toggleSort(field) {
   renderTable();
 }
 
+const attendanceText = document.getElementById("attendanceText");
+const processBtn = document.getElementById("processBtn");
+
+// 🔤 helpers
+function normalize(str) {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z\s]/g, "")
+    .trim();
+}
+
+processBtn.onclick = () => {
+  const raw = attendanceText.value;
+  if (!raw) return;
+
+  const tokens = normalize(raw)
+    .split(/\s+|\n|,/)
+    .filter(t => t.length >= 3); // evita ruido tipo "de"
+
+  // recorrer jugadores visibles
+  document
+    .querySelectorAll("input[type=checkbox][data-player-name]")
+    .forEach(cb => {
+      const playerName = normalize(cb.dataset.playerName);
+
+      const match = tokens.some(token =>
+        playerName.includes(token) || token.includes(playerName)
+      );
+
+      if (match) cb.checked = true;
+    });
+};
+
+
 // 🚀 init
 loadPlayers();
