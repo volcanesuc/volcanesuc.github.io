@@ -1,7 +1,13 @@
 import { db } from "./firebase.js";
 
 import {
+  doc,
+  setDoc,
+  addDoc,
   collection,
+  serverTimestamp,
+  query,
+  where,
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -109,6 +115,76 @@ processBtn.onclick = () => {
 
       if (match) cb.checked = true;
     });
+};
+
+
+const saveBtn = document.getElementById("saveBtn");
+const trainingDateInput = document.getElementById("trainingDate");
+
+saveBtn.onclick = async () => {
+  const date = trainingDateInput.value;
+
+  if (!date) {
+    alert("Elegí una fecha");
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.innerText = "Guardando...";
+
+  try {
+    /* 1️⃣ crear o reutilizar entreno (1 por fecha) */
+    const trainingRef = doc(db, "club_trainings", date);
+
+    await setDoc(
+      trainingRef,
+      {
+        date,
+        createdAt: serverTimestamp()
+      },
+      { merge: true }
+    );
+
+    /* 2️⃣ borrar asistencia previa de ese entreno (si existe) */
+    const existing = await getDocs(
+      query(
+        collection(db, "club_attendance"),
+        where("trainingId", "==", date)
+      )
+    );
+
+    for (const d of existing.docs) {
+      await d.ref.delete();
+    }
+
+    /* 3️⃣ guardar presentes */
+    const checkboxes = document.querySelectorAll(
+      "input[type=checkbox][data-player-id]"
+    );
+
+    let count = 0;
+
+    for (const cb of checkboxes) {
+      if (!cb.checked) continue;
+
+      await addDoc(collection(db, "club_attendance"), {
+        trainingId: date,
+        playerId: cb.dataset.playerId,
+        present: true
+      });
+
+      count++;
+    }
+
+    alert(`Entreno guardado ✅ (${count} presentes)`);
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Error guardando entreno");
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerText = "Guardar entreno";
+  }
 };
 
 
