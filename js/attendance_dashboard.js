@@ -7,6 +7,8 @@ import {
 
 import { APP_CONFIG } from "./config.js";
 
+import { showLoader, hideLoader } from "./main.js";
+
 const trainingsTable = document.getElementById("trainingsTable");
 const playersTable = document.getElementById("playersTable");
 
@@ -220,20 +222,6 @@ const versionEl = document.getElementById("appVersion");
 
 if (versionEl) {
   versionEl.textContent = `v${APP_CONFIG.version}`;
-}
-
-/* ============= LOADING OVERLAY ============= */
-
-const loadingOverlay = document.getElementById("loadingOverlay");
-
-function showLoader() {
-  if (loadingOverlay) loadingOverlay.style.display = "flex";
-}
-
-function hideLoader() {
-  if (!loadingOverlay) return;
-  loadingOverlay.classList.add("hidden");
-  setTimeout(() => loadingOverlay.remove(), 300);
 }
 
 /* ================= INIT ================= */

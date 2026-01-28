@@ -11,6 +11,12 @@ import {
 
 import { APP_CONFIG } from "./config.js";
 
+import { showLoader, hideLoader } from "./main.js";
+
+showLoader();
+
+let loaderHidden = false;
+
 const firebaseConfig = {
   apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
   authDomain: "rifavolcanes.firebaseapp.com",
@@ -108,6 +114,11 @@ for (let i = 0; i < 100; i++) {
   onSnapshot(doc(db, "rifa", i.toString()), (snap) => {
     let vendido = false;
     let nombre = "";
+
+    if (!loaderHidden) { //spinner
+      hideLoader();
+      loaderHidden = true;
+    }
 
     if (snap.exists() && snap.data().vendido) {
       vendido = true;
