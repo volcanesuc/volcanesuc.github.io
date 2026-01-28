@@ -133,6 +133,26 @@ function renderPlayers(list, totalTrainings) {
 
 const birthdaysList = document.getElementById("birthdaysList");
 
+function parseBirthday(str) {
+  if (!str) return null;
+
+  // MM/DD/YYYY
+  if (str.includes("/")) {
+    const [month, day, year] = str.split("/").map(Number);
+    if (!month || !day) return null;
+    return { month: month - 1, day };
+  }
+
+  // YYYY-MM-DD
+  if (str.includes("-")) {
+    const d = new Date(str);
+    if (isNaN(d)) return null;
+    return { month: d.getMonth(), day: d.getDate() };
+  }
+
+  return null;
+}
+
 function renderBirthdays(playersObj, selectedMonth) {
   if (!birthdaysList) return;
 
@@ -147,8 +167,9 @@ function renderBirthdays(playersObj, selectedMonth) {
   const cumpleaneros = Object.values(playersObj)
     .filter(p => p.birthday)
     .map(p => {
-      const d = new Date(p.birthday);
-      return { ...p, day: d.getDate(), month: d.getMonth() };
+      const parsed = parseBirthday(p.birthday);
+      if (!parsed) return null;
+      return { ...p, ...parsed };
     })
     .filter(p => p.month === month)
     .sort((a, b) => a.day - b.day);
@@ -172,6 +193,7 @@ function renderBirthdays(playersObj, selectedMonth) {
     })
     .join("");
 }
+
 
 /* ================= EVENTS ================= */
 
