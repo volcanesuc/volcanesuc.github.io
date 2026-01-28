@@ -11,8 +11,8 @@ function normalize(str) {
 }
 
 async function savePlayer() {
-  const name = document.getElementById("nameInput").value.trim();
-  const number = Number(document.getElementById("numberInput").value);
+  const name = document.getElementById("playerName").value.trim();
+  const number = Number(document.getElementById("playerNumber").value);
   const birthdayInput = document.getElementById("birthday");
   const birthday = birthdayInput ? birthdayInput.value : null;
 
@@ -54,6 +54,7 @@ function showMessage(text, type = "success") {
   `;
 }
 
-document
-  .getElementById("savePlayerBtn")
-  .addEventListener("click", savePlayer);
+const saveBtn = document.getElementById("savePlayerBtn");
+if (saveBtn) {
+  saveBtn.addEventListener("click", savePlayer);
+}
