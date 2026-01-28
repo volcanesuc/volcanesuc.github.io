@@ -11,6 +11,8 @@ const playersTable = document.getElementById("playersTable");
 const monthFilter = document.getElementById("monthFilter");
 const clearFilterBtn = document.getElementById("clearFilter");
 
+const currentMonth = new Date().getMonth(); // 0-11
+
 let allTrainings = {};
 let allPlayers = {};
 let allAttendance = [];
@@ -23,6 +25,7 @@ async function loadData() {
   playersSnap.forEach(d => {
     allPlayers[d.id] = {
       name: d.data().name,
+      birthday: d.data().birthday || null,
       count: 0
     };
   });
@@ -85,6 +88,7 @@ function applyFilter() {
     Object.values(players),
     filteredTrainings.length
   );
+  renderBirthdays(players, selectedMonth);
 }
 
 /* ================= RENDER ================= */
@@ -123,6 +127,50 @@ function renderPlayers(list, totalTrainings) {
         </tr>
       `;
     });
+}
+
+/* ================= BIRTHDAY ================= */
+
+const birthdaysList = document.getElementById("birthdaysList");
+
+function renderBirthdays(playersObj, selectedMonth) {
+  if (!birthdaysList) return;
+
+  const month = selectedMonth
+    ? parseInt(selectedMonth.split("-")[1], 10) - 1
+    : currentMonth;
+
+  const today = new Date();
+  const todayDay = today.getDate();
+  const todayMonth = today.getMonth();
+
+  const cumpleaneros = Object.values(playersObj)
+    .filter(p => p.birthday)
+    .map(p => {
+      const d = new Date(p.birthday);
+      return { ...p, day: d.getDate(), month: d.getMonth() };
+    })
+    .filter(p => p.month === month)
+    .sort((a, b) => a.day - b.day);
+
+  if (cumpleaneros.length === 0) {
+    birthdaysList.innerHTML = `<p>No hay cumpleañeros este mes 🎈</p>`;
+    return;
+  }
+
+  birthdaysList.innerHTML = cumpleaneros
+    .map(p => {
+      const isToday =
+        p.day === todayDay && p.month === todayMonth;
+
+      return `
+        <div class="birthday-item ${isToday ? "today" : ""}">
+          🎂 <strong>${p.name}</strong> — ${p.day}
+          ${isToday ? " (HOY 🎉)" : ""}
+        </div>
+      `;
+    })
+    .join("");
 }
 
 /* ================= EVENTS ================= */

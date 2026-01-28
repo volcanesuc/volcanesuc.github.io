@@ -1,0 +1,8 @@
+.birthday-item {
+  padding: 4px 0;
+}
+
+.birthday-item.today {
+  color: #e63946;
+  font-weight: bold;
+}
