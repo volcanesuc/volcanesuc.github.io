@@ -13,11 +13,11 @@ function normalize(str) {
 async function savePlayer() {
   const name = document.getElementById("nameInput").value.trim();
   const number = Number(document.getElementById("numberInput").value);
-  const birthday = document.getElementById("birthday").value;
-  const status = document.getElementById("status");
+  const birthdayInput = document.getElementById("birthday");
+  const birthday = birthdayInput ? birthdayInput.value : null;
 
   if (!name || !number) {
-    status.textContent = "❌ Nombre y número son obligatorios";
+    showMessage("❌ Nombre y número son obligatorios", "danger");
     return;
   }
 
@@ -25,9 +25,12 @@ async function savePlayer() {
     name,
     normalized: normalize(name),
     number,
-    birthday,
     active: true
   };
+
+  if (birthday) {
+  player.birthday = birthday;
+  }
 
   try {
     await addDoc(collection(db, "club_players"), player);
