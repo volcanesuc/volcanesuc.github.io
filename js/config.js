@@ -1,5 +1,3 @@
-export const firebaseConfig = {
-  apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
-  authDomain: "rifavolcanes.firebaseapp.com",
-  projectId: "rifavolcanes",
+export const APP_CONFIG = {
+  version: "0.1"
 };

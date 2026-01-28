@@ -5,6 +5,8 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+import { APP_CONFIG } from "./config.js";
+
 const trainingsTable = document.getElementById("trainingsTable");
 const playersTable = document.getElementById("playersTable");
 
@@ -12,6 +14,8 @@ const monthFilter = document.getElementById("monthFilter");
 const clearFilterBtn = document.getElementById("clearFilter");
 
 const currentMonth = new Date().getMonth(); // 0-11
+
+console.log("APP_CONFIG", APP_CONFIG);
 
 let allTrainings = {};
 let allPlayers = {};
@@ -203,6 +207,13 @@ clearFilterBtn.onclick = () => {
   monthFilter.value = "";
   applyFilter();
 };
+
+/* ================= VERSION ================= */
+const versionEl = document.getElementById("appVersion");
+
+if (versionEl) {
+  versionEl.textContent = `v${APP_CONFIG.version}`;
+}
 
 /* ================= INIT ================= */
 
