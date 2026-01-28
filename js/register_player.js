@@ -13,6 +13,7 @@ function normalize(str) {
 async function savePlayer() {
   const name = document.getElementById("playerName").value.trim();
   const number = Number(document.getElementById("playerNumber").value);
+  const birthdayInput = document.getElementById("birthday");
   const birthday = birthdayInput ? birthdayInput.value : null;
 
   if (!name || !number) {
