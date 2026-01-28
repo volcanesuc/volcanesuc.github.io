@@ -55,5 +55,5 @@ function showMessage(text, type = "success") {
 }
 
 document
-  .getElementById("saveBtn")
+  .getElementById("savePlayerBtn")
   .addEventListener("click", savePlayer);
