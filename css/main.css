@@ -21,6 +21,7 @@
 }
 h1 {
   font-family: 'Recons' !important;
+  color: var(--club-green) !important; /* verde volcanes */
 }
 
 #loadingOverlay {
