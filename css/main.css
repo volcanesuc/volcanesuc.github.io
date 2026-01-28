@@ -5,6 +5,16 @@
   --club-green-light: #2c6b61;
 }
 
+@font-face {
+  font-family: 'Recons';
+  src: url('./fonts/Recons-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+h1 {
+  font-family: 'Recons' !important;
+}
+
 #loadingOverlay {
   position: fixed;
   inset: 0;
