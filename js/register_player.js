@@ -13,7 +13,6 @@ function normalize(str) {
 async function savePlayer() {
   const name = document.getElementById("playerName").value.trim();
   const number = Number(document.getElementById("playerNumber").value);
-  const birthdayInput = document.getElementById("birthday");
   const birthday = birthdayInput ? birthdayInput.value : null;
 
   if (!name || !number) {
@@ -36,8 +35,8 @@ async function savePlayer() {
     await addDoc(collection(db, "club_players"), player);
     showMessage("Jugador guardado ✅", "success");
 
-    document.getElementById("nameInput").value = "";
-    document.getElementById("numberInput").value = "";
+    document.getElementById("playerName").value = "";
+    document.getElementById("playerNumber").value = "";
   } catch (err) {
     console.error(err);
     showMessage("Error guardando jugador ❌", "danger");
