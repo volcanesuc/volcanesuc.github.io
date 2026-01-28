@@ -5,6 +5,14 @@
   --club-green-light: #2c6b61;
 }
 
+.text-success {
+  color: var(--club-green) !important; /* verde volcanes */
+}
+
+.text-warning {
+  color:var(--club-yellow) !important; /* verde volcanes */
+}
+
 @font-face {
   font-family: 'Recons';
   src: url('./fonts/Recons-Regular.ttf') format('truetype');

@@ -54,7 +54,7 @@ function renderNumero(i) {
 
   if (estado.vendido) {
     const pendiente = estado.nombre.toLowerCase().includes("(p)");
-    btn.classList.add(pendiente ? "btn-warning" : "btn-danger");
+    btn.classList.add(pendiente ? "btn-warning" : "btn-success");
 
     if (isAdmin && estado.nombre) {
       btn.innerText = `${i}\n${estado.nombre}`;
