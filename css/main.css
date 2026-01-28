@@ -6,7 +6,7 @@
 }
 
 .text-success {
-  color: var(--club-green) !important; /* verde volcanes */
+  color: var(--club-green-light) !important; /* verde volcanes */
 }
 
 .text-warning {
