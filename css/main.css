@@ -1,14 +1,32 @@
-.birthday-item {
-  padding: 6px 8px;
-  border-radius: 6px;
-  margin-bottom: 4px;
-  background: rgba(25, 71, 63, 0.05);
+:root {
+  --club-green: #19473f;
+  --club-yellow: #e8ce26;
+  --club-green-dark: #12352f;
+  --club-green-light: #2c6b61;
 }
 
-.birthday-item.today {
-  background: var(--club-yellow);
-  color: var(--club-green);
-  font-weight: 700;
+#loadingOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(25, 71, 63, 0.92); /* verde */
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#loadingOverlay .spinner-border {
+  width: 4rem;
+  height: 4rem;
+  color: var(--club-yellow);
+}
+
+#loadingOverlay {
+  transition: opacity 0.3s ease;
+}
+
+#loadingOverlay.hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .card {

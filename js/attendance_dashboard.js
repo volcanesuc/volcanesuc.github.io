@@ -15,8 +15,6 @@ const clearFilterBtn = document.getElementById("clearFilter");
 
 const currentMonth = new Date().getMonth(); // 0-11
 
-console.log("APP_CONFIG", APP_CONFIG);
-
 let allTrainings = {};
 let allPlayers = {};
 let allAttendance = [];
@@ -24,32 +22,41 @@ let allAttendance = [];
 /* ================= LOAD DATA ================= */
 
 async function loadData() {
-  // jugadores
-  const playersSnap = await getDocs(collection(db, "club_players"));
-  playersSnap.forEach(d => {
-    allPlayers[d.id] = {
-      name: d.data().name,
-      birthday: d.data().birthday || null,
-      count: 0
-    };
-  });
+  showLoader();
 
-  // entrenos
-  const trainingsSnap = await getDocs(collection(db, "club_trainings"));
-  trainingsSnap.forEach(d => {
-    allTrainings[d.id] = {
-      date: d.id,
-      count: 0
-    };
-  });
+  try {
 
-  // asistencia
-  const attendanceSnap = await getDocs(collection(db, "club_attendance"));
-  attendanceSnap.forEach(d => {
-    allAttendance.push(d.data());
-  });
+    // jugadores
+    const playersSnap = await getDocs(collection(db, "club_players"));
+    playersSnap.forEach(d => {
+      allPlayers[d.id] = {
+        name: d.data().name,
+        birthday: d.data().birthday || null,
+        count: 0
+      };
+    });
 
-  applyFilter();
+    // entrenos
+    const trainingsSnap = await getDocs(collection(db, "club_trainings"));
+    trainingsSnap.forEach(d => {
+      allTrainings[d.id] = {
+        date: d.id,
+        count: 0
+      };
+    });
+
+    // asistencia
+    const attendanceSnap = await getDocs(collection(db, "club_attendance"));
+    attendanceSnap.forEach(d => {
+      allAttendance.push(d.data());
+    });
+
+    applyFilter();
+  } catch (err) {
+    console.error("Error cargando dashboard", err);
+  } finally {
+    hideLoader();
+  }
 }
 
 /* ================= FILTER ================= */
@@ -213,6 +220,20 @@ const versionEl = document.getElementById("appVersion");
 
 if (versionEl) {
   versionEl.textContent = `v${APP_CONFIG.version}`;
+}
+
+/* ============= LOADING OVERLAY ============= */
+
+const loadingOverlay = document.getElementById("loadingOverlay");
+
+function showLoader() {
+  if (loadingOverlay) loadingOverlay.style.display = "flex";
+}
+
+function hideLoader() {
+  if (!loadingOverlay) return;
+  loadingOverlay.classList.add("hidden");
+  setTimeout(() => loadingOverlay.remove(), 300);
 }
 
 /* ================= INIT ================= */
