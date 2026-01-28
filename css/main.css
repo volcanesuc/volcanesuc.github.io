@@ -41,8 +41,8 @@
 }
 
 .table thead {
-  background-color: var(--club-green);
-  color: white;
+  background-color: var(--club-green) !important; /* verde volcanes */
+  color: #ffffff !important;
 }
 
 .table tbody tr:hover {
