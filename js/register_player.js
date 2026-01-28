@@ -35,8 +35,10 @@ async function savePlayer() {
     await addDoc(collection(db, "club_players"), player);
     showMessage("Jugador guardado ✅", "success");
 
-    document.getElementById("playerName").value = "";
-    document.getElementById("playerNumber").value = "";
+    ["playerName", "playerNumber", "birthday"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
   } catch (err) {
     console.error(err);
     showMessage("Error guardando jugador ❌", "danger");
