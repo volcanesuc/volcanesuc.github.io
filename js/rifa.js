@@ -9,6 +9,8 @@ import {
 } from
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+import { APP_CONFIG } from "./config.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
   authDomain: "rifavolcanes.firebaseapp.com",
@@ -127,4 +129,11 @@ for (let i = 0; i < 100; i++) {
     contadorDisponibles.innerText = 100 - vendidos.length;
     contadorPendientes.innerText = pendientes.length;
   });
+}
+
+/* ================= VERSION ================= */
+const versionEl = document.getElementById("appVersion");
+
+if (versionEl) {
+  versionEl.textContent = `v${APP_CONFIG.version}`;
 }
