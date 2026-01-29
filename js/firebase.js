@@ -1,5 +1,4 @@
-// firebase.js (browser-friendly)
-
+// firebase.js
 import { initializeApp } from
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 
@@ -10,9 +9,9 @@ import { getAuth } from
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
-  authDomain: "rifavolcanes.firebaseapp.com",
-  projectId: "rifavolcanes",
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
 };
 
 const app = initializeApp(firebaseConfig);

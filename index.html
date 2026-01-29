@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volcanes Ultimate</title>
+
+  <!-- CSS del landing (aislado del dashboard) -->
+  <link rel="stylesheet" href="./css/index.css" />
+</head>
+<body>
+
+<header class="landing-header">
+  <h1>Volcanes Ultimate</h1>
+  <button class="landing-login-btn" onclick="loginWithGoogle()">INGRESAR</button>
+</header>
+
+<section class="landing-section hero">
+  <div>
+    <h2>Más que un equipo,<br>una comunidad</h2>
+    <p>
+      Entrenamientos, jugadores y estadísticas del equipo en un solo lugar.
+      Accede al dashboard para registrar asistencia y ver el rendimiento del equipo.
+    </p>
+    <a class="landing-btn" href="#entrenamientos">Ver entrenamientos</a>
+  </div>
+  <div>
+    <img src="img/volcanes/nicaragua.jpeg" alt="Dashboard Volcanes" class="hero-img" />
+  </div>
+</section>
+
+<section class="landing-section">
+  <h2>🔥 Cartaglow 2025</h2>
+  <p>Nuestro evento, nuestra energía, nuestro espíritu.</p>
+  <div class="carousel">
+    <img src="img/cartaglow/cartaglow00.jpg" />
+    <img src="img/cartaglow/cartaglow01.jpg" />
+    <img src="img/cartaglow/cartaglow02.jpg" />
+  </div>
+</section>
+
+<section id="entrenamientos" class="landing-section">
+  <h2>📅 Entrenamientos y Juegos</h2>
+  <div class="landing-cards">
+    <div class="landing-card">
+      <h3>Entrenamientos</h3>
+      <p>Martes: 7:00 pm – 9:00 pm</p>
+      <p>Jueves: 7:00 pm – 9:00 pm</p>
+    </div>
+    <div class="landing-card">
+      <h3>Juegos y Torneos</h3>
+      <p>Fines de semana</p>
+      <p>Torneos nacionales e internacionales</p>
+    </div>
+  </div>
+</section>
+
+<section class="landing-section">
+  <h2>🏆 Palmarés Volcanes</h2>
+  <div class="landing-cards">
+    <div class="landing-card">Primer Lugar<br><strong>Espíritu Chorotega</strong><br>Enero 2025</div>
+    <div class="landing-card">Tercer Lugar<br><strong>Copa Verano</strong><br>2025</div>
+    <div class="landing-card">Primer Lugar<br><strong>Copa Invierno</strong><br>2025</div>
+    <div class="landing-card">Primer Lugar<br><strong>Espíritu de Juego</strong><br>Copa Invierno 2024</div>
+  </div>
+</section>
+
+<section class="landing-section">
+  <h2>👕 Uniformes del Equipo</h2>
+  <p>Compra tu camisa oficial de Volcanes Ultimate</p>
+  <div class="landing-cards">
+    <div class="landing-card">
+      <img src="img/camisas/chalecos.jpg" class="uniforme-img" />
+      <h3>Camisa Oficial</h3>
+      <a class="landing-btn" href="https://forms.gle/TU_FORM" target="_blank">Pedir uniforme</a>
+    </div>
+    <div class="landing-card">
+      <img src="img/camisas/white.jpg" class="uniforme-img" />
+      <h3>Camisa Alternativa</h3>
+      <a class="landing-btn" href="https://forms.gle/TU_FORM" target="_blank">Pedir uniforme</a>
+    </div>
+  </div>
+</section>
+
+<footer class="landing-footer">
+  <p>© Volcanes Ultimate</p>
+  <p>Sistema de asistencia y estadísticas</p>
+</footer>
+
+</body>
+
+<script type="module" src="./js/index.js"></script>
+
+</html>
