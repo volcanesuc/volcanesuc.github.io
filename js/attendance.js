@@ -5,11 +5,17 @@ import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
 
-showLoader();
+
 loadHeader("attendance");
 
-await loadAttendance();
-hideLoader();
+watchAuth(async () => {
+  showLoader();
+  try {
+    await loadAttendance();
+  } finally {
+    hideLoader();
+  }
+});
 
 const trainingsTable = document.getElementById("trainingsTable");
 const playersTable = document.getElementById("playersTable");
@@ -25,7 +31,10 @@ watchAuth(() => loadAttendance());
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
 async function loadAttendance() {
-  showLoader();
+
+  console.log("Players:", Object.keys(allPlayers).length);
+  console.log("Trainings:", Object.keys(allTrainings).length);
+  console.log("Attendance:", allAttendance.length);
 
   try {
     const playersSnap = await getDocs(collection(db, "club_players"));

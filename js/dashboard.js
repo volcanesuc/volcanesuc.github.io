@@ -6,17 +6,17 @@ import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
 
 
-showLoader();
+
 loadHeader("home");
 
-watchAuth(async user => {
+watchAuth(async () => {
+  showLoader();
   try {
-    await loadData();
+    await loadData(); // 👈 esta función ya es async
   } finally {
     hideLoader();
   }
 });
-
 
 const birthdaysList = document.getElementById("birthdaysList");
 const currentMonth = new Date().getMonth();
