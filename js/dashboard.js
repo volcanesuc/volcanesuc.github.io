@@ -1,5 +1,8 @@
 import { db } from "./firebase.js";
 
+import { watchAuth, logout } from "./auth.js";
+
+
 import {
   collection,
   getDocs
@@ -21,6 +24,14 @@ let allTrainings = {};
 let allPlayers = {};
 let allAttendance = [];
 
+watchAuth(user => {
+  console.log("Usuario autenticado:", user.email);
+  loadData(); // SOLO acá
+});
+document
+  .getElementById("logoutBtn")
+  .addEventListener("click", logout);
+  
 /* ================= LOAD DATA ================= */
 
 async function loadData() {
@@ -224,6 +235,3 @@ if (versionEl) {
   versionEl.textContent = `v${APP_CONFIG.version}`;
 }
 
-/* ================= INIT ================= */
-
-loadData();

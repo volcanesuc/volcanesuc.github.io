@@ -19,10 +19,12 @@ export async function loginWithGoogle() {
   }
 }
 
-export function watchAuth(redirectIfLoggedOut = true) {
+export function watchAuth(onLoggedIn) {
   onAuthStateChanged(auth, user => {
-    if (!user && redirectIfLoggedOut) {
+    if (!user) {
       window.location.href = "index.html";
+    } else {
+      if (onLoggedIn) onLoggedIn(user);
     }
   });
 }
