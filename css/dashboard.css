@@ -14,3 +14,34 @@
 body.loading {
   display: none;
 }
+
+
+/* HEADER */
+.landing-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--club-green);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+}
+
+.landing-header h1 {
+  font-family: 'Recons', sans-serif;
+  font-size: 18px;
+  margin: 0;
+  color: white;
+}
+
+.landing-login-btn {
+  background-color: var(--club-yellow);
+  color: var(--club-green);
+  border: none;
+  padding: 10px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 6px;
+}

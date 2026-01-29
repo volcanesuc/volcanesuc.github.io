@@ -26,8 +26,13 @@ let allAttendance = [];
 
 watchAuth(user => {
   console.log("Usuario autenticado:", user.email);
-  loadData(); // SOLO acá
+
+  // 🔥 ESTA LÍNEA ES LA CLAVE
+  document.body.classList.remove("loading");
+
+  loadData();
 });
+
 document
   .getElementById("logoutBtn")
   .addEventListener("click", logout);
