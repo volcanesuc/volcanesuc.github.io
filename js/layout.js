@@ -89,3 +89,28 @@ var Layout = function () {
 $(document).ready(function() {
     Layout.init();
 });
+
+const menuBtn = document.getElementById("menuBtn");
+const mobileMenu = document.getElementById("mobileMenu");
+
+if (menuBtn) {
+  menuBtn.addEventListener("click", () => {
+    mobileMenu.classList.toggle("open");
+  });
+}
+
+function setActiveSection(section) {
+  document.querySelectorAll("[data-section]").forEach(el => {
+    el.classList.toggle("active", el.dataset.section === section);
+  });
+  mobileMenu.classList.remove("open");
+}
+
+document.querySelectorAll("[data-section]").forEach(link => {
+  link.addEventListener("click", () => {
+    const section = link.dataset.section;
+    setActiveSection(section);
+
+    // acá luego llamás a loadSection(section)
+  });
+});

@@ -95,3 +95,86 @@ h1 {
   color: var(--club-green);
   opacity: 0.7;
 }
+
+/* ===== HEADER / NAV ===== */
+.topbar {
+  background: #19473f;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+}
+
+.logo {
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.hamburger {
+  font-size: 1.4rem;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+/* Tabs desktop */
+.nav-tabs {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-tabs a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  padding-bottom: 3px;
+  border-bottom: 3px solid transparent;
+}
+
+.nav-tabs a:hover {
+  border-bottom-color: rgba(255,255,255,0.5);
+}
+
+.nav-tabs a.active {
+  border-bottom-color: #e8ce26;
+  color: #e8ce26;
+  font-weight: 700;
+}
+
+/* Mobile menu */
+.mobile-menu {
+  display: none;
+  flex-direction: column;
+  background: #19473f;
+}
+
+.mobile-menu a {
+  color: white;
+  padding: 0.7rem 1rem;
+  text-decoration: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .nav-tabs {
+    display: none;
+  }
+
+  .hamburger {
+    display: block;
+  }
+
+  .mobile-menu.open {
+    display: flex;
+  }
+}
+
+/* Desktop */
+@media (min-width: 769px) {
+  .hamburger,
+  .mobile-menu {
+    display: none;
+  }
+}
