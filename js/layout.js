@@ -1,29 +1,10 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const hamburger = document.getElementById("hamburger");
+document.addEventListener("click", (e) => {
+  const menuBtn = document.getElementById("menuBtn");
   const mobileMenu = document.getElementById("mobileMenu");
 
-  if (hamburger && mobileMenu) {
-    hamburger.addEventListener("click", () => {
-      mobileMenu.classList.toggle("open");
-    });
-  }
-});
+  if (!menuBtn || !mobileMenu) return;
 
-document.addEventListener("DOMContentLoaded", async () => {
-  const headerContainer = document.getElementById("app-header");
-
-  if (!headerContainer) return;
-
-  const res = await fetch("/components/header.html");
-  headerContainer.innerHTML = await res.text();
-
-  // hamburger
-  const hamburger = document.getElementById("hamburger");
-  const mobileMenu = document.getElementById("mobileMenu");
-
-  if (hamburger && mobileMenu) {
-    hamburger.addEventListener("click", () => {
-      mobileMenu.classList.toggle("open");
-    });
+  if (e.target === menuBtn) {
+    mobileMenu.classList.toggle("open");
   }
 });
