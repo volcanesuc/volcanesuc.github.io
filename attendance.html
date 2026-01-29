@@ -70,7 +70,7 @@
             </div>
         </main>
     </body>
-    <div id="loadingOverlay">
+    <div id="loadingOverlay" class="loading-overlay">
         <div class="spinner-border" role="status">
             <span class="visually-hidden">Cargando...</span>
         </div>
@@ -78,9 +78,5 @@
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script type="module" src="./js/attendance.js"></script>
-    <script type="module">
-    import { loadHeader } from "./js/components/header.js";
-    loadHeader("attendance");
-    </script>
     <script src="js/layout.js" defer></script>
 </html>

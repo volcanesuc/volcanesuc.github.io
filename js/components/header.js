@@ -1,5 +1,11 @@
 export function loadHeader(activeTab) {
-  const headerHTML = `
+  const container = document.getElementById("app-header");
+  if (!container) return;
+
+  // 🛑 evita duplicados
+  if (container.children.length > 0) return;
+
+  container.innerHTML = `
     <header class="topbar">
       <div class="left">
         <button id="menuBtn" class="hamburger">☰</button>
@@ -7,11 +13,10 @@ export function loadHeader(activeTab) {
       </div>
 
       <nav class="nav-tabs">
-        <a data-tab="home" class="${activeTab === "home" ? "active" : ""}" href="dashboard.html">Home</a>
-        <a data-tab="players" class="${activeTab === "players" ? "active" : ""}" href="dashboard.html#players">Jugadores</a>
-        <a data-tab="attendance" class="${activeTab === "attendance" ? "active" : ""}" href="attendance.html">Asistencia</a>
-        <a data-tab="tournaments" class="${activeTab === "tournaments" ? "active" : ""}" href="dashboard.html#tournaments">Torneos</a>
-        <a data-tab="stats" class="${activeTab === "stats" ? "active" : ""}" href="stats2024.html">Estadísticas</a>
+        <a class="${activeTab === "home" ? "active" : ""}" href="dashboard.html">Home</a>
+        <a class="${activeTab === "attendance" ? "active" : ""}" href="attendance.html">Asistencia</a>
+        <a class="${activeTab === "tournaments" ? "active" : ""}" href="dashboard.html#tournaments">Torneos</a>
+        <a class="${activeTab === "stats" ? "active" : ""}" href="stats2024.html">Estadísticas</a>
       </nav>
 
       <button id="logoutBtn" class="logout-btn">SALIR</button>
@@ -19,12 +24,9 @@ export function loadHeader(activeTab) {
 
     <nav id="mobileMenu" class="mobile-menu">
       <a href="dashboard.html">Home</a>
-      <a href="dashboard.html#players">Jugadores</a>
       <a href="attendance.html">Asistencia</a>
       <a href="dashboard.html#tournaments">Torneos</a>
       <a href="stats2024.html">Estadísticas</a>
     </nav>
   `;
-
-  document.body.insertAdjacentHTML("afterbegin", headerHTML);
 }
