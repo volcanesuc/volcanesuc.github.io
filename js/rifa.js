@@ -11,7 +11,7 @@ import {
 
 import { APP_CONFIG } from "./config.js";
 
-import { showLoader, hideLoader } from "./main.js";
+import { showLoader, hideLoader } from "./ui/loader.js";
 
 showLoader();
 

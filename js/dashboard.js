@@ -2,7 +2,21 @@ import { db } from "./firebase.js";
 import { watchAuth, logout } from "./auth.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { APP_CONFIG } from "./config.js";
-import { showLoader, hideLoader } from "./main.js";
+import { showLoader, hideLoader } from "./ui/loader.js";
+import { loadHeader } from "./components/header.js";
+
+
+showLoader();
+loadHeader("home");
+
+watchAuth(async user => {
+  try {
+    await loadData();
+  } finally {
+    hideLoader();
+  }
+});
+
 
 const birthdaysList = document.getElementById("birthdaysList");
 const currentMonth = new Date().getMonth();

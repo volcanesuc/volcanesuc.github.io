@@ -25,28 +25,24 @@ h1 {
   color: var(--club-green) !important; /* verde volcanes */
 }
 
-#loadingOverlay {
+.loading-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.92); /* negro */
-  z-index: 9999;
+  background: rgba(25, 71, 63, 0.85); /* verde volcanes */
   display: flex;
   align-items: center;
   justify-content: center;
-}
-#loadingOverlay .spinner-border {
-  width: 4rem;
-  height: 4rem;
-  color: var(--club-yellow);
+  z-index: 9999;
 }
 
-#loadingOverlay {
-  transition: opacity 0.3s ease;
+body:not(.loading) .loading-overlay {
+  display: none;
 }
 
-#loadingOverlay.hidden {
-  opacity: 0;
-  pointer-events: none;
+.spinner-border {
+  color: #e8ce26; /* amarillo volcanes */
+  width: 3rem;
+  height: 3rem;
 }
 
 .card {

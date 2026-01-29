@@ -2,7 +2,14 @@ import { db } from "./firebase.js";
 import { watchAuth, logout } from "./auth.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { APP_CONFIG } from "./config.js";
-import { showLoader, hideLoader } from "./main.js";
+import { showLoader, hideLoader } from "./ui/loader.js";
+import { loadHeader } from "./components/header.js";
+
+showLoader();
+loadHeader("attendance");
+
+await loadAttendance();
+hideLoader();
 
 const trainingsTable = document.getElementById("trainingsTable");
 const playersTable = document.getElementById("playersTable");
