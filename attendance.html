@@ -11,12 +11,6 @@
   <link rel="stylesheet" href="./css/main.css" />
 </head>
 <body class="loading">
-   
-    <header class="landing-header">
-        <button id="menuBtn">☰</button>
-        <h1>Volcanes Ultimate</h1>
-        <button class="landing-login-btn" id="logoutBtn">SALIR</button>
-    </header>
 
     <main id="content">
 
@@ -88,5 +82,12 @@
     <span class="visually-hidden">Cargando...</span>
   </div>
 </div>
+
+<script type="module">
+    import { loadHeader } from "./js/components/header.js";
+    loadHeader("attendance");
+</script>
+<script src="js/layout.js"></script>
 <script type="module" src="./js/dashboard.js"></script>
+
 </html>
