@@ -240,3 +240,10 @@ if (versionEl) {
   versionEl.textContent = `v${APP_CONFIG.version}`;
 }
 
+/* ================= DASHBOARD TABS ================= */
+
+document.querySelectorAll("[data-section]").forEach(link => {
+  link.addEventListener("click", () => {
+    loadSection(link.dataset.section);
+  });
+});
