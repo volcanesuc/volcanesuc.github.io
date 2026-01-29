@@ -127,6 +127,8 @@ h1 {
 
 .nav-tabs a {
   color: white;
+  font-family: "Recons" !important;
+  text-transform: uppercase;
   text-decoration: none;
   font-weight: 500;
   padding-bottom: 3px;
@@ -138,9 +140,10 @@ h1 {
 }
 
 .nav-tabs a.active {
-  border-bottom-color: #e8ce26;
-  color: #e8ce26;
+  border-bottom-color: var(--club-yellow);
+  color: black;
   font-weight: 700;
+  text-shadow: 0 0 6px rgba(232, 206, 38, 0.6);
 }
 
 /* Mobile menu */
@@ -177,4 +180,19 @@ h1 {
   .mobile-menu {
     display: none;
   }
+}
+
+.logout-btn {
+  background: #e8ce26;
+  color: #19473f;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.logout-btn:hover {
+  background: #f1db4f;
 }
