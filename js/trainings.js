@@ -14,7 +14,7 @@ import { loadHeader } from "./components/header.js";
   INIT
 ------------------------- */
 document.addEventListener("DOMContentLoaded", async () => {
-  loadHeader("attendance");
+  loadHeader("trainings");
 
   await loadTrainings();
   await loadPlayers();
@@ -82,15 +82,21 @@ async function loadPlayers() {
   const tbody = document.getElementById("playersTable");
   tbody.innerHTML = "";
 
-  const snapshot = await getDocs(collection(db, "players"));
+  const snapshot = await getDocs(collection(db, "club_players"));
 
   players = snapshot.docs
-    .map(doc => ({ id: doc.id, ...doc.data() }))
-    .filter(p => p.active)
-    .sort((a, b) =>
-      `${a.firstName} ${a.lastName}`
-        .localeCompare(`${b.firstName} ${b.lastName}`)
-    );
+  .map(doc => ({
+    id: doc.id,
+    firstName: doc.data().firstName,
+    lastName: doc.data().lastName,
+    number: doc.data().number,
+    active: doc.data().active !== false
+  }))
+  .filter(p => p.active)
+  .sort((a, b) =>
+    `${a.firstName} ${a.lastName}`
+      .localeCompare(`${b.firstName} ${b.lastName}`)
+  );
 
   players.forEach(player => {
     tbody.innerHTML += `
