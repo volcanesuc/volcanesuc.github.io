@@ -44,12 +44,13 @@ async function loadPlayers() {
   });
 
   render();
+  updateSortIndicators();
 }
 
 
 function render() {
   table.innerHTML = Object.values(players)
-    .sort((a, b) => a.lastName.localeCompare(b.lastName))
+    .sort((a, b) => a.firstName.localeCompare(b.firstName))
     .map(
       p => `
       <tr data-id="${p.id}" class="player-row" style="cursor:pointer">
@@ -84,6 +85,92 @@ table.onclick = e => {
 
   modal.show();
 };
+
+
+// SORT 
+let currentSort = {
+  key: "name",
+  direction: "asc"
+};
+
+function sortPlayers(players, { key, direction }) {
+  const dir = direction === "asc" ? 1 : -1;
+
+  return players.sort((a, b) => {
+    let valA, valB;
+
+    switch (key) {
+      case "name":
+        valA = `${a.lastName} ${a.firstName}`.toLowerCase();
+        valB = `${b.lastName} ${b.firstName}`.toLowerCase();
+        break;
+
+      case "number":
+        valA = a.number ?? 999;
+        valB = b.number ?? 999;
+        break;
+
+      case "role":
+        valA = a.role ?? "";
+        valB = b.role ?? "";
+        break;
+
+      case "gender":
+        valA = a.gender ?? "";
+        valB = b.gender ?? "";
+        break;
+
+      case "birthday":
+        valA = a.birthday ?? "";
+        valB = b.birthday ?? "";
+        break;
+
+      case "active":
+        valA = a.active ? 1 : 0;
+        valB = b.active ? 1 : 0;
+        break;
+
+      default:
+        return 0;
+    }
+
+    return valA > valB ? dir : valA < valB ? -dir : 0;
+  });
+}
+
+document.querySelectorAll("th.sortable").forEach(th => {
+  th.addEventListener("click", () => {
+    const key = th.dataset.sort;
+
+    if (currentSort.key === key) {
+      currentSort.direction =
+        currentSort.direction === "asc" ? "desc" : "asc";
+    } else {
+      currentSort.key = key;
+      currentSort.direction = "asc";
+    }
+
+    sortPlayers(players, currentSort);
+    renderPlayers(players);
+    updateSortIndicators();
+  });
+});
+
+function updateSortIndicators() {
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.classList.remove("sorted-asc", "sorted-desc");
+
+    if (th.dataset.sort === currentSort.key) {
+      th.classList.add(
+        currentSort.direction === "asc"
+          ? "sorted-asc"
+          : "sorted-desc"
+      );
+    }
+  });
+}
+
+//CREAR NUEVO JUGADOR
 
 document.getElementById("addPlayerBtn").onclick = () => {
   form.reset();
@@ -120,6 +207,8 @@ form.onsubmit = async e => {
   modal.hide();
   loadPlayers();
 };
+
+//CARGAR DATOS
 
 watchAuth(async () => {
   showLoader();

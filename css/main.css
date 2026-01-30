@@ -192,3 +192,22 @@ body:not(.loading) .loading-overlay {
 .logout-btn:hover {
   background: #f1db4f;
 }
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+th.sortable::after {
+  content: " ⇅";
+  font-size: 0.7em;
+  opacity: 0.4;
+}
+
+th.sortable.sorted-asc::after {
+  content: " ↑";
+}
+
+th.sortable.sorted-desc::after {
+  content: " ↓";
+}
