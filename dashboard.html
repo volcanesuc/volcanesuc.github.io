@@ -17,19 +17,36 @@
             <div class="container py-4"></div>
 
                 <section class="dashboard-cards">
-                    <div class="card highlight">
+                    <!-- CUMPLEANOS-->
+                    <div class="kpi-card">
                         <span class="icon">🎂</span>
                         <h3>Cumpleañeros del mes</h3>
                         <div id="birthdaysList"></div>
                     </div>
+                    <!-- STATS DE JUGADORES Y ENTRENAMIENTOS-->
+                    <div class="kpi-card">
+                        <h3 class="kpi-title">Resumen del Mes</h3>
 
-                    <div class="card">
-                        <span class="icon">📋</span>
-                        <h3>Asistencia</h3>
-                        <p>82%</p>
+                        <div class="kpi-grid">
+                            <div class="kpi-item">
+                            <span class="kpi-value" id="kpiActivePlayers">—</span>
+                            <span class="kpi-label">Jugadores activos</span>
+                            </div>
+
+                            <div class="kpi-item">
+                            <span class="kpi-value" id="kpiAvgAttendance">—</span>
+                            <span class="kpi-label">Asistencia promedio</span>
+                            </div>
+
+                            <div class="kpi-item">
+                            <span class="kpi-value" id="kpiNewPlayers">—</span>
+                            <span class="kpi-label">Nuevos este mes</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="card">
+                    <!-- PROXIMOS TORNEOS -->
+                    <div class="kpi-card">
                         <span class="icon">🏆</span>
                         <h3>Próximo torneo</h3>
                         <p>Feb 7–8<br><small>Torneo Pura Vida</small></p>
