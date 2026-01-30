@@ -56,8 +56,8 @@ function render() {
         <td class="fw-semibold">${p.fullName}</td>
         <td><span class="badge bg-info text-dark">${p.roleLabel}</span>
         </td>
-        <td>${p.gender ?? "—"}</td>
         <td>${p.number ?? "—"}</td>
+        <td>${p.gender ?? "—"}</td>
         <td>${p.birthday ?? "—"}</td>
         <td><span class="badge ${p.active ? "bg-success" : "bg-secondary"}"> ${p.active ? "Activo" : "Inactivo"}</span></td>
       </tr>
