@@ -29,14 +29,10 @@ async function loadDashboard() {
 
   try {
     const snap = await getDocs(collection(db, "club_players"));
-    const players = {};
-
-    snap.forEach(d => {
-      players[d.id] = {
-        name: d.data().name,
-        birthday: d.data().birthday
-      };
-    });
+     snap.forEach(d => {
+        const player = Player.fromFirestore(d);
+        players[player.id] = player;
+      });
 
     renderBirthdays(players);
   } finally {
@@ -60,7 +56,7 @@ function renderBirthdays(players) {
 
   birthdaysList.innerHTML = list.length
     ? list.map(p =>
-        `🎂 <strong>${p.name}</strong> — ${p.day}${p.day === today.getDate() ? " (HOY 🎉)" : ""}`
+        `🎂 <strong>${p.fullName}</strong> — ${p.day}${p.day === today.getDate() ? " (HOY 🎉)" : ""}`
       ).join("<br>")
     : "No hay cumpleañeros este mes 🎈";
 }
