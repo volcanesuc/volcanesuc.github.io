@@ -5,6 +5,7 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/f
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
+import { Player } from "./models/player.js";
 
 loadHeader("attendance");
 
@@ -39,9 +40,9 @@ async function loadAttendance() {
 
   const playersSnap = await getDocs(collection(db, "club_players"));
   playersSnap.forEach(d => {
-    const p = d.data();
-    allPlayers[d.id] = {
-      name: `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim() || "—",
+    const player = Player.fromFirestore(d);
+    allPlayers[player.id] = {
+      player,
       count: 0
     };
   });
@@ -101,11 +102,18 @@ function renderTrainings(list) {
 function renderPlayers(list, totalTrainings) {
   playersTable.innerHTML = list
     .sort((a, b) => b.count - a.count)
-    .map(p => {
+    .map(({ player, count }) => {
       const pct = totalTrainings
-        ? Math.round((p.count / totalTrainings) * 100)
+        ? Math.round((count / totalTrainings) * 100)
         : 0;
-      return `<tr><td>${p.name}</td><td>${p.count}</td><td>${pct}%</td></tr>`;
+
+      return `
+        <tr>
+          <td>${player.fullName}</td>
+          <td>${count}</td>
+          <td>${pct}%</td>
+        </tr>
+      `;
     })
     .join("");
 }
@@ -127,14 +135,12 @@ function renderTopPlayers() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
 
-  const medals = ["🥇", "🥈", "🥉"];
-
   document.getElementById("topPlayers").innerHTML = top
     .map(
-      (p, i) => `
+      ({ player, count }, i) => `
       <li class="list-group-item d-flex justify-content-between">
-        <span>${medals[i]} ${p.name}</span>
-        <span class="fw-bold">${p.count}</span>
+        <span>${["🥇","🥈","🥉"][i]} ${player.fullName}</span>
+        <span class="fw-bold">${count}</span>
       </li>`
     )
     .join("");

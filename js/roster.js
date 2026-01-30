@@ -10,6 +10,7 @@ import {
 
 import { loadHeader } from "./components/header.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
+import { Player } from "./models/player.js";
 
 loadHeader("roster");
 
@@ -35,30 +36,23 @@ let players = {};
 
 async function loadPlayers() {
   players = {};
-  try {
-    const snap = await getDocs(collection(db, "club_players"));
-    snap.forEach(d => players[d.id] = d.data());
-    render();
-  } catch (err) {
-    console.error("Error cargando jugadores", err);
-  }
+  const snap = await getDocs(collection(db, "club_players"));
+  snap.forEach(d => {
+    const player = Player.fromFirestore(d);
+    players[player.id] = player;
+  });
+
+  render();
 }
 
 
 function render() {
-  table.innerHTML = Object.entries(players)
-    .sort(([, a], [, b]) => {
-      const lastA = (a.lastName || "").toLowerCase();
-      const lastB = (b.lastName || "").toLowerCase();
-      return lastA.localeCompare(lastB);
-    })
-    .map(([id, p]) => `
-      <tr data-id="${id}" class="player-row" style="cursor:pointer">
-        <td>
-          <div class="fw-semibold">
-            ${p.firstName || "—"} ${p.lastName || ""}
-          </div>
-        </td>
+  table.innerHTML = Object.values(players)
+    .sort((a, b) => a.lastName.localeCompare(b.lastName))
+    .map(
+      p => `
+      <tr data-id="${p.id}" class="player-row" style="cursor:pointer">
+        <td class="fw-semibold">${p.fullName}</td>
         <td>${p.number ?? "—"}</td>
         <td>${p.gender ?? "—"}</td>
         <td>${p.birthday ?? "—"}</td>
@@ -68,7 +62,8 @@ function render() {
           </span>
         </td>
       </tr>
-    `)
+    `
+    )
     .join("");
 }
 
@@ -109,11 +104,17 @@ form.onsubmit = async e => {
     active: fields.active.checked
   };
 
-  if (fields.id.value) {
-    await updateDoc(doc(db, "club_players", fields.id.value), data);
-  } else {
-    await setDoc(doc(collection(db, "club_players")), data);
-  }
+    if (fields.id.value) {
+        await updateDoc(
+            doc(db, "club_players", fields.id.value),
+            new Player(null, data).toFirestore()
+        );
+        } else {
+        await setDoc(
+            doc(collection(db, "club_players")),
+            new Player(null, data).toFirestore()
+        );
+    }
 
   modal.hide();
   loadPlayers();
