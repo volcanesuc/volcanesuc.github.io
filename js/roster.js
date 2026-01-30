@@ -204,7 +204,6 @@ function updateRosterStats() {
     }
   });
 
-  document.getElementById("statTotal").textContent = total;
   document.getElementById("statActive").textContent = `${active} activos`;
   document.getElementById("statInactive").textContent = `${inactive} inactivos`;
 
