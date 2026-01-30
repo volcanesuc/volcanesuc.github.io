@@ -184,23 +184,23 @@ function updateRosterStats() {
   const men = list.filter(p => p.gender === "M").length;
   const women = list.filter(p => p.gender === "F").length;
 
-  let h33 = 0;
-  let m30 = 0;
-  let hU24 = 0;
-  let mU24 = 0;
+  let masterH = 0;
+  let masterM = 0;
+  let u24H = 0;
+  let u24M = 0;
 
   list.forEach(p => {
     const age = calculateAge(p.birthday);
-    if (age === null) return;
+    if (age === null || !p.gender) return;
 
-    if (p.gender === "M") {
-      if (age >= 33) h33++;
-      if (age < 24) hU24++;
-    }
+    // MASTER
+    if (p.gender === "M" && age >= 33) masterH++;
+    if (p.gender === "F" && age >= 30) masterM++;
 
-    if (p.gender === "F") {
-      if (age >= 30) m30++;
-      if (age < 24) mU24++;
+    // U24
+    if (age < 24) {
+      if (p.gender === "M") u24H++;
+      if (p.gender === "F") u24M++;
     }
   });
 
@@ -211,11 +211,11 @@ function updateRosterStats() {
   document.getElementById("statMen").textContent = men;
   document.getElementById("statWomen").textContent = women;
 
-  document.getElementById("statH33").textContent = h33;
-  document.getElementById("statM30").textContent = m30;
+  document.getElementById("statMasterH").textContent = masterH;
+  document.getElementById("statMasterM").textContent = masterM;
 
-  document.getElementById("statHU24").textContent = hU24;
-  document.getElementById("statMU24").textContent = mU24;
+  document.getElementById("statU24H").textContent = u24H;
+  document.getElementById("statU24M").textContent = u24M;
 }
 
 
