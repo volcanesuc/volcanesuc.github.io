@@ -23,9 +23,11 @@ const playersTable = document.getElementById("playersTable");
 const monthFilter = document.getElementById("monthFilter");
 const clearFilterBtn = document.getElementById("clearFilter");
 
+//Variables globales
 let allTrainings = {};
 let allPlayers = {};
 let allAttendance = [];
+let attendanceChart;
 
 
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
@@ -82,8 +84,12 @@ function applyFilter() {
     }
   });
 
+  //inicializar componentes
   renderTrainings(trainings);
   renderPlayers(Object.values(allPlayers), trainings.length);
+  updateKPIs(trainings);
+  renderTopPlayers();
+  renderChart(currentMonth);
 }
 
 function renderTrainings(list) {
@@ -103,10 +109,100 @@ function renderPlayers(list, total) {
     .join("");
 }
 
+function updateKPIs(trainings) {
+  const totalTrainings = trainings.length;
+
+  const totalAttendance = trainings.reduce(
+    (sum, t) => sum + t.count,
+    0
+  );
+
+  const avg = totalTrainings
+    ? (totalAttendance / totalTrainings).toFixed(1)
+    : 0;
+
+  document.getElementById("kpiTrainings").textContent = totalTrainings;
+  document.getElementById("kpiAttendance").textContent = totalAttendance;
+  document.getElementById("kpiAverage").textContent = avg;
+}
+
+function renderTopPlayers() {
+  const top = Object.values(allPlayers)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+
+  const medals = ["🥇", "🥈", "🥉"];
+
+  document.getElementById("topPlayers").innerHTML = top
+    .map((p, i) => `
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>${medals[i]} ${p.name}</span>
+        <span class="fw-bold">${p.count}</span>
+      </li>
+    `)
+    .join("");
+}
+
+//Grafico de asistencia
+function getMonthlyChartData(month) {
+  const map = {};
+
+  allAttendance.forEach(a => {
+    if (!a.trainingId.startsWith(month)) return;
+    map[a.trainingId] = (map[a.trainingId] || 0) + 1;
+  });
+
+  const labels = Object.keys(map).sort();
+  const data = labels.map(d => map[d]);
+
+  return { labels, data };
+}
+
+function renderChart(month) {
+  const ctx = document.getElementById("attendanceChart");
+
+  const { labels, data } = getMonthlyChartData(month);
+
+  if (attendanceChart) attendanceChart.destroy();
+
+  attendanceChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Asistencias",
+        data
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+
+//Filtro para el grafico
+const chartMonthFilter = document.getElementById("chartMonthFilter");
+
+chartMonthFilter.onchange = () => {
+  if (chartMonthFilter.value) {
+    renderChart(chartMonthFilter.value);
+  }
+};
+
+//Filtro para la tabla
 monthFilter.onchange = applyFilter;
 clearFilterBtn.onclick = () => {
   monthFilter.value = "";
   applyFilter();
 };
 
+
+//Setear la version
 document.getElementById("appVersion").textContent = `v${APP_CONFIG.version}`;

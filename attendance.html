@@ -20,33 +20,59 @@
 
             <!-- KPIs -->
             <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <div class="card kpi-card">
-                <div class="card-body">
-                    <small class="text-muted">Entrenamientos</small>
-                    <h2 id="kpiTrainings">–</h2>
+                <div class="col-md-4">
+                    <div class="card kpi-card">
+                    <div class="card-body">
+                        <small class="text-muted">Entrenamientos</small>
+                        <h2 id="kpiTrainings">–</h2>
+                    </div>
+                    </div>
                 </div>
+
+                <div class="col-md-4">
+                    <div class="card kpi-card">
+                    <div class="card-body">
+                        <small class="text-muted">Asistencias Totales</small>
+                        <h2 id="kpiAttendance">–</h2>
+                    </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card kpi-card">
+                    <div class="card-body">
+                        <small class="text-muted">Promedio por entrenamiento</small>
+                        <h2 id="kpiAverage">–</h2>
+                    </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="card kpi-card">
-                <div class="card-body">
-                    <small class="text-muted">Asistencias Totales</small>
-                    <h2 id="kpiAttendance">–</h2>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                    <div class="card-header bg-white border-0">
+                        <h5 class="mb-0">Top 3 jugadores</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush" id="topPlayers"></ul>
+                    </div>
+                    </div>
                 </div>
-                </div>
-            </div>
 
-            <div class="col-md-4">
-                <div class="card kpi-card">
-                <div class="card-body">
-                    <small class="text-muted">Promedio por entrenamiento</small>
-                    <h2 id="kpiAverage">–</h2>
-                </div>
+                <!-- Gráfico -->
+                <div class="col-md-6">
+                    <div class="card">
+                    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Asistencia mensual</h5>
+                        <input type="month" id="chartMonthFilter" class="form-control form-control-sm" style="max-width:160px">
+                    </div>
+                    <div class="card-body">
+                        <canvas id="attendanceChart" height="120"></canvas>
+                    </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
             <!-- ENTRENAMIENTOS + FILTRO INTEGRADO -->
         <div class="card mb-4">
@@ -118,6 +144,7 @@
         <!-- SCRIPTS -->
         <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script type="module" src="./js/attendance.js"></script>
         <script src="js/layout.js" defer></script>
     </body>
