@@ -176,7 +176,6 @@ function calculateAlerts({ players, trainings }) {
   const now = new Date();
   const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
 
-  // Mapa último entrenamiento por jugador
   const lastAttendance = {};
 
   trainings.forEach(t => {
@@ -189,7 +188,7 @@ function calculateAlerts({ players, trainings }) {
     });
   });
 
-  // Jugadores activos sin entrenar 30 días
+  // 🔴 Activos sin entrenar 30 días
   const inactive30 = players.filter(p => {
     if (!p.active) return false;
     const last = lastAttendance[p.id];
@@ -197,17 +196,25 @@ function calculateAlerts({ players, trainings }) {
   });
 
   if (inactive30.length) {
-    alerts.push(`❌ ${inactive30.length} jugadores activos sin entrenar en 30 días`);
+    alerts.push({
+      type: "danger",
+      message: `❌ ${inactive30.length} jugadores activos sin entrenar en 30 días`
+    });
   }
 
-  // Entrenos con pocos handlers
+  // 🟡 Entrenos con pocos handlers
   trainings.forEach(t => {
     if (!t.active) return;
+
     const handlers = (t.attendees || []).filter(
       id => players.find(p => p.id === id && p.role === "handler")
     );
+
     if (handlers.length > 0 && handlers.length < 3) {
-      alerts.push(`⚠️ ${t.date}: solo ${handlers.length} handlers`);
+      alerts.push({
+        type: "warning",
+        message: `⚠️ ${t.date}: solo ${handlers.length} handlers`
+      });
     }
   });
 
@@ -218,10 +225,25 @@ function renderAlerts(alerts) {
   const el = document.getElementById("alertsList");
   if (!el) return;
 
-  el.innerHTML = alerts.length
-    ? alerts.map(a => `<li class="list-group-item">${a}</li>`).join("")
-    : `<li class="list-group-item text-muted">Todo en orden 👍</li>`;
+  if (!alerts.length) {
+    el.innerHTML = `
+      <li class="list-group-item text-muted">
+        Todo en orden 👍
+      </li>`;
+    return;
+  }
+
+  el.innerHTML = alerts
+    .map(
+      a => `
+        <li class="list-group-item list-group-item-${a.type}">
+          ${a.message}
+        </li>
+      `
+    )
+    .join("");
 }
+
 
 /* =========================================================
    HELPERS

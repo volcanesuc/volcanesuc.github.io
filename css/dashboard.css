@@ -1,6 +1,159 @@
-/* =========================
-   DASHBOARD – BIRTHDAYS
-========================= */
+/* ======================================================
+   VARIABLES DE CLUB (si no existen ya en main.css)
+====================================================== */
+
+:root {
+  --club-green: #19473f;
+  --club-yellow: #e8ce26;
+}
+
+/* ======================================================
+   HOME – DASHBOARD PRINCIPAL
+   (solo aplica cuando body / main tiene .dashboard-page)
+====================================================== */
+
+.dashboard-page {
+  padding-bottom: 2rem;
+}
+
+/* ===== KPIs SUPERIORES (HOME) ===== */
+.dashboard-page .kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-page .kpi-box {
+  background: var(--club-green);
+  border-radius: 14px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+}
+
+.dashboard-page .kpi-value {
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.dashboard-page .kpi-label {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--club-yellow);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ===== BLOQUE CENTRAL HOME ===== */
+.dashboard-page .home-main {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+/* ===== ALERTAS ===== */
+.dashboard-page .alerts-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.2rem 1.4rem;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.dashboard-page .alerts-card h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+  color: var(--club-green);
+}
+
+.dashboard-page .alerts-card .list-group-item {
+  border: none;
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 0.95rem;
+}
+
+/* ===== PRÓXIMO TORNEO ===== */
+.dashboard-page .next-tournament-card {
+  background: var(--club-green);
+  border-radius: 16px;
+  padding: 1.4rem;
+  color: white;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+}
+
+.dashboard-page .next-tournament-card h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.6rem;
+  color: var(--club-yellow);
+}
+
+.dashboard-page .t-date {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.dashboard-page .t-name {
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+/* ===== CUMPLEAÑOS ===== */
+.dashboard-page .birthdays-card {
+  background: var(--club-green);
+  border-radius: 16px;
+  padding: 1.4rem;
+  color: white;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+}
+
+.dashboard-page .birthdays-card h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.6rem;
+  color: var(--club-yellow);
+}
+
+.dashboard-page #birthdaysList {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* ======================================================
+   ASISTENCIA – KPIs
+   (solo aplica cuando main tiene .attendance-page)
+====================================================== */
+
+.attendance-page .kpi-card {
+  background: #ffffff;
+  border-left: 6px solid var(--club-green);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.attendance-page .kpi-label {
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.attendance-page .kpi-value {
+  margin-top: 6px;
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #111;
+}
+
+/* ======================================================
+   CUMPLEAÑOS – ITEMS (HOME)
+====================================================== */
 
 .birthday-item {
   padding: 6px 8px;
@@ -15,93 +168,16 @@
   font-weight: 700;
 }
 
-/* =========================
-   DASHBOARD – LAYOUT
-========================= */
+/* ======================================================
+   RESPONSIVE
+====================================================== */
 
-.dashboard-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-  margin: 1.5rem 0;
-}
+@media (max-width: 992px) {
+  .dashboard-page .kpi-row {
+    grid-template-columns: 1fr;
+  }
 
-/* =========================
-   KPI CARD (AISLADO)
-========================= */
-
-.dashboard-page .kpi-card {
-  background: var(--club-green);
-  color: white;
-  border-radius: 16px;
-  padding: 20px 24px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.15);
-  max-width: 520px;
-  margin: 0 auto;
-}
-
-.dashboard-page .kpi-title {
-  text-align: center;
-  font-size: 1.2rem;
-  margin-bottom: 16px;
-  color: var(--club-yellow);
-  letter-spacing: .5px;
-}
-
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-.kpi-item {
-  text-align: center;
-}
-
-.dashboard-page .kpi-value {
-  display: block;
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.dashboard-page .kpi-label {
-  font-size: .85rem;
-  opacity: .85;
-  margin-top: 4px;
-  display: block;
-}
-
-.attendance-page .kpi-card {
-  background: white;
-  border-left: 6px solid var(--club-green);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-  border-radius: 12px;
-}
-
-/* Label arriba */
-.attendance-page .kpi-label {
-  font-size: 0.8rem;
-  color: #666;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-/* Número grande en negro */
-.attendance-page .kpi-value {
-  margin-top: 6px;
-  font-size: 2.4rem;
-  font-weight: 800;
-  color: #111;
-}
-
-/* =========================
-   DASHBOARD – MOBILE
-========================= */
-
-@media (max-width: 600px) {
-  .kpi-grid {
+  .dashboard-page .home-main {
     grid-template-columns: 1fr;
   }
 }

@@ -1,78 +1,85 @@
 <!DOCTYPE html>
 <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <title>Dashboard Volcanes</title>
-        <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-            rel="stylesheet"
-        />
-        <link rel="stylesheet" href="./css/dashboard.css" />
-        <link rel="stylesheet" href="./css/main.css" />
-    </head>
-    <body class="loading">
-        <div id="app-header"></div>
-        <main id="content" class="dashboard-page">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard – Volcanes Ultimate</title>
 
-            <div class="container py-4"></div>
+  <!-- Bootstrap -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
 
-                <section class="dashboard-cards">
-                    <!-- CUMPLEANOS-->
-                    <div class="kpi-card">
-                        <h3 class="kpi-title">Cumpleañeros del mes</h3>
-                        <div id="birthdaysList"></div>
-                    </div>
-                    <!-- STATS DE JUGADORES Y ENTRENAMIENTOS-->
-                    <div class="kpi-card">
-                        <h3 class="kpi-title">Resumen del Mes</h3>
-                        <div class="kpi-grid">
-                            <div class="kpi-item">
-                                <span class="kpi-value" id="kpiActivePlayers">—</span>
-                                <span class="kpi-label">Jugadores activos</span>
-                            </div>
+  <!-- Estilos -->
+  <link rel="stylesheet" href="./css/main.css" />
+  <link rel="stylesheet" href="./css/dashboard.css" />
+</head>
 
-                            <div class="kpi-item">
-                                <span class="kpi-value" id="kpiAvgAttendance">—</span>
-                                <span class="kpi-label">Asistencia promedio</span>
-                            </div>
+<body class="loading">
 
-                             <div class="kpi-item">
-                                <span class="kpi-value" id="kpiActivePct">—%</span>
-                                <span class="kpi-label">Activos participantes</span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- PROXIMOS TORNEOS -->
-                    <div class="kpi-card">
-                        <h3 class="kpi-title">Próximo torneo</h3>
-                        <p>Feb 7–8<br><small>Torneo Pura Vida</small></p>
-                    </div>
-                </section>
+  <!-- HEADER -->
+  <div id="app-header"></div>
 
-                <section class="dashboard-alerts mt-4">
-                    <div class="kpi-card">
-                        <h3 class="kpi-title">🚨 Alertas del club</h3>
-                        <ul class="list-group list-group-flush" id="alertsList"></ul>
-                    </div>
-                </section>
-                            
-                <span id="appVersion"></span>
+  <!-- CONTENIDO -->
+  <main class="container py-4">
 
-                <script type="module" src="./js/dashboard.js"></script>
-                <script
-                    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
-                </script>
-            </div>
-        </main>
-    </body>
-    <div id="loadingOverlay" class="loading-overlay">
-    <div class="spinner-border" role="status">
-        <span class="visually-hidden">Cargando...</span>
-    </div>
-    </div>
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script type="module" src="./js/dashboard.js"></script>
-    <script src="js/layout.js" defer></script>
+    <!-- ================= KPIs PRINCIPALES ================= -->
+    <section class="kpi-row mb-4">
+      <div class="kpi-box">
+        <span class="kpi-value" id="kpiActivePlayers">—</span>
+        <span class="kpi-label">Jugadores activos</span>
+      </div>
 
+      <div class="kpi-box">
+        <span class="kpi-value" id="kpiAvgAttendance">—</span>
+        <span class="kpi-label">Asistencia promedio</span>
+      </div>
+
+      <div class="kpi-box">
+        <span class="kpi-value" id="kpiActiveParticipants">—</span>
+        <span class="kpi-label">Activos participantes</span>
+      </div>
+    </section>
+
+    <!-- ================= BLOQUE CENTRAL ================= -->
+    <section class="home-main mb-4">
+
+      <!-- ALERTAS -->
+      <div class="alerts-card">
+        <h3>🚨 Alertas del club</h3>
+        <ul id="alertsList" class="list-group list-group-flush">
+          <li class="list-group-item text-muted">Cargando alertas…</li>
+        </ul>
+      </div>
+
+      <!-- PRÓXIMO TORNEO -->
+      <div class="next-tournament-card">
+        <h3>🏆 Próximo torneo</h3>
+        <p class="t-date">Feb 7–8</p>
+        <p class="t-name">Torneo Pura Vida</p>
+      </div>
+
+    </section>
+
+    <!-- ================= CUMPLEAÑOS ================= -->
+    <section class="birthdays-card mb-5">
+      <h3>🎂 Cumpleañeros del mes</h3>
+      <div id="birthdaysList" class="mt-2">
+        Cargando…
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="text-center text-muted pb-3">
+    <small id="appVersion">v—</small>
+  </footer>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="./js/dashboard.js"></script>
+  <script src="./js/layout.js" defer></script>
+
+</body>
 </html>
