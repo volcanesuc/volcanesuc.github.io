@@ -168,6 +168,69 @@
   font-weight: 700;
 }
 
+/* =====================
+   DASHBOARD – HOME
+   ===================== */
+
+.kpi-box {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+.kpi-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #19473f;
+  line-height: 1;
+}
+
+.kpi-label {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-top: 6px;
+}
+
+/* Cards generales */
+.alerts-card,
+.next-tournament-card,
+.birthdays-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+/* Alertas */
+.alerts-card h3,
+.birthdays-card h3,
+.next-tournament-card h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+/* Torneo */
+.next-tournament-card .t-date {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e8ce26;
+}
+
+.next-tournament-card .t-name {
+  color: #19473f;
+  font-weight: 600;
+}
+
+/* Birthdays list */
+#birthdaysList div,
+#birthdaysList li {
+  padding: 4px 0;
+}
+
+
 /* ======================================================
    RESPONSIVE
 ====================================================== */
@@ -181,3 +244,6 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+
