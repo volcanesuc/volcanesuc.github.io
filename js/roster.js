@@ -88,8 +88,8 @@ function applySort() {
 
     switch (currentSort.key) {
       case "name":
-        valA = `${a.lastName} ${a.firstName}`.toLowerCase();
-        valB = `${b.lastName} ${b.firstName}`.toLowerCase();
+        valA = `${a.firstName} ${a.lastName}`.toLowerCase();
+        valB = `${b.firstName} ${b.lastName}`.toLowerCase();
         break;
 
       case "number":
