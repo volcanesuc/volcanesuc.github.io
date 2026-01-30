@@ -4,7 +4,6 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/f
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
-import { Player } from "./models/player.js";
 
 
 
@@ -30,10 +29,14 @@ async function loadDashboard() {
 
   try {
     const snap = await getDocs(collection(db, "club_players"));
-     snap.forEach(d => {
-        const player = Player.fromFirestore(d);
-        players[player.id] = player;
-      });
+    const players = {};
+
+    snap.forEach(d => {
+      players[d.id] = {
+        name: d.data().name,
+        birthday: d.data().birthday
+      };
+    });
 
     renderBirthdays(players);
   } finally {
@@ -57,7 +60,7 @@ function renderBirthdays(players) {
 
   birthdaysList.innerHTML = list.length
     ? list.map(p =>
-        `🎂 <strong>${p.fullName}</strong> — ${p.day}${p.day === today.getDate() ? " (HOY 🎉)" : ""}`
+        `🎂 <strong>${p.fullName()}</strong> — ${p.day}${p.day === today.getDate() ? " (HOY 🎉)" : ""}`
       ).join("<br>")
     : "No hay cumpleañeros este mes 🎈";
 }
