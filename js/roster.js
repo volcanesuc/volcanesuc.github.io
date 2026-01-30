@@ -1,10 +1,20 @@
 import { db } from "./firebase.js";
-import { collection, getDocs, doc, setDoc, updateDoc } from
-  "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { watchAuth, logout } from "./auth.js";
+import {
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  updateDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import { loadHeader } from "./components/header.js";
+import { showLoader, hideLoader } from "./ui/loader.js";
 
 loadHeader("roster");
+
+document.getElementById("logoutBtn")?.addEventListener("click", logout);
+
 
 const table = document.getElementById("playersTable");
 const modal = new bootstrap.Modal("#playerModal");
@@ -23,13 +33,19 @@ const fields = {
 
 let players = {};
 
+let players = {};
+
 async function loadPlayers() {
-  const snap = await getDocs(collection(db, "club_players"));
   players = {};
 
-  snap.forEach(d => players[d.id] = d.data());
+  const snap = await getDocs(collection(db, "club_players"));
+  snap.forEach(d => {
+    players[d.id] = d.data();
+  });
+
   render();
 }
+
 
 function render() {
   table.innerHTML = Object.entries(players)
@@ -105,4 +121,11 @@ form.onsubmit = async e => {
   loadPlayers();
 };
 
-loadPlayers();
+watchAuth(async () => {
+  showLoader();
+  try {
+    await loadPlayers();
+  } finally {
+    hideLoader();
+  }
+});
