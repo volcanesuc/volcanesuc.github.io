@@ -39,7 +39,11 @@ async function loadAttendance() {
 
   const playersSnap = await getDocs(collection(db, "club_players"));
   playersSnap.forEach(d => {
-    allPlayers[d.id] = { name: d.data().name, count: 0 };
+    const p = d.data();
+    allPlayers[d.id] = {
+      name: `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim() || "—",
+      count: 0
+    };
   });
 
   const trainingsSnap = await getDocs(collection(db, "club_trainings"));
