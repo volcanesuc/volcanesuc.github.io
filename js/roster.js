@@ -33,17 +33,15 @@ const fields = {
 
 let players = {};
 
-let players = {};
-
 async function loadPlayers() {
   players = {};
-
-  const snap = await getDocs(collection(db, "club_players"));
-  snap.forEach(d => {
-    players[d.id] = d.data();
-  });
-
-  render();
+  try {
+    const snap = await getDocs(collection(db, "club_players"));
+    snap.forEach(d => players[d.id] = d.data());
+    render();
+  } catch (err) {
+    console.error("Error cargando jugadores", err);
+  }
 }
 
 

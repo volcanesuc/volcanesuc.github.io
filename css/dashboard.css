@@ -11,11 +11,6 @@
   font-weight: 700;
 }
 
-body.loading {
-  display: none;
-}
-
-
 /* HEADER */
 .landing-header {
   position: sticky;
