@@ -61,8 +61,16 @@ const currentMonth = new Date().getMonth();
 
 function parseBirthday(str) {
   if (!str) return null;
-  const d = new Date(str);
-  return isNaN(d) ? null : { month: d.getMonth(), day: d.getDate() };
+
+  // Espera formato YYYY-MM-DD
+  const [year, month, day] = str.split("-").map(Number);
+
+  if (!year || !month || !day) return null;
+
+  return {
+    month: month - 1, // JS usa 0–11
+    day
+  };
 }
 
 function renderBirthdays(players) {
