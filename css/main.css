@@ -1,34 +1,70 @@
+/* =========================================================
+   VARIABLES GLOBALES
+========================================================= */
+
 :root {
   --club-green: #19473f;
-  --club-yellow: #e8ce26;
   --club-green-dark: #12352f;
   --club-green-light: #2c6b61;
+  --club-yellow: #e8ce26;
   --club-gray: #f4f4f4;
 }
 
-.text-success {
-  color: var(--club-green-light) !important; /* verde volcanes */
+
+/* =========================================================
+   RESET BÁSICO
+========================================================= */
+
+* {
+  box-sizing: border-box;
 }
 
-.text-warning {
-  color:var(--club-yellow) !important; /* verde volcanes */
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #222;
+  background: white;
 }
+
+
+/* =========================================================
+   TIPOGRAFÍA
+========================================================= */
 
 @font-face {
-  font-family: 'Recons';
-  src: url('./fonts/Recons-Regular.ttf') format('truetype');
+  font-family: "Recons";
+  src: url("./fonts/Recons-Regular.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
 }
+
 h1 {
-  font-family: 'Recons' !important;
-  color: var(--club-green) !important; /* verde volcanes */
+  font-family: "Recons";
+  color: var(--club-green);
 }
+
+
+/* =========================================================
+   UTILIDADES DE TEXTO
+========================================================= */
+
+.text-success {
+  color: var(--club-green-light) !important;
+}
+
+.text-warning {
+  color: var(--club-yellow) !important;
+}
+
+
+/* =========================================================
+   LOADER GLOBAL
+========================================================= */
 
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(25, 71, 63, 0.85); /* verde volcanes */
+  background: rgba(25, 71, 63, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,30 +76,47 @@ body:not(.loading) .loading-overlay {
 }
 
 .spinner-border {
-  color: #e8ce26; /* amarillo volcanes */
+  color: var(--club-yellow);
   width: 3rem;
   height: 3rem;
 }
 
+
+/* =========================================================
+   COMPONENTES BASE
+========================================================= */
+
+/* Cards base (para tablas, contenedores, etc.) */
 .card {
   border: none;
   border-radius: 12px;
   box-shadow: 0 6px 20px rgba(25, 71, 63, 0.12);
 }
 
+/* Títulos dentro de cards */
 .card h3 {
   color: var(--club-green);
   font-weight: 700;
 }
 
+
+/* =========================================================
+   TABLAS
+========================================================= */
+
 .table thead {
-  background-color: var(--club-green) !important; /* verde volcanes */
-  color: #ffffff !important;
+  background-color: var(--club-green);
+  color: #ffffff;
 }
 
 .table tbody tr:hover {
   background-color: rgba(232, 206, 38, 0.12);
 }
+
+
+/* =========================================================
+   BOTONES
+========================================================= */
 
 .btn-primary {
   background-color: var(--club-green);
@@ -86,15 +139,13 @@ body:not(.loading) .loading-overlay {
   color: var(--club-green);
 }
 
-.app-version {
-  font-size: 0.75rem;
-  color: var(--club-green);
-  opacity: 0.7;
-}
 
-/* ===== HEADER / NAV ===== */
+/* =========================================================
+   HEADER / NAV PRINCIPAL (APP)
+========================================================= */
+
 .topbar {
-  background: #19473f;
+  background: var(--club-green);
   color: white;
   display: flex;
   align-items: center;
@@ -107,15 +158,25 @@ body:not(.loading) .loading-overlay {
   letter-spacing: 1px;
 }
 
-.hamburger {
-  font-size: 1.4rem;
-  background: none;
+.logout-btn {
+  background: var(--club-yellow);
+  color: var(--club-green);
   border: none;
-  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 700;
   cursor: pointer;
 }
 
-/* Tabs desktop */
+.logout-btn:hover {
+  background: #f1db4f;
+}
+
+
+/* =========================================================
+   NAV TABS (DESKTOP)
+========================================================= */
+
 .nav-tabs {
   display: flex;
   gap: 1rem;
@@ -123,7 +184,7 @@ body:not(.loading) .loading-overlay {
 
 .nav-tabs a {
   color: white;
-  font-family: "Recons" !important;
+  font-family: "Recons";
   text-transform: uppercase;
   text-decoration: none;
   font-weight: 500;
@@ -132,7 +193,7 @@ body:not(.loading) .loading-overlay {
 }
 
 .nav-tabs a:hover {
-  border-bottom-color: rgba(255,255,255,0.5);
+  border-bottom-color: rgba(255, 255, 255, 0.5);
 }
 
 .nav-tabs a.active {
@@ -142,11 +203,23 @@ body:not(.loading) .loading-overlay {
   text-shadow: 0 0 6px rgba(232, 206, 38, 0.6);
 }
 
-/* Mobile menu */
+
+/* =========================================================
+   MENÚ MOBILE
+========================================================= */
+
+.hamburger {
+  font-size: 1.4rem;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
 .mobile-menu {
   display: none;
   flex-direction: column;
-  background: #19473f;
+  background: var(--club-green);
 }
 
 .mobile-menu a {
@@ -155,7 +228,11 @@ body:not(.loading) .loading-overlay {
   text-decoration: none;
 }
 
-/* Responsive */
+
+/* =========================================================
+   RESPONSIVE NAV
+========================================================= */
+
 @media (max-width: 768px) {
   .nav-tabs {
     display: none;
@@ -170,7 +247,6 @@ body:not(.loading) .loading-overlay {
   }
 }
 
-/* Desktop */
 @media (min-width: 769px) {
   .hamburger,
   .mobile-menu {
@@ -178,20 +254,10 @@ body:not(.loading) .loading-overlay {
   }
 }
 
-.logout-btn {
-  background: #e8ce26;
-  color: #19473f;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-}
 
-.logout-btn:hover {
-  background: #f1db4f;
-}
+/* =========================================================
+   SORTABLE TABLE HEADERS
+========================================================= */
 
 th.sortable {
   cursor: pointer;
@@ -210,4 +276,15 @@ th.sortable.sorted-asc::after {
 
 th.sortable.sorted-desc::after {
   content: " ↓";
+}
+
+
+/* =========================================================
+   FOOTER / META
+========================================================= */
+
+.app-version {
+  font-size: 0.75rem;
+  color: var(--club-green);
+  opacity: 0.7;
 }

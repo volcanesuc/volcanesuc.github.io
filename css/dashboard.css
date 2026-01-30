@@ -1,3 +1,7 @@
+/* =========================
+   DASHBOARD – BIRTHDAYS
+========================= */
+
 .birthday-item {
   padding: 6px 8px;
   border-radius: 6px;
@@ -11,62 +15,9 @@
   font-weight: 700;
 }
 
-/* HEADER */
-.landing-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: var(--club-green);
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 20px;
-}
-
-.landing-header h1 {
-  font-family: 'Recons', sans-serif;
-  font-size: 18px;
-  margin: 0;
-  color: white;
-}
-
-.landing-login-btn {
-  background-color: var(--club-yellow);
-  color: var(--club-green);
-  border: none;
-  padding: 10px 16px;
-  font-weight: 700;
-  cursor: pointer;
-  border-radius: 6px;
-}
-
-.nav-tabs {
-  background: #19473f;
-  padding: 0.5rem 1rem;
-  display: flex;
-  gap: 1rem;
-}
-
-.nav-tabs a {
-  color: white;
-  text-decoration: none;
-  padding: 0.4rem 0.7rem;
-  border-radius: 6px;
-  font-weight: 500;
-  opacity: 0.85;
-}
-
-.nav-tabs a:hover {
-  background: rgba(255,255,255,0.15);
-  opacity: 1;
-}
-
-.nav-tabs a.active {
-  background: #e8ce26;
-  color: #19473f;
-  font-weight: 700;
-}
+/* =========================
+   DASHBOARD – LAYOUT
+========================= */
 
 .dashboard-cards {
   display: grid;
@@ -75,29 +26,12 @@
   margin: 1.5rem 0;
 }
 
-.card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.2rem;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-  border-top: 5px solid #19473f;
-}
-
-.card.highlight {
-  border-top-color: #e8ce26;
-}
-
-.card .icon {
-  font-size: 1.6rem;
-}
-
-.card h3 {
-  margin: 0.4rem 0;
-  color: #19473f;
-}
+/* =========================
+   KPI CARD (AISLADO)
+========================= */
 
 .kpi-card {
-  background: #19473f;
+  background: var(--club-green);
   color: white;
   border-radius: 16px;
   padding: 20px 24px;
@@ -110,7 +44,7 @@
   text-align: center;
   font-size: 1.2rem;
   margin-bottom: 16px;
-  color: #e8ce26;
+  color: var(--club-yellow);
   letter-spacing: .5px;
 }
 
@@ -138,7 +72,10 @@
   display: block;
 }
 
-/* Mobile */
+/* =========================
+   DASHBOARD – MOBILE
+========================= */
+
 @media (max-width: 600px) {
   .kpi-grid {
     grid-template-columns: 1fr;
