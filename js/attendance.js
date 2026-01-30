@@ -1,4 +1,4 @@
-//attendace.js
+// attendance.js
 import { db } from "./firebase.js";
 import { watchAuth, logout } from "./auth.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -6,58 +6,53 @@ import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
 
-
 loadHeader("attendance");
-
-watchAuth(async () => {
-  showLoader();
-  try {
-    await loadAttendance();
-  } finally {
-    hideLoader();
-  }
-});
 
 const trainingsTable = document.getElementById("trainingsTable");
 const playersTable = document.getElementById("playersTable");
 const monthFilter = document.getElementById("monthFilter");
 const clearFilterBtn = document.getElementById("clearFilter");
 
-//Variables globales
 let allTrainings = {};
 let allPlayers = {};
 let allAttendance = [];
 let attendanceChart;
 
-
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
+watchAuth(async () => {
+  showLoader();
+  try {
+    await loadAttendance();
+    applyFilter(); // 👈 render inicial
+  } catch (e) {
+    console.error(e);
+  } finally {
+    hideLoader();
+  }
+});
+
 async function loadAttendance() {
+  allTrainings = {};
+  allPlayers = {};
+  allAttendance = [];
+
+  const playersSnap = await getDocs(collection(db, "club_players"));
+  playersSnap.forEach(d => {
+    allPlayers[d.id] = { name: d.data().name, count: 0 };
+  });
+
+  const trainingsSnap = await getDocs(collection(db, "club_trainings"));
+  trainingsSnap.forEach(d => {
+    allTrainings[d.id] = { date: d.id, count: 0 };
+  });
+
+  const attendanceSnap = await getDocs(collection(db, "club_attendance"));
+  attendanceSnap.forEach(d => allAttendance.push(d.data()));
 
   console.log("Players:", Object.keys(allPlayers).length);
   console.log("Trainings:", Object.keys(allTrainings).length);
   console.log("Attendance:", allAttendance.length);
-
-  try {
-    const playersSnap = await getDocs(collection(db, "club_players"));
-    playersSnap.forEach(d => {
-      allPlayers[d.id] = { name: d.data().name, count: 0 };
-    });
-
-    const trainingsSnap = await getDocs(collection(db, "club_trainings"));
-    trainingsSnap.forEach(d => {
-      allTrainings[d.id] = { date: d.id, count: 0 };
-    });
-
-    const attendanceSnap = await getDocs(collection(db, "club_attendance"));
-    attendanceSnap.forEach(d => allAttendance.push(d.data()));
-
-    applyFilter();
-  } catch (e) {
-    console.error("Error asistencia", e);
-  } finally {
-    hideLoader();
-  }
 }
 
 function applyFilter() {
@@ -67,30 +62,30 @@ function applyFilter() {
     selectedMonth ? t.date.startsWith(selectedMonth) : true
   );
 
-  trainings.forEach(t => t.count = 0);
-  Object.values(allPlayers).forEach(p => p.count = 0);
+  trainings.forEach(t => (t.count = 0));
+  Object.values(allPlayers).forEach(p => (p.count = 0));
 
-  const validIds = new Set(trainings.map(t => t.date));
+  const validTrainings = new Set(trainings.map(t => t.date));
 
   allAttendance.forEach(a => {
-    if (!validIds.has(a.trainingId)) return;
+    if (!validTrainings.has(a.trainingId)) return;
 
-    if (allTrainings[a.trainingId]) {
-      allTrainings[a.trainingId].count += 1;
-    }
-
+    allTrainings[a.trainingId].count++;
     if (allPlayers[a.playerId]) {
-      allPlayers[a.playerId].count += 1;
+      allPlayers[a.playerId].count++;
     }
   });
 
-  //inicializar componentes
   renderTrainings(trainings);
   renderPlayers(Object.values(allPlayers), trainings.length);
   updateKPIs(trainings);
   renderTopPlayers();
-  renderChart(currentMonth);
+  renderChart(trainings);
 }
+
+/* ==========================
+   RENDERS
+========================== */
 
 function renderTrainings(list) {
   trainingsTable.innerHTML = list
@@ -99,11 +94,13 @@ function renderTrainings(list) {
     .join("");
 }
 
-function renderPlayers(list, total) {
+function renderPlayers(list, totalTrainings) {
   playersTable.innerHTML = list
     .sort((a, b) => b.count - a.count)
     .map(p => {
-      const pct = total ? Math.round((p.count / total) * 100) : 0;
+      const pct = totalTrainings
+        ? Math.round((p.count / totalTrainings) * 100)
+        : 0;
       return `<tr><td>${p.name}</td><td>${p.count}</td><td>${pct}%</td></tr>`;
     })
     .join("");
@@ -111,12 +108,7 @@ function renderPlayers(list, total) {
 
 function updateKPIs(trainings) {
   const totalTrainings = trainings.length;
-
-  const totalAttendance = trainings.reduce(
-    (sum, t) => sum + t.count,
-    0
-  );
-
+  const totalAttendance = trainings.reduce((sum, t) => sum + t.count, 0);
   const avg = totalTrainings
     ? (totalAttendance / totalTrainings).toFixed(1)
     : 0;
@@ -134,45 +126,43 @@ function renderTopPlayers() {
   const medals = ["🥇", "🥈", "🥉"];
 
   document.getElementById("topPlayers").innerHTML = top
-    .map((p, i) => `
-      <li class="list-group-item d-flex justify-content-between align-items-center">
+    .map(
+      (p, i) => `
+      <li class="list-group-item d-flex justify-content-between">
         <span>${medals[i]} ${p.name}</span>
         <span class="fw-bold">${p.count}</span>
-      </li>
-    `)
+      </li>`
+    )
     .join("");
 }
 
-//Grafico de asistencia
-function getMonthlyChartData(month) {
-  const map = {};
+/* ==========================
+   CHART (LINE)
+========================== */
 
-  allAttendance.forEach(a => {
-    if (!a.trainingId.startsWith(month)) return;
-    map[a.trainingId] = (map[a.trainingId] || 0) + 1;
-  });
+function renderChart(trainings) {
+  const labels = trainings
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(t => t.date);
 
-  const labels = Object.keys(map).sort();
-  const data = labels.map(d => map[d]);
+  const data = trainings.map(t => t.count);
 
-  return { labels, data };
-}
-
-function renderChart(month) {
   const ctx = document.getElementById("attendanceChart");
-
-  const { labels, data } = getMonthlyChartData(month);
 
   if (attendanceChart) attendanceChart.destroy();
 
   attendanceChart = new Chart(ctx, {
-    type: "bar",
+    type: "line",
     data: {
       labels,
-      datasets: [{
-        label: "Asistencias",
-        data
-      }]
+      datasets: [
+        {
+          label: "Asistencia",
+          data,
+          tension: 0.3,
+          fill: false
+        }
+      ]
     },
     options: {
       responsive: true,
@@ -186,23 +176,15 @@ function renderChart(month) {
   });
 }
 
+/* ==========================
+   FILTROS
+========================== */
 
-//Filtro para el grafico
-const chartMonthFilter = document.getElementById("chartMonthFilter");
-
-chartMonthFilter.onchange = () => {
-  if (chartMonthFilter.value) {
-    renderChart(chartMonthFilter.value);
-  }
-};
-
-//Filtro para la tabla
 monthFilter.onchange = applyFilter;
+
 clearFilterBtn.onclick = () => {
   monthFilter.value = "";
   applyFilter();
 };
 
-
-//Setear la version
 document.getElementById("appVersion").textContent = `v${APP_CONFIG.version}`;
