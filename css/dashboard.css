@@ -30,7 +30,7 @@
    KPI CARD (AISLADO)
 ========================= */
 
-.kpi-card {
+.dashboard-page .kpi-card {
   background: var(--club-green);
   color: white;
   border-radius: 16px;
@@ -40,7 +40,7 @@
   margin: 0 auto;
 }
 
-.kpi-title {
+.dashboard-page .kpi-title {
   text-align: center;
   font-size: 1.2rem;
   margin-bottom: 16px;
@@ -58,18 +58,42 @@
   text-align: center;
 }
 
-.kpi-value {
+.dashboard-page .kpi-value {
   display: block;
   font-size: 2rem;
   font-weight: 700;
   line-height: 1;
 }
 
-.kpi-label {
+.dashboard-page .kpi-label {
   font-size: .85rem;
   opacity: .85;
   margin-top: 4px;
   display: block;
+}
+
+.attendance-page .kpi-card {
+  background: white;
+  border-left: 6px solid var(--club-green);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  border-radius: 12px;
+}
+
+/* Label arriba */
+.attendance-page .kpi-label {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Número grande en negro */
+.attendance-page .kpi-value {
+  margin-top: 6px;
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #111;
 }
 
 /* =========================
