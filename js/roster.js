@@ -54,20 +54,12 @@ function render() {
       p => `
       <tr data-id="${p.id}" class="player-row" style="cursor:pointer">
         <td class="fw-semibold">${p.fullName}</td>
-        <td>${p.birthday ?? "—"}</td>
+        <td><span class="badge bg-info text-dark">${p.roleLabel}</span>
+        </td>
         <td>${p.gender ?? "—"}</td>
-    
-         <td>${p.number ?? "—"}</td>
-        <td>
-            <span class="badge bg-info text-dark">
-                ${p.roleLabel}
-            </span>
-        </td>
-        <td>
-          <span class="badge ${p.active ? "bg-success" : "bg-secondary"}">
-            ${p.active ? "Activo" : "Inactivo"}
-          </span>
-        </td>
+        <td>${p.number ?? "—"}</td>
+        <td>${p.birthday ?? "—"}</td>
+        <td><span class="badge ${p.active ? "bg-success" : "bg-secondary"}"> ${p.active ? "Activo" : "Inactivo"}</span></td>
       </tr>
     `
     )
