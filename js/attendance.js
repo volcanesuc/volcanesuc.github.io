@@ -1,3 +1,4 @@
+//attendace.js
 import { db } from "./firebase.js";
 import { watchAuth, logout } from "./auth.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -26,7 +27,6 @@ let allTrainings = {};
 let allPlayers = {};
 let allAttendance = [];
 
-watchAuth(() => loadAttendance());
 
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
@@ -72,8 +72,14 @@ function applyFilter() {
 
   allAttendance.forEach(a => {
     if (!validIds.has(a.trainingId)) return;
-    allTrainings[a.trainingId]?.count++;
-    allPlayers[a.playerId]?.count++;
+
+    if (allTrainings[a.trainingId]) {
+      allTrainings[a.trainingId].count += 1;
+    }
+
+    if (allPlayers[a.playerId]) {
+      allPlayers[a.playerId].count += 1;
+    }
   });
 
   renderTrainings(trainings);
