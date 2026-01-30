@@ -176,20 +176,21 @@ function calculateAge(birthday) {
 
 function updateRosterStats() {
   const list = Object.values(players);
+  const activeList = list.filter(p => p.active);
 
   const total = list.length;
-  const active = list.filter(p => p.active).length;
+  const active = activeList.length;
   const inactive = total - active;
 
-  const men = list.filter(p => p.gender === "M").length;
-  const women = list.filter(p => p.gender === "F").length;
+  const men = activeList.filter(p => p.gender === "M" ).length;
+  const women = activeList.filter(p => p.gender === "F").length;
 
   let masterH = 0;
   let masterM = 0;
   let u24H = 0;
   let u24M = 0;
 
-  list.forEach(p => {
+  activeList.forEach(p => {
     const age = calculateAge(p.birthday);
     if (age === null || !p.gender) return;
 
