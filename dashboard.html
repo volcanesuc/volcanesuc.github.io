@@ -23,49 +23,69 @@
   <!-- CONTENIDO -->
   <main class="container py-4">
 
-    <!-- ================= KPIs PRINCIPALES ================= -->
-    <section class="kpi-row mb-4">
-      <div class="kpi-box">
-        <span class="kpi-value" id="kpiActivePlayers">—</span>
-        <span class="kpi-label">Jugadores activos</span>
-      </div>
+    <!-- ================= KPIs ================= -->
+    <section class="mb-4">
+      <div class="row g-3">
 
-      <div class="kpi-box">
-        <span class="kpi-value" id="kpiAvgAttendance">—</span>
-        <span class="kpi-label">Asistencia promedio</span>
-      </div>
+        <div class="col-12 col-md-4">
+          <div class="kpi-box h-100">
+            <div class="kpi-value" id="kpiActivePlayers">—</div>
+            <div class="kpi-label">Jugadores activos</div>
+          </div>
+        </div>
 
-      <div class="kpi-box">
-        <span class="kpi-value" id="kpiActiveParticipants">—</span>
-        <span class="kpi-label">Activos participantes</span>
+        <div class="col-12 col-md-4">
+          <div class="kpi-box h-100">
+            <div class="kpi-value" id="kpiAvgAttendance">—</div>
+            <div class="kpi-label">Asistencia promedio</div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <div class="kpi-box h-100">
+            <div class="kpi-value" id="kpiActiveParticipants">—</div>
+            <div class="kpi-label">Activos participantes</div>
+          </div>
+        </div>
+
       </div>
     </section>
 
     <!-- ================= BLOQUE CENTRAL ================= -->
-    <section class="home-main mb-4">
+    <section class="mb-4">
+      <div class="row g-4">
 
-      <!-- ALERTAS -->
-      <div class="alerts-card">
-        <h3>🚨 Alertas del club</h3>
-        <ul id="alertsList" class="list-group list-group-flush">
-          <li class="list-group-item text-muted">Cargando alertas…</li>
-        </ul>
+        <!-- ALERTAS -->
+        <div class="col-12 col-lg-8">
+          <div class="alerts-card h-100">
+            <h3 class="mb-3">🚨 Alertas del club</h3>
+            <ul id="alertsList" class="list-group list-group-flush">
+              <li class="list-group-item text-muted">
+                Cargando alertas…
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- PRÓXIMO TORNEO -->
+        <div class="col-12 col-lg-4">
+          <div class="next-tournament-card h-100 text-center">
+            <h3 class="mb-3">🏆 Próximo torneo</h3>
+            <p class="t-date mb-1">Feb 7–8</p>
+            <p class="t-name mb-0">Torneo Pura Vida</p>
+          </div>
+        </div>
+
       </div>
-
-      <!-- PRÓXIMO TORNEO -->
-      <div class="next-tournament-card">
-        <h3>🏆 Próximo torneo</h3>
-        <p class="t-date">Feb 7–8</p>
-        <p class="t-name">Torneo Pura Vida</p>
-      </div>
-
     </section>
 
     <!-- ================= CUMPLEAÑOS ================= -->
-    <section class="birthdays-card mb-5">
-      <h3>🎂 Cumpleañeros del mes</h3>
-      <div id="birthdaysList" class="mt-2">
-        Cargando…
+    <section class="mb-5">
+      <div class="birthdays-card">
+        <h3 class="mb-3">🎂 Cumpleañeros del mes</h3>
+        <div id="birthdaysList">
+          Cargando…
+        </div>
       </div>
     </section>
 
