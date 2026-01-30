@@ -154,7 +154,70 @@ function render() {
     `
     )
     .join("");
+    updateRosterStats(); //muestra contadores
 }
+
+//Contadores
+function calculateAge(birthday) {
+  if (!birthday) return null;
+
+  const birth = new Date(birthday);
+  const today = new Date();
+
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+
+  return age;
+}
+
+function updateRosterStats() {
+  const list = Object.values(players);
+
+  const total = list.length;
+  const active = list.filter(p => p.active).length;
+  const inactive = total - active;
+
+  const men = list.filter(p => p.gender === "M").length;
+  const women = list.filter(p => p.gender === "F").length;
+
+  let h33 = 0;
+  let m30 = 0;
+  let hU24 = 0;
+  let mU24 = 0;
+
+  list.forEach(p => {
+    const age = calculateAge(p.birthday);
+    if (age === null) return;
+
+    if (p.gender === "M") {
+      if (age >= 33) h33++;
+      if (age < 24) hU24++;
+    }
+
+    if (p.gender === "F") {
+      if (age >= 30) m30++;
+      if (age < 24) mU24++;
+    }
+  });
+
+  document.getElementById("statTotal").textContent = total;
+  document.getElementById("statActive").textContent = `${active} activos`;
+  document.getElementById("statInactive").textContent = `${inactive} inactivos`;
+
+  document.getElementById("statMen").textContent = men;
+  document.getElementById("statWomen").textContent = women;
+
+  document.getElementById("statH33").textContent = h33;
+  document.getElementById("statM30").textContent = m30;
+
+  document.getElementById("statHU24").textContent = hU24;
+  document.getElementById("statMU24").textContent = mU24;
+}
+
 
 /*************************************************
  * CLICK EN FILA (EDITAR)
