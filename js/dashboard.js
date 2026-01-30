@@ -112,23 +112,32 @@ function calculateMonthlyKPIs({ players, trainings }) {
     t => t.active === true && t.month === monthKey
   );
 
-  // Asistencia promedio por entrenamiento
+  // Asistencia total del mes
   const totalAttendance = monthlyTrainings.reduce(
     (sum, t) => sum + (t.attendees?.length ?? 0),
     0
   );
 
+  // Promedio por entrenamiento
   const avgAttendance = monthlyTrainings.length
     ? Math.round(totalAttendance / monthlyTrainings.length)
     : 0;
 
-  // Jugadores activos del mes (IDs únicos)
-  const activePlayerIds = new Set();
-  monthlyTrainings.forEach(t => {
-    (t.attendees || []).forEach(id => activePlayerIds.add(id));
-  });
+  // IDs de jugadores activos en el roster
+  const activeRosterIds = new Set(
+    players.filter(p => p.active).map(p => p.id)
+  );
 
-  const activePlayers = activePlayerIds.size;
+  // IDs únicos de jugadores activos que sí participaron
+  const activeParticipants = new Set();
+
+  monthlyTrainings.forEach(t => {
+    (t.attendees || []).forEach(id => {
+      if (activeRosterIds.has(id)) {
+        activeParticipants.add(id);
+      }
+    });
+  });
 
   // Jugadores nuevos registrados este mes
   const newPlayers = players.filter(p => {
@@ -141,10 +150,10 @@ function calculateMonthlyKPIs({ players, trainings }) {
   }).length;
 
   return {
-    activePlayers,
+    activePlayers: activeParticipants.size, // 👈 activos que participaron
     avgAttendance,
     newPlayers
-  };
+ };
 }
 
 function renderKPIs(kpis) {
