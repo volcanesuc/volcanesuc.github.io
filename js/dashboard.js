@@ -4,7 +4,7 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/f
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
-
+import { Player } from "./models/player.js";
 
 
 loadHeader("home");
@@ -24,18 +24,15 @@ const currentMonth = new Date().getMonth();
 watchAuth(() => loadDashboard());
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
+
 async function loadDashboard() {
   showLoader();
-
   try {
     const snap = await getDocs(collection(db, "club_players"));
-    const players = {};
+    const players = [];
 
-    snap.forEach(d => {
-      players[d.id] = {
-        name: d.data().name,
-        birthday: d.data().birthday
-      };
+    snap.forEach(doc => {
+      players.push(Player.fromFirestore(doc));
     });
 
     renderBirthdays(players);
@@ -53,16 +50,21 @@ function parseBirthday(str) {
 function renderBirthdays(players) {
   const today = new Date();
 
-  const list = Object.values(players)
-    .map(p => ({ ...p, ...parseBirthday(p.birthday) }))
+  const list = players
+    .map(p => {
+      const parsed = parseBirthday(p.birthday);
+      return parsed ? { player: p, ...parsed } : null;
+    })
+    .filter(Boolean)
     .filter(p => p.month === currentMonth)
     .sort((a, b) => a.day - b.day);
 
   birthdaysList.innerHTML = list.length
-    ? list.map(p =>
-        `🎂 <strong>${p.fullName()}</strong> — ${p.day}${p.day === today.getDate() ? " (HOY 🎉)" : ""}`
+    ? list.map(({ player, day }) =>
+        `🎂 <strong>${player.fullName}</strong> — ${day}${day === today.getDate() ? " (HOY 🎉)" : ""}`
       ).join("<br>")
     : "No hay cumpleañeros este mes 🎈";
 }
+
 
 document.getElementById("appVersion").textContent = `v${APP_CONFIG.version}`;
