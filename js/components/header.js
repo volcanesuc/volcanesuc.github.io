@@ -1,7 +1,8 @@
 const MENU = [
   { id: "home", label: "Home", href: "dashboard.html" },
-  { id: "attendance", label: "Asistencia", href: "attendance.html" },
   { id: "roster", label: "Roster", href: "roster.html" },
+  { id: "trainings", label: "Entrenamientos", href: "trainings.html" },
+  { id: "attendance", label: "Asistencia", href: "attendance.html" },
   { id: "tournaments", label: "Torneos", href: "dashboard.html#tournaments" },
   { id: "stats", label: "Estadísticas", href: "stats2024.html" }
 ];
