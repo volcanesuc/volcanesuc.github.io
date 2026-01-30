@@ -50,6 +50,9 @@ async function loadDashboard() {
   // Calcular y render KPIs
   const kpis = calculateMonthlyKPIs({ players, trainings });
   renderKPIs(kpis);
+
+  const alerts = calculateAlerts({ players, trainings });
+  renderAlerts(alerts);
 }
 
 /* =========================================================
@@ -151,8 +154,64 @@ function renderKPIs(kpis) {
   document.getElementById("kpiAvgAttendance").textContent =
     kpis.avgAttendance;
 
-  document.getElementById("kpiNewPlayers").textContent =
+  document.getElementById("kpiActivePct").textContent =
     kpis.newPlayers;
+}
+
+/* =========================================================
+   ALERTAS
+========================================================= */
+
+function calculateAlerts({ players, trainings }) {
+  const alerts = [];
+  const now = new Date();
+  const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
+
+  // Mapa último entrenamiento por jugador
+  const lastAttendance = {};
+
+  trainings.forEach(t => {
+    if (!t.active) return;
+    const date = new Date(t.date);
+    (t.attendees || []).forEach(pid => {
+      if (!lastAttendance[pid] || date > lastAttendance[pid]) {
+        lastAttendance[pid] = date;
+      }
+    });
+  });
+
+  // Jugadores activos sin entrenar 30 días
+  const inactive30 = players.filter(p => {
+    if (!p.active) return false;
+    const last = lastAttendance[p.id];
+    return !last || now - last > THIRTY_DAYS;
+  });
+
+  if (inactive30.length) {
+    alerts.push(`❌ ${inactive30.length} jugadores activos sin entrenar en 30 días`);
+  }
+
+  // Entrenos con pocos handlers
+  trainings.forEach(t => {
+    if (!t.active) return;
+    const handlers = (t.attendees || []).filter(
+      id => players.find(p => p.id === id && p.role === "handler")
+    );
+    if (handlers.length > 0 && handlers.length < 3) {
+      alerts.push(`⚠️ ${t.date}: solo ${handlers.length} handlers`);
+    }
+  });
+
+  return alerts;
+}
+
+function renderAlerts(alerts) {
+  const el = document.getElementById("alertsList");
+  if (!el) return;
+
+  el.innerHTML = alerts.length
+    ? alerts.map(a => `<li class="list-group-item">${a}</li>`).join("")
+    : `<li class="list-group-item text-muted">Todo en orden 👍</li>`;
 }
 
 /* =========================================================

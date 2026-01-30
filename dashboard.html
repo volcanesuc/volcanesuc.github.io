@@ -25,32 +25,37 @@
                     <!-- STATS DE JUGADORES Y ENTRENAMIENTOS-->
                     <div class="kpi-card">
                         <h3 class="kpi-title">Resumen del Mes</h3>
-
                         <div class="kpi-grid">
                             <div class="kpi-item">
-                            <span class="kpi-value" id="kpiActivePlayers">—</span>
-                            <span class="kpi-label">Jugadores activos</span>
+                                <span class="kpi-value" id="kpiActivePlayers">—</span>
+                                <span class="kpi-label">Jugadores activos</span>
                             </div>
 
                             <div class="kpi-item">
-                            <span class="kpi-value" id="kpiAvgAttendance">—</span>
-                            <span class="kpi-label">Asistencia promedio</span>
+                                <span class="kpi-value" id="kpiAvgAttendance">—</span>
+                                <span class="kpi-label">Asistencia promedio</span>
                             </div>
 
-                            <div class="kpi-item">
-                            <span class="kpi-value" id="kpiNewPlayers">—</span>
-                            <span class="kpi-label">Nuevos este mes</span>
+                             <div class="kpi-item">
+                                <span class="kpi-value" id="kpiActivePct">—%</span>
+                                <span class="kpi-label">Activos participantes</span>
                             </div>
                         </div>
                     </div>
-
                     <!-- PROXIMOS TORNEOS -->
                     <div class="kpi-card">
                         <h3 class="kpi-title">Próximo torneo</h3>
                         <p>Feb 7–8<br><small>Torneo Pura Vida</small></p>
                     </div>
                 </section>
-            
+
+                <section class="dashboard-alerts mt-4">
+                    <div class="kpi-card">
+                        <h3 class="kpi-title">🚨 Alertas del club</h3>
+                        <ul class="list-group list-group-flush" id="alertsList"></ul>
+                    </div>
+                </section>
+                            
                 <span id="appVersion"></span>
 
                 <script type="module" src="./js/dashboard.js"></script>
