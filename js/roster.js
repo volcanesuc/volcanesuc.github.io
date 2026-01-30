@@ -29,6 +29,7 @@ const fields = {
   number: document.getElementById("number"),
   gender: document.getElementById("gender"),
   birthday: document.getElementById("birthday"),
+  role: document.getElementById("role"),
   active: document.getElementById("active")
 };
 
@@ -53,9 +54,15 @@ function render() {
       p => `
       <tr data-id="${p.id}" class="player-row" style="cursor:pointer">
         <td class="fw-semibold">${p.fullName}</td>
-        <td>${p.number ?? "—"}</td>
-        <td>${p.gender ?? "—"}</td>
         <td>${p.birthday ?? "—"}</td>
+        <td>${p.gender ?? "—"}</td>
+    
+         <td>${p.number ?? "—"}</td>
+        <td>
+            <span class="badge bg-info text-dark">
+                ${p.roleLabel}
+            </span>
+        </td>
         <td>
           <span class="badge ${p.active ? "bg-success" : "bg-secondary"}">
             ${p.active ? "Activo" : "Inactivo"}
@@ -81,6 +88,7 @@ table.onclick = e => {
   fields.gender.value = p.gender ?? "";
   fields.birthday.value = p.birthday ?? "";
   fields.active.checked = p.active;
+  fields.role.value = p.role ?? "cutter";
 
   modal.show();
 };
@@ -101,6 +109,7 @@ form.onsubmit = async e => {
     number: Number(fields.number.value) || null,
     gender: fields.gender.value || null,
     birthday: fields.birthday.value || null,
+    role: fields.role.value,
     active: fields.active.checked
   };
 

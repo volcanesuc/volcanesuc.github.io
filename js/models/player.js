@@ -1,5 +1,12 @@
 // js/models/player.js
 
+export const PLAYER_ROLES = {
+  HANDLER: "handler",
+  CUTTER: "cutter",
+  HYBRID: "hybrid"
+};
+
+
 export class Player {
   constructor(id, data = {}) {
     this.id = id;
@@ -10,6 +17,7 @@ export class Player {
     this.gender = data.gender ?? null;
     this.birthday = data.birthday ?? null;
     this.active = data.active ?? true;
+    this.role = data.role ?? PLAYER_ROLES.HYBRID;
   }
 
   /* =========================
@@ -27,6 +35,17 @@ export class Player {
       : this.firstName || "—";
   }
 
+  get roleLabel() {
+    switch (this.role) {
+      case PLAYER_ROLES.HANDLER:
+        return "Handler";
+      case PLAYER_ROLES.CUTTER:
+        return "Cutter";
+      default:
+        return "Hybrid";
+    }
+  }
+
   /* =========================
      SERIALIZATION
   ========================= */
@@ -38,7 +57,8 @@ export class Player {
       number: this.number,
       gender: this.gender,
       birthday: this.birthday,
-      active: this.active
+      active: this.active,
+      role: this.role
     };
   }
 
