@@ -9,10 +9,11 @@ import {
 
 import { db } from "./firebase.js";
 import { loadHeader } from "./components/header.js";
+import { Training } from "./models/training.js";
 
-/* -------------------------
-  INIT
-------------------------- */
+/* =========================
+   INIT
+========================= */
 document.addEventListener("DOMContentLoaded", async () => {
   loadHeader("trainings");
 
@@ -23,27 +24,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     .getElementById("saveTrainingBtn")
     .addEventListener("click", saveTraining);
 
+  document
+    .getElementById("processBtn")
+    .addEventListener("click", processQuickText);
+
   hideLoading();
 });
 
-/* -------------------------
-  STATE
-------------------------- */
+/* =========================
+   STATE
+========================= */
 let players = [];
-let attendanceMap = {};
+let attendees = [];
 
-/* -------------------------
-  LOADERS
-------------------------- */
+/* =========================
+   LOADER
+========================= */
 function hideLoading() {
   document.body.classList.remove("loading");
   const overlay = document.getElementById("loadingOverlay");
   if (overlay) overlay.style.display = "none";
 }
 
-/* -------------------------
-  TRAININGS LIST
-------------------------- */
+/* =========================
+   LOAD TRAININGS
+========================= */
 async function loadTrainings() {
   const tbody = document.getElementById("trainingsTable");
   tbody.innerHTML = "";
@@ -57,14 +62,17 @@ async function loadTrainings() {
 
   snapshot.forEach(doc => {
     const t = doc.data();
-    const count = t.attendance
-      ? Object.keys(t.attendance).length
+    const count = Array.isArray(t.attendees)
+      ? t.attendees.length
       : 0;
 
     tbody.innerHTML += `
       <tr>
         <td>${t.date}</td>
         <td>${count}</td>
+        <td class="small text-muted">
+          ${t.summary ?? ""}
+        </td>
         <td class="text-end">
           <button class="btn btn-sm btn-outline-secondary" disabled>
             Editar
@@ -75,9 +83,9 @@ async function loadTrainings() {
   });
 }
 
-/* -------------------------
-  PLAYERS
-------------------------- */
+/* =========================
+   LOAD PLAYERS
+========================= */
 async function loadPlayers() {
   const tbody = document.getElementById("playersTable");
   tbody.innerHTML = "";
@@ -85,18 +93,18 @@ async function loadPlayers() {
   const snapshot = await getDocs(collection(db, "club_players"));
 
   players = snapshot.docs
-  .map(doc => ({
-    id: doc.id,
-    firstName: doc.data().firstName,
-    lastName: doc.data().lastName,
-    number: doc.data().number,
-    active: doc.data().active !== false
-  }))
-  .filter(p => p.active)
-  .sort((a, b) =>
-    `${a.firstName} ${a.lastName}`
-      .localeCompare(`${b.firstName} ${b.lastName}`)
-  );
+    .map(doc => ({
+      id: doc.id,
+      firstName: doc.data().firstName,
+      lastName: doc.data().lastName,
+      number: doc.data().number,
+      active: doc.data().active !== false
+    }))
+    .filter(p => p.active)
+    .sort((a, b) =>
+      `${a.firstName} ${a.lastName}`
+        .localeCompare(`${b.firstName} ${b.lastName}`)
+    );
 
   players.forEach(player => {
     tbody.innerHTML += `
@@ -104,8 +112,8 @@ async function loadPlayers() {
         <td>
           <input
             type="checkbox"
-            data-id="${player.id}"
             class="attendance-check"
+            data-id="${player.id}"
           />
         </td>
         <td>${player.firstName} ${player.lastName}</td>
@@ -121,84 +129,102 @@ async function loadPlayers() {
     );
 }
 
-/* -------------------------
-  ATTENDANCE
-------------------------- */
+/* =========================
+   ATTENDANCE
+========================= */
 function onAttendanceChange(e) {
   const playerId = e.target.dataset.id;
 
   if (e.target.checked) {
-    attendanceMap[playerId] = true;
+    if (!attendees.includes(playerId)) {
+      attendees.push(playerId);
+    }
   } else {
-    delete attendanceMap[playerId];
+    attendees = attendees.filter(id => id !== playerId);
   }
 }
 
-/* -------------------------
-  SAVE TRAINING
-------------------------- */
+/* =========================
+   QUICK TEXT (WHATSAPP)
+========================= */
+function processQuickText() {
+  const text = document
+    .getElementById("attendanceText")
+    .value
+    .toLowerCase();
+
+  players.forEach(player => {
+    const fullName = `${player.firstName} ${player.lastName}`.toLowerCase();
+    const checkbox = document.querySelector(
+      `.attendance-check[data-id="${player.id}"]`
+    );
+
+    if (
+      text.includes(player.firstName.toLowerCase()) ||
+      text.includes(fullName)
+    ) {
+      checkbox.checked = true;
+
+      if (!attendees.includes(player.id)) {
+        attendees.push(player.id);
+      }
+    }
+  });
+}
+
+/* =========================
+   SAVE TRAINING
+========================= */
 async function saveTraining() {
-  const dateInput = document.getElementById("trainingDate");
-  const date = dateInput.value;
+  const date = document.getElementById("trainingDate").value;
+  const summary = document
+    .getElementById("trainingSummary")
+    .value
+    .trim();
+
+  const notes = document
+    .getElementById("trainingNotes")
+    .value
+    .trim();
 
   if (!date) {
     alert("Selecciona una fecha");
     return;
   }
 
-await addDoc(collection(db, "trainings"), {
-  date,
-  attendance: attendanceMap,
-  attendanceCount: Object.keys(attendanceMap).length,
-  createdAt: serverTimestamp()
-});
+  const training = new Training(null, {
+    date,
+    attendees,
+    summary,
+    notes,
+    createdAt: serverTimestamp()
+  });
 
-  // reset
-  attendanceMap = {};
-  dateInput.value = "";
-  document.getElementById("attendanceText").value = "";
-  document
-    .querySelectorAll(".attendance-check")
-    .forEach(cb => (cb.checked = false));
+  await addDoc(
+    collection(db, "trainings"),
+    training.toFirestore()
+  );
 
-  bootstrap.Modal
-    .getInstance(document.getElementById("trainingModal"))
-    .hide();
-
+  resetModal();
   await loadTrainings();
 }
 
+/* =========================
+   MODAL RESET
+========================= */
 const trainingModal = document.getElementById("trainingModal");
 
-trainingModal.addEventListener("show.bs.modal", () => {
-  attendanceMap = {};
+trainingModal.addEventListener("show.bs.modal", resetModal);
+
+function resetModal() {
+  attendees = [];
+
   document.getElementById("trainingDate").value = "";
   document.getElementById("attendanceText").value = "";
+  document.getElementById("trainingSummary").value = "";
+  document.getElementById("trainingNotes").value = "";
+
   document
     .querySelectorAll(".attendance-check")
     .forEach(cb => (cb.checked = false));
-});
-
-
-document
-  .getElementById("processBtn")
-  .addEventListener("click", () => {
-    const text = document
-      .getElementById("attendanceText")
-      .value
-      .toLowerCase();
-
-    players.forEach(p => {
-      const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
-      const checkbox = document.querySelector(
-        `.attendance-check[data-id="${p.id}"]`
-      );
-
-      if (text.includes(p.firstName.toLowerCase()) || text.includes(fullName)) {
-        checkbox.checked = true;
-        attendanceMap[p.id] = true;
-      }
-    });
-  });
-
-
+}
