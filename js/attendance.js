@@ -47,12 +47,12 @@ async function loadAttendance() {
     };
   });
 
-  const trainingsSnap = await getDocs(collection(db, "club_trainings"));
+  const trainingsSnap = await getDocs(collection(db, "trainings"));
   trainingsSnap.forEach(d => {
     allTrainings[d.id] = { date: d.id, count: 0 };
   });
 
-  const attendanceSnap = await getDocs(collection(db, "club_attendance"));
+  const attendanceSnap = await getDocs(collection(db, "attendees"));
   attendanceSnap.forEach(d => allAttendance.push(d.data()));
 
   console.log("Players:", Object.keys(allPlayers).length);
