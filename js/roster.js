@@ -33,10 +33,18 @@ async function loadPlayers() {
 
 function render() {
   table.innerHTML = Object.entries(players)
-    .sort((a, b) => a[1].lastName.localeCompare(b[1].lastName))
+    .sort(([, a], [, b]) => {
+      const lastA = (a.lastName || "").toLowerCase();
+      const lastB = (b.lastName || "").toLowerCase();
+      return lastA.localeCompare(lastB);
+    })
     .map(([id, p]) => `
-      <tr data-id="${id}" class="player-row">
-        <td>${p.firstName} ${p.lastName}</td>
+      <tr data-id="${id}" class="player-row" style="cursor:pointer">
+        <td>
+          <div class="fw-semibold">
+            ${p.firstName || "—"} ${p.lastName || ""}
+          </div>
+        </td>
         <td>${p.number ?? "—"}</td>
         <td>${p.gender ?? "—"}</td>
         <td>${p.birthday ?? "—"}</td>
@@ -46,7 +54,8 @@ function render() {
           </span>
         </td>
       </tr>
-    `).join("");
+    `)
+    .join("");
 }
 
 table.onclick = e => {
