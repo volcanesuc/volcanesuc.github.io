@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import { db } from "./firebase.js";
-import { loadHeader } from "./header.js";
+import { loadHeader } from "./components/header.js";
 
 /* -------------------------
   INIT
@@ -140,11 +140,12 @@ async function saveTraining() {
     return;
   }
 
-  await addDoc(collection(db, "trainings"), {
-    date,
-    attendance: attendanceMap,
-    createdAt: serverTimestamp()
-  });
+await addDoc(collection(db, "trainings"), {
+  date,
+  attendance: attendanceMap,
+  attendanceCount: Object.keys(attendanceMap).length,
+  createdAt: serverTimestamp()
+});
 
   // reset
   attendanceMap = {};
@@ -160,3 +161,38 @@ async function saveTraining() {
 
   await loadTrainings();
 }
+
+const trainingModal = document.getElementById("trainingModal");
+
+trainingModal.addEventListener("show.bs.modal", () => {
+  attendanceMap = {};
+  document.getElementById("trainingDate").value = "";
+  document.getElementById("attendanceText").value = "";
+  document
+    .querySelectorAll(".attendance-check")
+    .forEach(cb => (cb.checked = false));
+});
+
+
+document
+  .getElementById("processBtn")
+  .addEventListener("click", () => {
+    const text = document
+      .getElementById("attendanceText")
+      .value
+      .toLowerCase();
+
+    players.forEach(p => {
+      const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+      const checkbox = document.querySelector(
+        `.attendance-check[data-id="${p.id}"]`
+      );
+
+      if (text.includes(p.firstName.toLowerCase()) || text.includes(fullName)) {
+        checkbox.checked = true;
+        attendanceMap[p.id] = true;
+      }
+    });
+  });
+
+
