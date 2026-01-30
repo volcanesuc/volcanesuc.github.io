@@ -16,7 +16,6 @@ const clearFilterBtn = document.getElementById("clearFilter");
 
 let allTrainings = {};
 let allPlayers = {};
-let allAttendance = [];
 let attendanceChart;
 
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
@@ -36,8 +35,8 @@ watchAuth(async () => {
 async function loadAttendance() {
   allTrainings = {};
   allPlayers = {};
-  allAttendance = [];
 
+  // PLAYERS
   const playersSnap = await getDocs(collection(db, "club_players"));
   playersSnap.forEach(d => {
     const player = Player.fromFirestore(d);
@@ -47,38 +46,44 @@ async function loadAttendance() {
     };
   });
 
+  // TRAININGS (nuevo modelo)
   const trainingsSnap = await getDocs(collection(db, "trainings"));
   trainingsSnap.forEach(d => {
-    allTrainings[d.id] = { date: d.id, count: 0 };
-  });
+    const data = d.data();
 
-  const attendanceSnap = await getDocs(collection(db, "attendees"));
-  attendanceSnap.forEach(d => allAttendance.push(d.data()));
+    allTrainings[d.id] = {
+      id: d.id,
+      date: data.date,
+      month: data.month,
+      attendees: data.attendees ?? [],
+      count: 0
+    };
+  });
 
   console.log("Players:", Object.keys(allPlayers).length);
   console.log("Trainings:", Object.keys(allTrainings).length);
-  console.log("Attendance:", allAttendance.length);
 }
+
 
 function applyFilter() {
   const selectedMonth = monthFilter.value;
 
   const trainings = Object.values(allTrainings).filter(t =>
-    selectedMonth ? t.date.startsWith(selectedMonth) : true
+    selectedMonth ? t.month === selectedMonth : true
   );
 
+  // reset
   trainings.forEach(t => (t.count = 0));
   Object.values(allPlayers).forEach(p => (p.count = 0));
 
-  const validTrainings = new Set(trainings.map(t => t.date));
+  trainings.forEach(training => {
+    training.count = training.attendees.length;
 
-  allAttendance.forEach(a => {
-    if (!validTrainings.has(a.trainingId)) return;
-
-    allTrainings[a.trainingId].count++;
-    if (allPlayers[a.playerId]) {
-      allPlayers[a.playerId].count++;
-    }
+    training.attendees.forEach(playerId => {
+      if (allPlayers[playerId]) {
+        allPlayers[playerId].count++;
+      }
+    });
   });
 
   renderTrainings(trainings);
@@ -87,6 +92,7 @@ function applyFilter() {
   renderTopPlayers();
   renderChart(trainings);
 }
+
 
 /* ==========================
    RENDERS
