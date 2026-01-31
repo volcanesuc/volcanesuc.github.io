@@ -147,21 +147,22 @@ function calculateMonthlyKPIs({ players, trainings }) {
   }).length;
 
   return {
-    activeParticipants: activeParticipants.size,
+    activePlayers: activeParticipants.size,  
     avgAttendance,
-    newPlayers
-  };
+    trainingsCount: monthlyTrainings.length
+};
+
 }
 
 function renderKPIs(kpis) {
-  document.getElementById("kpiActiveParticipants").textContent =
-    kpis.activeParticipants;
+  document.getElementById("kpiActivePlayers").textContent =
+    kpis.activePlayers;
 
   document.getElementById("kpiAvgAttendance").textContent =
     kpis.avgAttendance;
 
-  document.getElementById("kpiActivePlayers").textContent =
-    kpis.newPlayers;
+  document.getElementById("kpiTrainingsCount").textContent =
+    kpis.trainingsCount;
 }
 
 /* =========================================================
@@ -224,18 +225,23 @@ function renderAlerts(alerts) {
 
   if (!alerts.length) {
     el.innerHTML = `
-      <li class="list-group-item text-muted">
-        Todo en orden 👍
-      </li>`;
+      <div class="alert-item">
+        <span class="alert-icon">✅</span>
+        <div class="alert-text">Todo en orden</div>
+      </div>`;
     return;
   }
 
   el.innerHTML = alerts
     .map(
       a => `
-      <li class="list-group-item list-group-item-${a.type}">
-        ${a.message}
-      </li>`
+        <div class="alert-item alert-${a.type}">
+          <span class="alert-icon">
+            ${a.type === "danger" ? "❌" : "⚠️"}
+          </span>
+          <div class="alert-text">${a.message}</div>
+        </div>
+      `
     )
     .join("");
 }
