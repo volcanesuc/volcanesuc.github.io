@@ -1,9 +1,12 @@
 // dashboard.js
-// Dashboard principal: carga jugadores, entrenamientos, KPIs y cumpleaños
+// Dashboard principal: jugadores, entrenamientos, KPIs y alertas
 
 import { db } from "./firebase.js";
 import { watchAuth, logout } from "./auth.js";
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
@@ -31,26 +34,27 @@ document.getElementById("logoutBtn")?.addEventListener("click", logout);
 ========================================================= */
 
 async function loadDashboard() {
-  // Cargar jugadores
+  // Jugadores
   const playersSnap = await getDocs(collection(db, "club_players"));
   const players = playersSnap.docs.map(doc =>
     Player.fromFirestore(doc)
   );
 
-  // Cargar entrenamientos
+  // Entrenamientos
   const trainingsSnap = await getDocs(collection(db, "trainings"));
   const trainings = trainingsSnap.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   }));
 
-  // Render cumpleaños
+  // Cumpleaños
   renderBirthdays(players);
 
-  // Calcular y render KPIs
+  // KPIs
   const kpis = calculateMonthlyKPIs({ players, trainings });
   renderKPIs(kpis);
 
+  // Alertas
   const alerts = calculateAlerts({ players, trainings });
   renderAlerts(alerts);
 }
@@ -64,25 +68,18 @@ const currentMonth = new Date().getMonth();
 
 function parseBirthday(str) {
   if (!str) return null;
-
-  // Espera formato YYYY-MM-DD
-  const [year, month, day] = str.split("-").map(Number);
-
-  if (!year || !month || !day) return null;
-
-  return {
-    month: month - 1, // JS usa 0–11
-    day
-  };
+  const [y, m, d] = str.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return { month: m - 1, day: d };
 }
 
 function renderBirthdays(players) {
   const today = new Date();
 
   const list = players
-    .map(player => {
-      const parsed = parseBirthday(player.birthday);
-      return parsed ? { player, ...parsed } : null;
+    .map(p => {
+      const b = parseBirthday(p.birthday);
+      return b ? { player: p, ...b } : null;
     })
     .filter(Boolean)
     .filter(p => p.month === currentMonth)
@@ -105,30 +102,33 @@ function renderBirthdays(players) {
 ========================================================= */
 
 function calculateMonthlyKPIs({ players, trainings }) {
-  const monthKey = getCurrentMonthKey();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
 
-  // Entrenamientos activos del mes
-  const monthlyTrainings = trainings.filter(
-    t => t.active === true && t.month === monthKey
-  );
+  // Entrenamientos activos del mes (por fecha real)
+  const monthlyTrainings = trainings.filter(t => {
+    if (!t.active || !t.date) return false;
+    const d = new Date(t.date);
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
 
-  // Asistencia total del mes
+  // Asistencia total
   const totalAttendance = monthlyTrainings.reduce(
     (sum, t) => sum + (t.attendees?.length ?? 0),
     0
   );
 
-  // Promedio por entrenamiento
   const avgAttendance = monthlyTrainings.length
     ? Math.round(totalAttendance / monthlyTrainings.length)
     : 0;
 
-  // IDs de jugadores activos en el roster
+  // IDs activos en roster
   const activeRosterIds = new Set(
     players.filter(p => p.active).map(p => p.id)
   );
 
-  // IDs únicos de jugadores activos que sí participaron
+  // Activos que sí participaron
   const activeParticipants = new Set();
 
   monthlyTrainings.forEach(t => {
@@ -139,31 +139,28 @@ function calculateMonthlyKPIs({ players, trainings }) {
     });
   });
 
-  // Jugadores nuevos registrados este mes
+  // Jugadores nuevos del mes
   const newPlayers = players.filter(p => {
     if (!p.createdAt) return false;
     const d = p.createdAt.toDate?.() ?? new Date(p.createdAt);
-    return (
-      d.getFullYear() === Number(monthKey.slice(0, 4)) &&
-      d.getMonth() + 1 === Number(monthKey.slice(5))
-    );
+    return d.getFullYear() === year && d.getMonth() === month;
   }).length;
 
   return {
-    activePlayers: activeParticipants.size, // 👈 activos que participaron
+    activeParticipants: activeParticipants.size,
     avgAttendance,
     newPlayers
- };
+  };
 }
 
 function renderKPIs(kpis) {
-  document.getElementById("kpiActivePlayers").textContent =
-    kpis.activePlayers;
+  document.getElementById("kpiActiveParticipants").textContent =
+    kpis.activeParticipants;
 
   document.getElementById("kpiAvgAttendance").textContent =
     kpis.avgAttendance;
 
-  document.getElementById("kpiActivePct").textContent =
+  document.getElementById("kpiActivePlayers").textContent =
     kpis.newPlayers;
 }
 
@@ -179,11 +176,11 @@ function calculateAlerts({ players, trainings }) {
   const lastAttendance = {};
 
   trainings.forEach(t => {
-    if (!t.active) return;
-    const date = new Date(t.date);
+    if (!t.active || !t.date) return;
+    const d = new Date(t.date);
     (t.attendees || []).forEach(pid => {
-      if (!lastAttendance[pid] || date > lastAttendance[pid]) {
-        lastAttendance[pid] = date;
+      if (!lastAttendance[pid] || d > lastAttendance[pid]) {
+        lastAttendance[pid] = d;
       }
     });
   });
@@ -206,11 +203,11 @@ function calculateAlerts({ players, trainings }) {
   trainings.forEach(t => {
     if (!t.active) return;
 
-    const handlers = (t.attendees || []).filter(
-      id => players.find(p => p.id === id && p.role === "handler")
+    const handlers = (t.attendees || []).filter(id =>
+      players.find(p => p.id === id && p.role === "handler")
     );
 
-    if (handlers.length > 0 && handlers.length < 3) {
+    if (handlers.length < 3) {
       alerts.push({
         type: "warning",
         message: `⚠️ ${t.date}: solo ${handlers.length} handlers`
@@ -236,22 +233,11 @@ function renderAlerts(alerts) {
   el.innerHTML = alerts
     .map(
       a => `
-        <li class="list-group-item list-group-item-${a.type}">
-          ${a.message}
-        </li>
-      `
+      <li class="list-group-item list-group-item-${a.type}">
+        ${a.message}
+      </li>`
     )
     .join("");
-}
-
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function getCurrentMonthKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 /* =========================================================
