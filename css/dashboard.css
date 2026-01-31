@@ -231,9 +231,71 @@
 }
 
 
+/* ==============================
+   ATTENDANCE CHECKLIST (MODAL)
+================================ */
+
+.attendance-box {
+  max-height: 55vh;           /* scroll interno */
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 14px;
+  padding: 0.5rem;
+  background: #fff;
+}
+
+/* item jugador */
+.attendance-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.5rem;
+
+  background: #f8f9fa;
+  border-radius: 12px;
+
+  cursor: pointer;
+  user-select: none;
+}
+
+.attendance-item:active {
+  background: #e8f3f1;
+}
+
+/* checkbox grande */
+.attendance-item input[type="checkbox"] {
+  transform: scale(1.4);
+}
+
+/* nombre */
+.attendance-name {
+  flex: 1;
+  font-size: 1rem;
+}
+
+/* número */
+.attendance-number {
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
+
 /* ======================================================
    RESPONSIVE
 ====================================================== */
+
+/* mobile tuning */
+@media (max-width: 576px) {
+  .attendance-box {
+    max-height: 60vh;
+  }
+
+  .attendance-item {
+    padding: 1.1rem;
+  }
+}
 
 @media (max-width: 992px) {
   .dashboard-page .kpi-row {

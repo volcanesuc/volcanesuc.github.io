@@ -87,8 +87,8 @@ async function loadTrainings() {
    LOAD PLAYERS
 ========================= */
 async function loadPlayers() {
-  const tbody = document.getElementById("playersTable");
-  tbody.innerHTML = "";
+  const list = document.getElementById("playersList");
+  list.innerHTML = "";
 
   const snapshot = await getDocs(collection(db, "club_players"));
 
@@ -107,18 +107,20 @@ async function loadPlayers() {
     );
 
   players.forEach(player => {
-    tbody.innerHTML += `
-      <tr>
-        <td>
-          <input
-            type="checkbox"
-            class="attendance-check"
-            data-id="${player.id}"
-          />
-        </td>
-        <td>${player.firstName} ${player.lastName}</td>
-        <td>${player.number ?? "-"}</td>
-      </tr>
+    list.innerHTML += `
+      <label class="attendance-item">
+        <input
+          type="checkbox"
+          class="attendance-check"
+          data-id="${player.id}"
+        />
+        <span class="attendance-name">
+          ${player.firstName} ${player.lastName}
+        </span>
+        <span class="attendance-number">
+          ${player.number ?? ""}
+        </span>
+      </label>
     `;
   });
 
@@ -128,6 +130,7 @@ async function loadPlayers() {
       cb.addEventListener("change", onAttendanceChange)
     );
 }
+
 
 /* =========================
    ATTENDANCE
