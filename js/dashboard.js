@@ -196,7 +196,7 @@ function calculateAlerts({ players, trainings }) {
   if (inactive30.length) {
     alerts.push({
       type: "danger",
-      message: `❌ ${inactive30.length} jugadores activos sin entrenar en 30 días`
+      message: `${inactive30.length} jugadores activos sin entrenar en 30 días`
     });
   }
 
@@ -211,7 +211,7 @@ function calculateAlerts({ players, trainings }) {
     if (handlers.length < 3) {
       alerts.push({
         type: "warning",
-        message: `⚠️ ${t.date}: solo ${handlers.length} handlers`
+        message: `${t.date}: solo ${handlers.length} handlers`
       });
     }
   });
