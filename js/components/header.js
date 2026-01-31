@@ -38,9 +38,13 @@ export function loadHeader(activeTab) {
       <button id="logoutBtn" class="logout-btn">SALIR</button>
     </header>
 
-    <nav id="mobileMenu" class="mobile-menu">
+    <!-- Backdrop -->
+    <div id="menuBackdrop" class="menu-backdrop"></div>
+
+    <!-- Drawer mobile -->
+    <aside id="mobileMenu" class="mobile-drawer">
       ${renderLinks(true)}
-    </nav>
+    </aside>
   `;
 
   setupMobileMenu();
@@ -48,11 +52,26 @@ export function loadHeader(activeTab) {
 
 function setupMobileMenu() {
   const btn = document.getElementById("menuBtn");
-  const menu = document.getElementById("mobileMenu");
+  const drawer = document.getElementById("mobileMenu");
+  const backdrop = document.getElementById("menuBackdrop");
 
-  if (!btn || !menu) return;
+  if (!btn || !drawer || !backdrop) return;
 
-  btn.onclick = () => {
-    menu.classList.toggle("open");
+  const openMenu = () => {
+    drawer.classList.add("open");
+    backdrop.classList.add("open");
   };
+
+  const closeMenu = () => {
+    drawer.classList.remove("open");
+    backdrop.classList.remove("open");
+  };
+
+  btn.addEventListener("click", openMenu);
+  backdrop.addEventListener("click", closeMenu);
+
+  // cerrar al navegar
+  drawer.querySelectorAll("a").forEach(link =>
+    link.addEventListener("click", closeMenu)
+  );
 }
