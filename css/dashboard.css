@@ -423,6 +423,7 @@
 
 .mobile-drawer.open {
   transform: translateX(0);
+  background: red !important;
 }
 
 /* ===== MOBILE ===== */
