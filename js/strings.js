@@ -92,7 +92,7 @@ export const CLUB_DATA = {
         },
         {
           position: "Primer Lugar",
-          tournament: "Espíritu Chorotega 1era Ed.",
+          tournament: "Espíritu Chorotega Primera Edición",
           year: 2025
         },
         {
