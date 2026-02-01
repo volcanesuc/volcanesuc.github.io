@@ -3,9 +3,15 @@ import { loginWithGoogle } from "./auth.js";
 import { CLUB_DATA } from "./strings.js";
 
 /* =========================================================
-   LOGIN
+   HEADER
 ========================================================= */
 
+const headerTitle = document.querySelector(".club-name");
+const headerCtaBtn = document.getElementById("loginBtn");
+
+
+
+//LOGIN ACTION
 const loginBtn = document.getElementById("loginBtn");
 if (loginBtn) {
   loginBtn.addEventListener("click", loginWithGoogle);

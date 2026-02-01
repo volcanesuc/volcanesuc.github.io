@@ -2,19 +2,8 @@
 // Header global con tabs desktop + offcanvas mobile (Bootstrap)
 
 import { logout } from "../auth.js";
+import { CLUB_DATA } from "../strings.js";
 
-/* =========================================================
-   CONFIG
-========================================================= */
-
-const MENU = [
-  { id: "home", label: "Home", href: "dashboard.html" },
-  { id: "roster", label: "Roster", href: "roster.html" },
-  { id: "trainings", label: "Entrenamientos", href: "trainings.html" },
-  { id: "attendance", label: "Asistencia", href: "attendance.html" },
-  { id: "tournaments", label: "Torneos", href: "dashboard.html#tournaments" },
-  { id: "stats", label: "Estadísticas", href: "stats2024.html" }
-];
 
 /* =========================================================
    HEADER RENDER
@@ -23,6 +12,8 @@ const MENU = [
 export function loadHeader(activeTab) {
   const header = document.getElementById("app-header");
   if (!header) return;
+
+  const MENU = CLUB_DATA.header.menu;
 
   const renderLinks = () =>
     MENU.map(
@@ -51,7 +42,7 @@ export function loadHeader(activeTab) {
           ☰
         </button>
 
-        <div class="logo">Volcanes</div>
+        <div class="logo">${CLUB_DATA.header.logoText}</div>
       </div>
 
       <!-- DESKTOP NAV -->
@@ -73,13 +64,13 @@ export function loadHeader(activeTab) {
     >
       <div class="offcanvas-header">
         <h5 class="offcanvas-title" id="mobileMenuLabel">
-          Volcanes Ultimate
+          ${CLUB_DATA.header.mobileTitle}
         </h5>
         <button
           type="button"
           class="btn-close"
           data-bs-dismiss="offcanvas"
-          aria-label="Cerrar"
+          aria-label= ${CLUB_DATA.header.logout.label}
         ></button>
       </div>
 
@@ -87,7 +78,7 @@ export function loadHeader(activeTab) {
         ${renderLinks()}
         <hr />
         <button class="btn btn-outline-primary w-100 mt-2" id="logoutBtnMobile">
-          Salir
+          ${CLUB_DATA.header.logout.label}
         </button>
       </div>
     </div>
