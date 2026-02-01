@@ -168,7 +168,7 @@ if (uniformsSection) {
             href="${CLUB_DATA.landing.uniforms.orderUrl}"
             target="_blank"
           >
-            Pedir uniforme
+            ${CLUB_DATA.landing.uniforms.CTA}
           </a>
         </div>
       `;

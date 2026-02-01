@@ -106,6 +106,7 @@ export const CLUB_DATA = {
     uniforms: {
       title: "Uniformes del Equipo",
       subtitle: "Compra tu indumentaria oficial del club",
+      CTA: "Comprar",
       orderUrl:
         "https://docs.google.com/forms/d/e/1FAIpQLScWsh7S91GY6MZ_1ewNu1Eth7L0IK9ycHwbySY5THZe3vM2mg/viewform",
       items: [
