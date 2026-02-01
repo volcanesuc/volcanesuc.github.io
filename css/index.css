@@ -320,6 +320,10 @@ body {
   display: flex;
   gap: 24px;
   justify-content: center;
-  align-items: stretch;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+}
+
+.uniform-card {
+  flex: 1 1 250px;
+  max-width: 300px;
 }
