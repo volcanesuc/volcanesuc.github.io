@@ -6,12 +6,12 @@ import { CLUB_DATA } from "./strings.js";
    HEADER
 ========================================================= */
 
-const headerTitle = document.querySelector(".club-name");
+const headerTitle = document.querySelector(".clubName");
 const headerCtaBtn = document.getElementById("loginBtn");
 
 // Nombre del club
 if (headerTitle) {
-  headerTitle.textContent = CLUB_DATA.club.name;
+  headerTitle.textContent = CLUB_DATA.header.mobileTitle;
 }
 
 // CTA del header (INGRESAR)
