@@ -73,7 +73,7 @@ if (heroWhatsappCta) {
    EVENTS (Cartaglow y futuros)
 ========================================================= */
 
-const eventsSection = document.querySelectorAll(".landing-section")[1];
+const eventsSection = document.getElementById("eventsSection");
 
 if (eventsSection) {
   const event = CLUB_DATA.landing.events[0]; // por ahora mostramos el primero
@@ -85,6 +85,7 @@ if (eventsSection) {
     `${event.description} Contamos con ${event.participants} participantes en la edición ${event.edition}. Próxima edición en ${event.nextEdition.month} ${event.nextEdition.year}.`;
 
   const events = eventsSection.querySelector(".events");
+    if (!events) return;
   events.innerHTML = "";
 
   event.images.forEach(src => {
@@ -257,4 +258,24 @@ if (footer) {
     <p>${CLUB_DATA.footer.copyright}</p>
     <p>Fundados en el ${CLUB_DATA.club.foundedYear}</p>
   `;
+}
+
+
+function hideLoader() {
+  const loader = document.getElementById("pageLoader");
+  if (!loader) return;
+
+  loader.classList.add("hidden");
+
+  // opcional: remover del DOM
+  setTimeout(() => loader.remove(), 400);
+}
+
+if (heroImg) {
+  heroImg.src = CLUB_DATA.landing.hero.image;
+  heroImg.alt = CLUB_DATA.club.name;
+
+  heroImg.onload = hideLoader;
+} else {
+  hideLoader();
 }
