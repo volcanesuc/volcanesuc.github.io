@@ -256,6 +256,9 @@ th.sortable.sorted-desc::after {
   color: var(--club-green-dark);
 }
 
+.hamburger {
+  display: none;
+}
 
 @media (max-width: 768px) {
   .nav-tabs {
@@ -267,10 +270,19 @@ th.sortable.sorted-desc::after {
   }
 }
 
+/* Desktop */
+@media (min-width: 769px) {
+  .hamburger {
+    display: none;
+  }
+}
+
 .offcanvas-body a.active {
   color: var(--club-green-dark);
   font-weight: 700;
 }
+
+
 
 /* =========================================================
    FOOTER / META
