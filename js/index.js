@@ -271,11 +271,4 @@ function hideLoader() {
   setTimeout(() => loader.remove(), 400);
 }
 
-if (heroImg) {
-  heroImg.src = CLUB_DATA.landing.hero.image;
-  heroImg.alt = CLUB_DATA.club.name;
-
-  heroImg.onload = hideLoader;
-} else {
-  hideLoader();
-}
+hideLoader();
