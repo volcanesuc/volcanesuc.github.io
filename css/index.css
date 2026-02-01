@@ -92,6 +92,21 @@ body {
   background-color: var(--club-green-dark);
 }
 
+/* CAROUSEL */
+.events {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 30px;
+}
+
+.events img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
 /* CARDS */
 .landing-cards {
   display: grid;
