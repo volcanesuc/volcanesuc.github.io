@@ -9,7 +9,15 @@ import { CLUB_DATA } from "./strings.js";
 const headerTitle = document.querySelector(".club-name");
 const headerCtaBtn = document.getElementById("loginBtn");
 
+// Nombre del club
+if (headerTitle) {
+  headerTitle.textContent = CLUB_DATA.club.name;
+}
 
+// CTA del header (INGRESAR)
+if (headerCtaBtn) {
+  headerCtaBtn.textContent = CLUB_DATA.header.cta.label;
+}
 
 //LOGIN ACTION
 const loginBtn = document.getElementById("loginBtn");
