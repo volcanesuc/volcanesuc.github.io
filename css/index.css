@@ -318,9 +318,9 @@ body {
 
 .uniform-row {
   display: flex;
-  gap: 24px;
   justify-content: center;
-  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 24px;
 }
 
 .uniform-card {

@@ -254,6 +254,11 @@ if (uniformsSection) {
   }
 }
 
+const carouselEl = document.getElementById("uniformsCarousel");
+if (carouselEl) {
+  new bootstrap.Carousel(carouselEl);
+}
+
 
 /* =========================================================
    FOOTER
