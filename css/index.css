@@ -111,6 +111,11 @@ body {
   font-size: 0.95rem;
 }
 
+.landing-btn-whatsapp i {
+  font-size: 1.1rem;
+  margin-right: 0.45rem;
+}
+
 /* botón principal */
 .landing-btn {
   background-color: var(--club-green);
