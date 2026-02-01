@@ -18,10 +18,12 @@ if (loginBtn) {
 const heroTitle = document.querySelector(".hero h2");
 const heroText = document.querySelector(".hero p");
 const heroCta = document.querySelector(".hero .landing-btn");
+const heroImg = document.querySelector(".hero-img");
 
 if (heroTitle) heroTitle.innerHTML = CLUB_DATA.landing.hero.title.replace("\n", "<br>");
 if (heroText) heroText.textContent = CLUB_DATA.landing.hero.description;
 if (heroCta) heroCta.textContent = CLUB_DATA.landing.hero.cta;
+heroImg.src = CLUB_DATA.landing.hero.image;
 
 /* =========================================================
    EVENTS (Cartaglow y futuros)
