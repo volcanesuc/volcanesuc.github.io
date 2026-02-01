@@ -101,7 +101,7 @@ if (trainingsSection) {
    HONORS / PALMARÉS
 ========================================================= */
 
-const honorsSection = document.querySelectorAll(".landing-section")[3];
+const honorsSection = document.getElementById("honorsSection");
 
 if (honorsSection) {
   honorsSection.querySelector("h2").textContent =
@@ -111,16 +111,37 @@ if (honorsSection) {
   container.innerHTML = "";
 
   CLUB_DATA.landing.honors.items.forEach(item => {
-    const div = document.createElement("div");
-    div.className = "landing-card";
-    div.innerHTML = `
-      ${item.position}<br>
-      <strong>${item.tournament}</strong><br>
-      ${item.year}
+    let badge = "🏅";
+    let className = "honor-card";
+
+    if (item.position.toLowerCase().includes("primer")) {
+      badge = "🥇";
+      className += " honor-gold";
+    } else if (item.position.toLowerCase().includes("segundo")) {
+      badge = "🥈";
+      className += " honor-silver";
+    } else if (item.position.toLowerCase().includes("tercer")) {
+      badge = "🥉";
+      className += " honor-bronze";
+    } else if (item.position.toLowerCase().includes("espíritu")) {
+      badge = "🤝";
+      className += " honor-spirit";
+    }
+
+    const card = document.createElement("div");
+    card.className = className;
+
+    card.innerHTML = `
+      <div class="honor-badge">${badge}</div>
+      <div class="honor-position">${item.position}</div>
+      <div class="honor-tournament">${item.tournament}</div>
+      <div class="honor-year">${item.year}</div>
     `;
-    container.appendChild(div);
+
+    container.appendChild(card);
   });
 }
+
 
 /* =========================================================
    UNIFORMS (CAROUSEL)
