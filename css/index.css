@@ -315,3 +315,11 @@ body {
   height: 100%;
   object-fit: contain;
 }
+
+.uniform-row {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  align-items: stretch;
+  flex-wrap: nowrap;
+}
