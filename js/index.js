@@ -84,13 +84,19 @@ if (eventsSection) {
   eventsSection.querySelector("p").textContent =
     `${event.description} Contamos con ${event.participants} participantes en la edición ${event.edition}. Próxima edición en ${event.nextEdition.month} ${event.nextEdition.year}.`;
 
+    const events = eventsSection.querySelector(".events");
 
-  event.images.forEach(src => {
-    const img = document.createElement("img");
-    img.src = src;
-    img.alt = event.name;
-    events.appendChild(img);
-  });
+    if (events) {
+        events.innerHTML = "";
+
+        event.images.forEach(src => {
+            const img = document.createElement("img");
+            img.src = src;
+            img.alt = event.name;
+            events.appendChild(img);
+        });
+    }
+
 }
 
 /* =========================================================
