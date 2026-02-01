@@ -31,13 +31,43 @@ if (loginBtn) {
 
 const heroTitle = document.querySelector(".hero h2");
 const heroText = document.querySelector(".hero p");
-const heroCta = document.querySelector(".hero .landing-btn");
 const heroImg = document.querySelector(".hero-img");
 
-if (heroTitle) heroTitle.innerHTML = CLUB_DATA.landing.hero.title.replace("\n", "<br>");
-if (heroText) heroText.textContent = CLUB_DATA.landing.hero.description;
-if (heroCta) heroCta.textContent = CLUB_DATA.landing.hero.cta;
-heroImg.src = CLUB_DATA.landing.hero.image;
+const heroPrimaryCta = document.getElementById("heroPrimaryCta");
+const heroWhatsappCta = document.getElementById("heroWhatsappCta");
+
+if (heroTitle) {
+  heroTitle.innerHTML =
+    CLUB_DATA.landing.hero.title.replace(",", ",<br>");
+}
+
+if (heroText) {
+  heroText.textContent = CLUB_DATA.landing.hero.description;
+}
+
+if (heroImg) {
+  heroImg.src = CLUB_DATA.landing.hero.image;
+  heroImg.alt = CLUB_DATA.club.name;
+}
+
+/* CTA principal */
+if (heroPrimaryCta) {
+  heroPrimaryCta.textContent =
+    CLUB_DATA.landing.hero.cta.primary.label;
+  heroPrimaryCta.href =
+    CLUB_DATA.landing.hero.cta.primary.href;
+}
+
+/* CTA WhatsApp */
+if (heroWhatsappCta) {
+  const wa = CLUB_DATA.landing.contacts.whatsapp;
+
+  heroWhatsappCta.textContent = "WhatsApp";
+  heroWhatsappCta.href =
+    `https://wa.me/${wa.phone.replace("+", "")}?text=${encodeURIComponent(
+      wa.message
+    )}`;
+}
 
 /* =========================================================
    EVENTS (Cartaglow y futuros)
@@ -95,6 +125,19 @@ if (trainingsSection) {
       card.appendChild(p);
     });
   });
+}
+
+const trainingsWhatsappCta =
+  document.getElementById("trainingsWhatsappCta");
+
+if (trainingsWhatsappCta) {
+  const wa = CLUB_DATA.landing.contacts.whatsapp;
+
+  trainingsWhatsappCta.textContent = wa.label;
+  trainingsWhatsappCta.href =
+    `https://wa.me/${wa.phone.replace("+", "")}?text=${encodeURIComponent(
+      wa.message
+    )}`;
 }
 
 /* =========================================================

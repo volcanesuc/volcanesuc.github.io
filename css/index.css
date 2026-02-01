@@ -54,7 +54,9 @@ body {
   margin: auto;
 }
 
-/* HERO */
+/* ======================================================
+   HERO 
+====================================================== */
 .hero {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -75,6 +77,43 @@ body {
   width: 100%;
   border-radius: 16px;
 }
+
+.hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* botón secundario */
+.landing-btn-outline {
+  background: transparent;
+  border: 2px solid #19473f;
+  color: #19473f;
+}
+
+.landing-btn-outline:hover {
+  background: #19473f;
+  color: white;
+}
+
+/* ======================================================
+   WHATSAPP CTA
+====================================================== */
+
+.landing-btn-whatsapp {
+  background: #25d366;
+  color: white;
+}
+
+.landing-btn-whatsapp:hover {
+  background: #1ebe5d;
+}
+
+.trainings-cta {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
 
 /* BOTONES */
 .landing-btn {

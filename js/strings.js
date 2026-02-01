@@ -33,7 +33,24 @@ export const CLUB_DATA = {
       image: "img/volcanes/nicaragua.jpeg",
       description:
         "La misión del club es fortalecer la comunidad y promover el conocimiento y la práctica del deporte bajo el correcto espíritu de juego. Queremos crear espacios donde se practique de manera saludable el Ultimate.",
-      cta: "Ver entrenamientos"
+      cta: {
+        primary: {
+            label: "Ver entrenamientos",
+            href: "#entrenamientos"
+        },
+        secondary: {
+            label: "Contactar por WhatsApp",
+            type: "whatsapp"
+        }
+      }
+    },
+
+    contacts: {
+        whatsapp: {
+            label: "Escribinos por WhatsApp",
+            phone: "+50670567463",
+            message: "Hola, quiero info sobre los entrenamientos de Volcanes"
+        }
     },
 
     events: [
