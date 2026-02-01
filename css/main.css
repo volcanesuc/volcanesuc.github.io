@@ -267,6 +267,11 @@ th.sortable.sorted-desc::after {
   }
 }
 
+.offcanvas-body a.active {
+  color: var(--club-green-dark);
+  font-weight: 700;
+}
+
 /* =========================================================
    FOOTER / META
 ========================================================= */
