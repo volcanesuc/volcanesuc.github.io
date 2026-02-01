@@ -17,7 +17,10 @@ body {
   background: white;
 }
 
-/* HEADER */
+/* ======================================================
+   HEADER
+====================================================== */
+
 .landing-header {
   position: sticky;
   top: 0;
@@ -35,6 +38,7 @@ body {
   font-size: 18px;
   margin: 0;
   color: white;
+  white-space: nowrap;
 }
 
 .landing-login-btn {
@@ -47,7 +51,10 @@ body {
   border-radius: 6px;
 }
 
-/* SECCIONES */
+/* ======================================================
+   SECCIONES
+====================================================== */
+
 .landing-section {
   padding: 60px 20px;
   max-width: 1100px;
@@ -55,8 +62,9 @@ body {
 }
 
 /* ======================================================
-   HERO 
+   HERO
 ====================================================== */
+
 .hero {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -78,74 +86,64 @@ body {
   border-radius: 16px;
 }
 
+/* ======================================================
+   CTA BUTTONS (alineados y mismo tamaño)
+====================================================== */
+
 .hero-actions {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  margin-top: 1.25rem;
 }
 
-/* asegurar que ambos CTAs se vean iguales */
-.hero-actions .landing-btn,
-.hero-actions .landing-btn-whatsapp {
-  min-height: 44px;
+.landing-btn,
+.landing-btn-whatsapp {
+  min-height: 48px;
+  padding: 0 1.6rem;
+  font-weight: 700;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 0.95rem;
 }
 
-/* botón secundario */
-.landing-btn-outline {
-  background: transparent;
-  border: 2px solid #19473f;
-  color: #19473f;
-}
-
-.landing-btn-outline:hover {
-  background: #19473f;
-  color: white;
-}
-
-/* ======================================================
-   WHATSAPP CTA
-====================================================== */
-
-.landing-btn-whatsapp {
-  background: white;
-  color: #19473f;
-  border: 2px solid #19473f;
-  /* igualar tamaño visual */
-  padding: 0.6rem 1.4rem;
-  font-weight: 700;
-}
-
-.landing-btn-whatsapp:hover {
-  background: #19473f;
-  color: white;
-}
-
-.trainings-cta {
-  margin-top: 1.5rem;
-  text-align: center;
-}
-
-
-/* BOTONES */
+/* botón principal */
 .landing-btn {
   background-color: var(--club-green);
   color: white;
-  padding: 14px 22px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: bold;
-  display: inline-block;
-  margin-top: 20px;
+  border: 2px solid var(--club-green);
 }
 
 .landing-btn:hover {
   background-color: var(--club-green-dark);
 }
 
-/* CAROUSEL */
+/* botón WhatsApp (BLANCO con borde verde) */
+.landing-btn-whatsapp {
+  background: white;
+  color: var(--club-green);
+  border: 2px solid var(--club-green);
+}
+
+.landing-btn-whatsapp:hover {
+  background: var(--club-green);
+  color: white;
+}
+
+/* CTA en entrenamientos */
+.trainings-cta {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+/* ======================================================
+   EVENTS / IMAGES
+====================================================== */
+
 .events {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -160,7 +158,10 @@ body {
   border-radius: 12px;
 }
 
-/* CARDS */
+/* ======================================================
+   CARDS
+====================================================== */
+
 .landing-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -182,7 +183,10 @@ body {
   margin-bottom: 8px;
 }
 
-/* FOOTER */
+/* ======================================================
+   FOOTER
+====================================================== */
+
 .landing-footer {
   background: var(--club-green);
   color: white;
@@ -201,7 +205,7 @@ body {
 }
 
 .honor-card {
-  background: #ffffff;
+  background: #fff;
   border-radius: 16px;
   padding: 1.25rem;
   text-align: center;
@@ -214,128 +218,57 @@ body {
   box-shadow: 0 10px 28px rgba(0,0,0,0.12);
 }
 
-/* badge de posición */
 .honor-badge {
   font-size: 2.5rem;
-  margin-bottom: 0.5rem;
 }
 
-/* texto de posición */
 .honor-position {
   font-weight: 700;
   text-transform: uppercase;
   font-size: 0.85rem;
   letter-spacing: 0.05em;
-  margin-bottom: 0.5rem;
 }
 
-/* torneo */
 .honor-tournament {
   font-size: 1.1rem;
   font-weight: 600;
 }
 
-/* año */
 .honor-year {
   font-size: 0.9rem;
   opacity: 0.7;
-  margin-top: 0.25rem;
 }
 
-/* ========================
-   COLORES SEGÚN LOGRO
-======================== */
-
-.honor-gold {
-  border-top: 5px solid #e8ce26; /* amarillo volcanes */
-}
-
-.honor-silver {
-  border-top: 5px solid #cfd8dc;
-}
-
-.honor-bronze {
-  border-top: 5px solid #cd7f32;
-}
-
-.honor-spirit {
-  border-top: 5px solid #19473f; /* verde volcanes */
-}
+.honor-gold { border-top: 5px solid var(--club-yellow); }
+.honor-silver { border-top: 5px solid #cfd8dc; }
+.honor-bronze { border-top: 5px solid #cd7f32; }
+.honor-spirit { border-top: 5px solid var(--club-green); }
 
 /* ======================================================
    UNIFORMS CAROUSEL
 ====================================================== */
 
-#uniformsCarousel {
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-/* cada slide */
-#uniformsCarousel .carousel-item {
-  padding: 1rem 0;
-}
-
-/* card del uniforme */
-.uniform-card {
-  max-width: 320px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-/* contenedor de imagen con altura fija */
 .uniform-img-wrapper {
   width: 100%;
-  height: 280px;           /* 🔒 altura estándar */
+  height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
 
-/* imagen siempre proporcional */
 .uniform-img-wrapper img {
   width: 100%;
   height: 100%;
-  object-fit: contain;     /* 👈 evita que se corten */
-}
-
-/* nombre + botón alineados */
-.uniform-info {
-  margin-top: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.uniform-info h3 {
-  font-size: 1.1rem;
-  margin: 0;
-}
-
-/* botones dentro del carousel */
-#uniformsCarousel .landing-btn {
-  width: 100%;
-  max-width: 220px;
+  object-fit: contain;
 }
 
 /* ======================================================
    RESPONSIVE
 ====================================================== */
 
-@media (min-width: 768px) {
-  /* mostramos 2 uniformes por slide */
-  .carousel-item .uniform-row {
-    display: flex;
-    gap: 2rem;
-    justify-content: center;
-  }
-}
-
-@media (min-width: 1024px) {
-  /* 3 uniformes por slide */
-  .carousel-item .uniform-row {
-    gap: 3rem;
+@media (max-width: 768px) {
+  .hero {
+    grid-template-columns: 1fr;
   }
 }

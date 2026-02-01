@@ -6,7 +6,7 @@ import { CLUB_DATA } from "./strings.js";
    HEADER
 ========================================================= */
 
-const headerTitle = document.querySelector(".clubName");
+const headerTitle = document.getElementById("clubName");
 const headerCtaBtn = document.getElementById("loginBtn");
 
 // Nombre del club
