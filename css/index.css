@@ -84,6 +84,15 @@ body {
   flex-wrap: wrap;
 }
 
+/* asegurar que ambos CTAs se vean iguales */
+.hero-actions .landing-btn,
+.hero-actions .landing-btn-whatsapp {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* botón secundario */
 .landing-btn-outline {
   background: transparent;
@@ -101,12 +110,17 @@ body {
 ====================================================== */
 
 .landing-btn-whatsapp {
-  background: #25d366;
-  color: white;
+  background: white;
+  color: #19473f;
+  border: 2px solid #19473f;
+  /* igualar tamaño visual */
+  padding: 0.6rem 1.4rem;
+  font-weight: 700;
 }
 
 .landing-btn-whatsapp:hover {
-  background: #1ebe5d;
+  background: #19473f;
+  color: white;
 }
 
 .trainings-cta {
