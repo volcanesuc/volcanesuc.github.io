@@ -75,29 +75,34 @@ if (heroWhatsappCta) {
 
 const eventsSection = document.getElementById("eventsSection");
 
-if (eventsSection) {
-  const event = CLUB_DATA.landing.events[0]; // por ahora mostramos el primero
+if (eventsSection && CLUB_DATA.landing.events?.length) {
+  const event = CLUB_DATA.landing.events[0];
 
-  eventsSection.querySelector("h2").textContent =
-    `${event.name} ${event.edition}`;
+  const titleEl = eventsSection.querySelector("h2");
+  const descEl = eventsSection.querySelector("p");
+  const eventsContainer = eventsSection.querySelector(".events");
 
-  eventsSection.querySelector("p").textContent =
-    `${event.description} Contamos con ${event.participants} participantes en la edición ${event.edition}. Próxima edición en ${event.nextEdition.month} ${event.nextEdition.year}.`;
+  if (titleEl) {
+    titleEl.textContent = `${event.name} ${event.edition}`;
+  }
 
-    const events = eventsSection.querySelector(".events");
+  if (descEl) {
+    descEl.textContent =
+      `${event.description} Contamos con ${event.participants} participantes en la edición ${event.edition}. Próxima edición en ${event.nextEdition.month} ${event.nextEdition.year}.`;
+  }
 
-    if (events) {
-        events.innerHTML = "";
+  if (eventsContainer) {
+    eventsContainer.innerHTML = "";
 
-        event.images.forEach(src => {
-            const img = document.createElement("img");
-            img.src = src;
-            img.alt = event.name;
-            events.appendChild(img);
-        });
-    }
-
+    event.images.forEach(src => {
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = event.name;
+      eventsContainer.appendChild(img);
+    });
+  }
 }
+
 
 /* =========================================================
    TRAININGS & GAMES
