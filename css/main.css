@@ -230,51 +230,32 @@ th.sortable.sorted-desc::after {
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
-/* ===== MOBILE DRAWER ===== */
 
-.menu-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.45);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-  z-index: 998;
+/* =========================================================
+   OFFCANVAS - HEADER NAV DRAWER
+========================================================= */
+
+.offcanvas {
+  background: var(--club-gray);
 }
 
-.menu-backdrop.open {
-  opacity: 1;
-  pointer-events: auto;
+.offcanvas-title {
+  font-family: "Recons";
+  color: var(--club-green);
 }
 
-.mobile-drawer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 260px;
-  background: #fff;
-  transform: translateX(-100%);
-  transition: transform 0.25s ease;
-  z-index: 999;
-  padding: 1rem;
-}
-
-.mobile-drawer a {
+.offcanvas-body a {
   display: block;
   padding: 0.75rem 0;
-  color: #19473f;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--club-green);
   text-decoration: none;
 }
 
-.mobile-drawer.open {
-  transform: translateX(0);
+.offcanvas-body a:hover {
+  color: var(--club-green-dark);
 }
 
-/* =========================================================
-   RESPONSIVE HEADER
-========================================================= */
 
 @media (max-width: 768px) {
   .nav-tabs {
@@ -285,34 +266,6 @@ th.sortable.sorted-desc::after {
     display: block;
   }
 }
-
-@media (min-width: 769px) {
-  .hamburger,
-  .menu-backdrop,
-  .mobile-drawer {
-    display: none;
-  }
-}
-
-/* =========================================================
-   HAMBURGER BUTTON
-========================================================= */
-
-.hamburger {
-  font-size: 1.6rem;
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-
-  padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-}
-
-.hamburger:active {
-  background: rgba(255,255,255,0.15);
-}
-
 
 /* =========================================================
    FOOTER / META

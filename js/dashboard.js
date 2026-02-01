@@ -27,7 +27,6 @@ watchAuth(async () => {
   }
 });
 
-document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
 /* =========================================================
    DASHBOARD LOAD

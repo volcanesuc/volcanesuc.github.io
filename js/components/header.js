@@ -1,3 +1,12 @@
+// header.js
+// Header global con tabs desktop + offcanvas mobile (Bootstrap)
+
+import { logout } from "../auth.js";
+
+/* =========================================================
+   CONFIG
+========================================================= */
+
 const MENU = [
   { id: "home", label: "Home", href: "dashboard.html" },
   { id: "roster", label: "Roster", href: "roster.html" },
@@ -7,71 +16,111 @@ const MENU = [
   { id: "stats", label: "Estadísticas", href: "stats2024.html" }
 ];
 
+/* =========================================================
+   HEADER RENDER
+========================================================= */
+
 export function loadHeader(activeTab) {
-  const container = document.getElementById("app-header");
-  if (!container) return;
+  const header = document.getElementById("app-header");
+  if (!header) return;
 
-  // 🛑 evita duplicados
-  if (container.children.length > 0) return;
+  const renderLinks = () =>
+    MENU.map(
+      item => `
+        <a
+          href="${item.href}"
+          class="${activeTab === item.id ? "active" : ""}"
+        >
+          ${item.label}
+        </a>
+      `
+    ).join("");
 
-  const renderLinks = (isMobile = false) =>
-    MENU.map(item => `
-      <a
-        href="${item.href}"
-        class="${!isMobile && activeTab === item.id ? "active" : ""}"
-      >
-        ${item.label}
-      </a>
-    `).join("");
-
-  container.innerHTML = `
+  header.innerHTML = `
     <header class="topbar">
-      <div class="left">
-        <button id="menuBtn" class="hamburger">☰</button>
-        <span class="logo">Volcanes Ultimate</span>
+
+      <div class="d-flex align-items-center gap-2">
+        <!-- HAMBURGER -->
+        <button
+          class="hamburger"
+          type="button"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#mobileMenu"
+          aria-controls="mobileMenu"
+        >
+          ☰
+        </button>
+
+        <div class="logo">Volcanes</div>
       </div>
 
+      <!-- DESKTOP NAV -->
       <nav class="nav-tabs">
         ${renderLinks()}
       </nav>
 
-      <button id="logoutBtn" class="logout-btn">SALIR</button>
+      <button id="logoutBtn" class="logout-btn">
+        Salir
+      </button>
     </header>
 
-    <!-- Backdrop -->
-    <div id="menuBackdrop" class="menu-backdrop"></div>
+    <!-- OFFCANVAS MOBILE -->
+    <div
+      class="offcanvas offcanvas-start"
+      tabindex="-1"
+      id="mobileMenu"
+      aria-labelledby="mobileMenuLabel"
+    >
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="mobileMenuLabel">
+          Volcanes Ultimate
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="offcanvas"
+          aria-label="Cerrar"
+        ></button>
+      </div>
 
-    <!-- Drawer mobile -->
-    <aside id="mobileMenu" class="mobile-drawer">
-      ${renderLinks(true)}
-    </aside>
+      <div class="offcanvas-body">
+        ${renderLinks()}
+        <hr />
+        <button class="btn btn-outline-primary w-100 mt-2" id="logoutBtnMobile">
+          Salir
+        </button>
+      </div>
+    </div>
   `;
 
-  setupMobileMenu();
+  bindHeaderEvents();
 }
 
-function setupMobileMenu() {
-  const btn = document.getElementById("menuBtn");
-  const drawer = document.getElementById("mobileMenu");
-  const backdrop = document.getElementById("menuBackdrop");
+/* =========================================================
+   EVENTS
+========================================================= */
 
-  if (!btn || !drawer || !backdrop) return;
+function bindHeaderEvents() {
+  // logout desktop
+  document
+    .getElementById("logoutBtn")
+    ?.addEventListener("click", logout);
 
-  const openMenu = () => {
-    drawer.classList.add("open");
-    backdrop.classList.add("open");
-  };
+  // logout mobile
+  document
+    .getElementById("logoutBtnMobile")
+    ?.addEventListener("click", logout);
 
-  const closeMenu = () => {
-    drawer.classList.remove("open");
-    backdrop.classList.remove("open");
-  };
+  // cerrar offcanvas al clickear un link
+  const offcanvasEl = document.getElementById("mobileMenu");
 
-  btn.addEventListener("click", openMenu);
-  backdrop.addEventListener("click", closeMenu);
-
-  // cerrar al navegar
-  drawer.querySelectorAll("a").forEach(link =>
-    link.addEventListener("click", closeMenu)
-  );
+  offcanvasEl
+    ?.querySelectorAll("a")
+    .forEach(link => {
+      link.addEventListener("click", () => {
+        const instance =
+          bootstrap.Offcanvas.getInstance(offcanvasEl);
+        instance?.hide();
+      });
+    });
 }
