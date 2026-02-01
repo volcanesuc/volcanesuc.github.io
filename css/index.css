@@ -250,25 +250,6 @@ body {
 .honor-spirit { border-top: 5px solid var(--club-green); }
 
 /* ======================================================
-   UNIFORMS CAROUSEL
-====================================================== */
-
-.uniform-img-wrapper {
-  width: 100%;
-  height: 280px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.uniform-img-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-/* ======================================================
    RESPONSIVE
 ====================================================== */
 
@@ -313,4 +294,24 @@ body {
   to {
     transform: rotate(360deg);
   }
+}
+
+
+/* ======================================================
+   UNIFORMS CAROUSEL
+====================================================== */
+
+.uniform-img-wrapper {
+  width: 100%;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.uniform-img-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
