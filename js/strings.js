@@ -139,13 +139,13 @@ export const CLUB_DATA = {
           name: "Pantaloneta",
           category: "pantaloneta",
           image: "img/camisas/shorts.PNG"
-        },
+        }/*,
         {
           id: "cap",
           name: "Gorra",
           category: "accesorio",
           image: "img/camisas/cap.jpg"
-        }
+        }*/
       ]
     }
   },
