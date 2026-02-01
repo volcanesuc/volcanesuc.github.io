@@ -23,7 +23,7 @@ export const CLUB_DATA = {
       { id: "stats", label: "Estadísticas", href: "stats2024.html" }
     ],
      logout: {
-      label: "Salir"
+      label: "SALIR"
     }
   },
 
