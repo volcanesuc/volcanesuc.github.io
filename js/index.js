@@ -54,14 +54,14 @@ if (eventsSection) {
   eventsSection.querySelector("p").textContent =
     `${event.description} Contamos con ${event.participants} participantes en la edición ${event.edition}. Próxima edición en ${event.nextEdition.month} ${event.nextEdition.year}.`;
 
-  const carousel = eventsSection.querySelector(".carousel");
-  carousel.innerHTML = "";
+  const events = eventsSection.querySelector(".events");
+  events.innerHTML = "";
 
   event.images.forEach(src => {
     const img = document.createElement("img");
     img.src = src;
     img.alt = event.name;
-    carousel.appendChild(img);
+    events.appendChild(img);
   });
 }
 
