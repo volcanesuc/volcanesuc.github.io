@@ -84,8 +84,6 @@ if (eventsSection) {
   eventsSection.querySelector("p").textContent =
     `${event.description} Contamos con ${event.participants} participantes en la edición ${event.edition}. Próxima edición en ${event.nextEdition.month} ${event.nextEdition.year}.`;
 
-  const events = eventsSection.querySelector(".events");
-    if (!events) return;
   events.innerHTML = "";
 
   event.images.forEach(src => {
