@@ -51,7 +51,7 @@ export function loadHeader(activeTab) {
       </nav>
 
       <button id="logoutBtn" class="logout-btn">
-        ${CLUB_DATA.logout.label}
+        ${CLUB_DATA.header.logout.label}
       </button>
     </header>
 
