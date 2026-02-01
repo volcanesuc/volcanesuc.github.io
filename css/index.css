@@ -92,21 +92,6 @@ body {
   background-color: var(--club-green-dark);
 }
 
-/* CAROUSEL */
-.carousel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
-  margin-top: 30px;
-}
-
-.carousel img {
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-  border-radius: 12px;
-}
-
 /* CARDS */
 .landing-cards {
   display: grid;
@@ -129,13 +114,6 @@ body {
   margin-bottom: 8px;
 }
 
-/* UNIFORMES */
-.uniforme-img {
-  width: 100%;
-  border-radius: 10px;
-  margin-bottom: 10px;
-}
-
 /* FOOTER */
 .landing-footer {
   background: var(--club-green);
@@ -144,9 +122,80 @@ body {
   padding: 30px 20px;
 }
 
-/* RESPONSIVE */
-@media (max-width: 800px) {
-  .hero {
-    grid-template-columns: 1fr;
+/* ======================================================
+   UNIFORMS CAROUSEL
+====================================================== */
+
+#uniformsCarousel {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* cada slide */
+#uniformsCarousel .carousel-item {
+  padding: 1rem 0;
+}
+
+/* card del uniforme */
+.uniform-card {
+  max-width: 320px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* contenedor de imagen con altura fija */
+.uniform-img-wrapper {
+  width: 100%;
+  height: 280px;           /* 🔒 altura estándar */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* imagen siempre proporcional */
+.uniform-img-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;     /* 👈 evita que se corten */
+}
+
+/* nombre + botón alineados */
+.uniform-info {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.uniform-info h3 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* botones dentro del carousel */
+#uniformsCarousel .landing-btn {
+  width: 100%;
+  max-width: 220px;
+}
+
+/* ======================================================
+   RESPONSIVE
+====================================================== */
+
+@media (min-width: 768px) {
+  /* mostramos 2 uniformes por slide */
+  .carousel-item .uniform-row {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* 3 uniformes por slide */
+  .carousel-item .uniform-row {
+    gap: 3rem;
   }
 }

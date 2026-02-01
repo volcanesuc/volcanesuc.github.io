@@ -123,10 +123,10 @@ if (honorsSection) {
 }
 
 /* =========================================================
-   UNIFORMS
+   UNIFORMS (CAROUSEL)
 ========================================================= */
 
-const uniformsSection = document.querySelectorAll(".landing-section")[4];
+const uniformsSection = document.getElementById("uniformsSection");
 
 if (uniformsSection) {
   uniformsSection.querySelector("h2").textContent =
@@ -135,24 +135,52 @@ if (uniformsSection) {
   uniformsSection.querySelector("p").textContent =
     CLUB_DATA.landing.uniforms.subtitle;
 
-  const container = uniformsSection.querySelector(".landing-cards");
-  container.innerHTML = "";
+  const carouselInner = document.querySelector(
+    "#uniformsCarousel .carousel-inner"
+  );
 
-  CLUB_DATA.landing.uniforms.items.forEach(item => {
-    const card = document.createElement("div");
-    card.className = "landing-card";
+  carouselInner.innerHTML = "";
 
-    card.innerHTML = `
-      <img src="${item.image}" class="uniforme-img" />
-      <h3>${item.name}</h3>
-      <a class="landing-btn" href="${CLUB_DATA.landing.uniforms.orderUrl}" target="_blank">
-        Pedir uniforme
-      </a>
-    `;
+  const itemsPerSlide = window.innerWidth < 768 ? 1 : 3;
 
-    container.appendChild(card);
-  });
+  for (let i = 0; i < CLUB_DATA.landing.uniforms.items.length; i += itemsPerSlide) {
+    const slideItems =
+      CLUB_DATA.landing.uniforms.items.slice(i, i + itemsPerSlide);
+
+    const slide = document.createElement("div");
+    slide.className = `carousel-item ${i === 0 ? "active" : ""}`;
+
+    const row = document.createElement("div");
+    row.className = "uniform-row";
+
+    slideItems.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "uniform-card";
+
+      card.innerHTML = `
+        <div class="uniform-img-wrapper">
+          <img src="${item.image}" alt="${item.name}" />
+        </div>
+        <div class="uniform-info">
+          <h3>${item.name}</h3>
+          <a
+            class="landing-btn"
+            href="${CLUB_DATA.landing.uniforms.orderUrl}"
+            target="_blank"
+          >
+            Pedir uniforme
+          </a>
+        </div>
+      `;
+
+      row.appendChild(card);
+    });
+
+    slide.appendChild(row);
+    carouselInner.appendChild(slide);
+  }
 }
+
 
 /* =========================================================
    FOOTER
