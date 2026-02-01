@@ -1,133 +1,152 @@
 // js/index.js
 import { loginWithGoogle } from "./auth.js";
-import { CLUB_STRINGS } from "./strings.js";
+import { CLUB_DATA } from "./strings.js";
 
 /* =========================================================
-   HEADER
+   LOGIN
 ========================================================= */
 
-document.getElementById("clubName").textContent =
-  CLUB_STRINGS.club.name;
-
 const loginBtn = document.getElementById("loginBtn");
-loginBtn.textContent = CLUB_STRINGS.actions.login;
-loginBtn.addEventListener("click", loginWithGoogle);
+if (loginBtn) {
+  loginBtn.addEventListener("click", loginWithGoogle);
+}
 
 /* =========================================================
    HERO
 ========================================================= */
 
-const heroSection = document.querySelector(".hero");
+const heroTitle = document.querySelector(".hero h2");
+const heroText = document.querySelector(".hero p");
+const heroCta = document.querySelector(".hero .landing-btn");
 
-heroSection.querySelector("h2").innerHTML =
-  CLUB_STRINGS.hero.title;
-
-heroSection.querySelector("p").textContent =
-  CLUB_STRINGS.hero.description;
-
-heroSection.querySelector(".landing-btn").textContent =
-  CLUB_STRINGS.hero.cta;
-
-const heroImg = heroSection.querySelector(".hero-img");
-heroImg.src = CLUB_STRINGS.hero.image;
-heroImg.alt = CLUB_STRINGS.club.name;
+if (heroTitle) heroTitle.innerHTML = CLUB_DATA.landing.hero.title.replace("\n", "<br>");
+if (heroText) heroText.textContent = CLUB_DATA.landing.hero.description;
+if (heroCta) heroCta.textContent = CLUB_DATA.landing.hero.cta;
 
 /* =========================================================
-   EVENTS / TORNEOS
+   EVENTS (Cartaglow y futuros)
 ========================================================= */
 
-const eventsSection = document.getElementById("eventsSection");
-const carousel = eventsSection.querySelector(".carousel");
+const eventsSection = document.querySelectorAll(".landing-section")[1];
 
-const mainEvent = CLUB_STRINGS.events[0];
+if (eventsSection) {
+  const event = CLUB_DATA.landing.events[0]; // por ahora mostramos el primero
 
-eventsSection.querySelector("h2").textContent = mainEvent.title;
-eventsSection.querySelector("p").textContent = mainEvent.description;
+  eventsSection.querySelector("h2").textContent =
+    `${event.name} ${event.edition}`;
 
-carousel.innerHTML = mainEvent.images
-  .map(src => `<img src="${src}" />`)
-  .join("");
+  eventsSection.querySelector("p").textContent =
+    `${event.description} Contamos con ${event.participants} participantes en la edición ${event.edition}. Próxima edición en ${event.nextEdition.month} ${event.nextEdition.year}.`;
+
+  const carousel = eventsSection.querySelector(".carousel");
+  carousel.innerHTML = "";
+
+  event.images.forEach(src => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = event.name;
+    carousel.appendChild(img);
+  });
+}
 
 /* =========================================================
-   TRAININGS
+   TRAININGS & GAMES
 ========================================================= */
 
 const trainingsSection = document.getElementById("entrenamientos");
-const trainingCards = trainingsSection.querySelectorAll(".landing-card");
 
-trainingsSection.querySelector("h2").textContent =
-  CLUB_STRINGS.trainings.title;
+if (trainingsSection) {
+  trainingsSection.querySelector("h2").textContent =
+    CLUB_DATA.landing.trainings.title;
 
-// Entrenamientos
-trainingCards[0].querySelector("h3").textContent =
-  CLUB_STRINGS.trainings.practice.title;
+  const cards = trainingsSection.querySelectorAll(".landing-card");
 
-trainingCards[0].innerHTML += CLUB_STRINGS.trainings.practice.schedule
-  .map(t => `<p>${t}</p>`)
-  .join("");
+  CLUB_DATA.landing.trainings.blocks.forEach((block, index) => {
+    const card = cards[index];
+    if (!card) return;
 
-// Juegos
-trainingCards[1].querySelector("h3").textContent =
-  CLUB_STRINGS.trainings.games.title;
+    card.querySelector("h3").textContent = block.name;
 
-trainingCards[1].innerHTML += CLUB_STRINGS.trainings.games.schedule
-  .map(t => `<p>${t}</p>`)
-  .join("");
+    const content = block.schedule
+      .map(s => `${s.day}: ${s.time}`)
+      .join("\n");
+
+    card.querySelectorAll("p").forEach(p => p.remove());
+
+    content.split("\n").forEach(line => {
+      const p = document.createElement("p");
+      p.textContent = line;
+      card.appendChild(p);
+    });
+  });
+}
 
 /* =========================================================
    HONORS / PALMARÉS
 ========================================================= */
 
-const honorsSection = document.getElementById("honorsSection");
-const honorsContainer = honorsSection.querySelector(".landing-cards");
+const honorsSection = document.querySelectorAll(".landing-section")[3];
 
-honorsSection.querySelector("h2").textContent =
-  CLUB_STRINGS.honors.title;
+if (honorsSection) {
+  honorsSection.querySelector("h2").textContent =
+    CLUB_DATA.landing.honors.title;
 
-honorsContainer.innerHTML = CLUB_STRINGS.honors.items
-  .map(
-    h => `
-    <div class="landing-card">
-      ${h.position}<br>
-      <strong>${h.tournament}</strong><br>
-      ${h.year}
-    </div>
-  `
-  )
-  .join("");
+  const container = honorsSection.querySelector(".landing-cards");
+  container.innerHTML = "";
+
+  CLUB_DATA.landing.honors.items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "landing-card";
+    div.innerHTML = `
+      ${item.position}<br>
+      <strong>${item.tournament}</strong><br>
+      ${item.year}
+    `;
+    container.appendChild(div);
+  });
+}
 
 /* =========================================================
    UNIFORMS
 ========================================================= */
 
-const uniformsSection = document.getElementById("uniformsSection");
-const uniformsContainer = uniformsSection.querySelector(".landing-cards");
+const uniformsSection = document.querySelectorAll(".landing-section")[4];
 
-uniformsSection.querySelector("h2").textContent =
-  CLUB_STRINGS.uniforms.title;
+if (uniformsSection) {
+  uniformsSection.querySelector("h2").textContent =
+    CLUB_DATA.landing.uniforms.title;
 
-uniformsSection.querySelector("p").textContent =
-  CLUB_STRINGS.uniforms.subtitle;
+  uniformsSection.querySelector("p").textContent =
+    CLUB_DATA.landing.uniforms.subtitle;
 
-uniformsContainer.innerHTML = CLUB_STRINGS.uniforms.items
-  .map(
-    u => `
-    <div class="landing-card">
-      <img src="${u.image}" class="uniforme-img" />
-      <h3>${u.name}</h3>
-      <a class="landing-btn" href="${u.link}" target="_blank">
-        ${CLUB_STRINGS.actions.orderUniform}
+  const container = uniformsSection.querySelector(".landing-cards");
+  container.innerHTML = "";
+
+  CLUB_DATA.landing.uniforms.items.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "landing-card";
+
+    card.innerHTML = `
+      <img src="${item.image}" class="uniforme-img" />
+      <h3>${item.name}</h3>
+      <a class="landing-btn" href="${CLUB_DATA.landing.uniforms.orderUrl}" target="_blank">
+        Pedir uniforme
       </a>
-    </div>
-  `
-  )
-  .join("");
+    `;
+
+    container.appendChild(card);
+  });
+}
 
 /* =========================================================
    FOOTER
 ========================================================= */
 
-document.querySelector(".landing-footer").innerHTML = `
-  <p>© ${CLUB_STRINGS.club.name}</p>
-  <p>${CLUB_STRINGS.club.founded}</p>
-`;
+const footer = document.querySelector(".landing-footer");
+
+if (footer) {
+  footer.innerHTML = `
+    <p>${CLUB_DATA.footer.copyright}</p>
+    <p>Fundados en el ${CLUB_DATA.club.foundedYear}</p>
+  `;
+}
