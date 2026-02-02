@@ -61,9 +61,9 @@ const playersEmpty = document.getElementById("playersEmpty");
 const playersTitle = document.getElementById("playersTitle");
 const playersSubtitle = document.getElementById("playersSubtitle");
 
-// Team fee UI (optional)
-const teamFeePaidPill = document.getElementById("teamFeePaidPill");
-const toggleTeamFeePaidBtn = document.getElementById("toggleTeamFeePaidBtn");
+// Team fee UI (recommended in hero)
+const teamFeePill = document.getElementById("teamFeePill");
+const toggleTeamFeeBtn = document.getElementById("toggleTeamFeeBtn");
 
 /* ==========================
    PARAMS / STATE
@@ -72,8 +72,8 @@ const params = new URLSearchParams(window.location.search);
 const tournamentId = (params.get("id") || "").trim();
 
 let tournament = null;
-let roster = [];   // roster entries
-let players = [];  // club players
+let roster = [];   // roster entries (subcollection)
+let players = [];  // club players (global)
 let addPanelVisible = true;
 
 /* ==========================
@@ -93,7 +93,7 @@ openAddBtn?.addEventListener("click", () => {
   if (playersSearch) playersSearch.style.display = addPanelVisible ? "" : "none";
 });
 
-toggleTeamFeePaidBtn?.addEventListener("click", toggleTeamFeePaid);
+toggleTeamFeeBtn?.addEventListener("click", toggleTeamFeePaid);
 
 /* ==========================
    INIT
@@ -119,6 +119,7 @@ watchAuth(async () => {
     }
 
     await Promise.all([loadRoster(), loadPlayers()]);
+
     render();
     renderPlayers();
   } catch (e) {
@@ -173,16 +174,11 @@ async function loadPlayers() {
 function render() {
   if (!tournament) return;
 
-  // header
+  // hero
   if (tName) tName.textContent = tournament.name || "—";
   if (tMeta) tMeta.textContent = formatTournamentMeta(tournament);
 
-  // team fee pill
-  if (teamFeePaidPill) {
-    const paid = !!tournament.teamFeePaid;
-    teamFeePaidPill.className = paid ? "pill pill--good" : "pill pill--warn";
-    teamFeePaidPill.textContent = paid ? "Team fee: Pagado" : "Team fee: Pendiente";
-  }
+  renderTeamFee();
 
   const q = (searchInput?.value || "").trim().toLowerCase();
   const list = q
@@ -200,7 +196,7 @@ function render() {
     rosterEmpty.textContent = S.roster?.empty || "No hay jugadores asignados a este torneo.";
   }
 
-  // listeners
+  // listeners: remove / status / fee paid
   rosterList?.querySelectorAll("[data-remove]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-remove");
@@ -231,9 +227,7 @@ function renderPlayers() {
   const rosterIds = new Set(roster.map(r => r.playerId || r.id));
 
   const list = q
-    ? players.filter(p =>
-        `${p.name || ""} ${p.nickname || ""}`.toLowerCase().includes(q)
-      )
+    ? players.filter(p => `${p.name || ""} ${p.nickname || ""}`.toLowerCase().includes(q))
     : players;
 
   if (playersList) {
@@ -272,7 +266,7 @@ async function addToRoster(playerId) {
       number: p.number ?? null,
       role: p.role || "",
       status: "convocado",
-      playerFeePaid: false, // 👈 nuevo
+      playerFeePaid: false, // NEW
       createdAt: serverTimestamp()
     }, { merge: true });
 
@@ -366,7 +360,7 @@ async function toggleTeamFeePaid() {
     }, { merge: true });
 
     tournament.teamFeePaid = next;
-    render();
+    renderTeamFee();
   } catch (e) {
     console.error(e);
     alert("Error actualizando team fee.");
@@ -414,7 +408,7 @@ function rosterRow(r) {
           </button>
 
           <button class="btn btn-sm btn-outline-success"
-                  title="Toggle pago"
+                  title="Toggle fee pagado"
                   data-toggle-paid="${escapeHtml(r.id)}">
             <i class="bi bi-cash-coin"></i>
           </button>
@@ -454,6 +448,28 @@ function playerPickRow(p, already) {
       </button>
     </div>
   `;
+}
+
+/* ==========================
+   TEAM FEE UI
+========================== */
+function renderTeamFee() {
+  // If you haven't added these in HTML, nothing breaks.
+  if (!teamFeePill || !toggleTeamFeeBtn || !tournament) return;
+
+  const amount = tournament.teamFee != null
+    ? `₡${Number(tournament.teamFee).toLocaleString("es-CR")}`
+    : "—";
+
+  const paid = !!tournament.teamFeePaid;
+
+  teamFeePill.textContent = `Team fee: ${amount} · ${paid ? "Pagado" : "Pendiente"}`;
+  teamFeePill.className = `pill ${paid ? "pill--good" : "pill--warn"}`;
+
+  // update button label
+  toggleTeamFeeBtn.innerHTML = paid
+    ? `<i class="bi bi-cash-coin"></i> Marcar pendiente`
+    : `<i class="bi bi-cash-coin"></i> Marcar pagado`;
 }
 
 /* ==========================
