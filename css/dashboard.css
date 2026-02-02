@@ -651,9 +651,6 @@
   gap: .75rem;
 }
 
-/* Top 3 más “cards” */
-.top3-wrap { display:grid; gap:.75rem; }
-
 .top3-card{
   border-radius: 14px;
   padding: .9rem 1rem;
@@ -728,6 +725,129 @@
 .pill--good{ background: rgba(25,71,63,.10); }
 .pill--warn{ background: rgba(232,206,38,.18); }
 
+/* ======================================================
+   HOME / DASHBOARD PAGE
+====================================================== */
+
+.dashboard-page {
+  padding-bottom: 2rem;
+}
+
+/* KPIs */
+.dashboard-page .kpi-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.25rem 1.25rem;
+  text-align: center;
+  border: 1px solid rgba(25, 71, 63, 0.12);
+  box-shadow: 0 10px 25px rgba(25, 71, 63, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+/* barrita izquierda */
+.dashboard-page .kpi-box::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: var(--club-green);
+}
+
+/* números KPI */
+.dashboard-page .kpi-value {
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: var(--club-green);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+/* label KPI */
+.dashboard-page .kpi-label {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(0,0,0,0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+}
+
+/* Cards principales */
+.dashboard-page .alerts-card,
+.dashboard-page .next-tournament-card,
+.dashboard-page .birthdays-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid rgba(25, 71, 63, 0.12);
+  box-shadow: 0 10px 25px rgba(25, 71, 63, 0.08);
+  padding: 1.2rem 1.25rem;
+}
+
+/* títulos */
+.dashboard-page .alerts-card h3,
+.dashboard-page .next-tournament-card h3,
+.dashboard-page .birthdays-card h3 {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--club-green);
+  margin-bottom: 0.85rem;
+}
+
+.dashboard-page .alerts-list { 
+  display: grid; gap: .6rem; 
+}
+
+/* Alertas - usa tus alert-item */
+.dashboard-page #alertsList {
+  margin: 0;
+  padding: 0;
+}
+
+/* Próximo torneo: estilo Volcanes sin degradado */
+.dashboard-page .next-tournament-card {
+  background: var(--club-green);
+  color: #fff;
+  border: none;
+}
+
+.dashboard-page .next-tournament-card h3 {
+  color: var(--club-yellow);
+}
+
+.dashboard-page .next-tournament-card .t-date {
+  font-size: 1.6rem;
+  font-weight: 900;
+  margin: 0;
+}
+
+.dashboard-page .next-tournament-card .t-name {
+  opacity: 0.92;
+  margin: 0;
+}
+
+/* Cumpleaños */
+.dashboard-page #birthdaysList {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* Item bonito si usás .birthday-item en JS futuro */
+.dashboard-page .birthday-item {
+  padding: 6px 8px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: rgba(25, 71, 63, 0.06);
+}
+
+.dashboard-page .birthday-item.today {
+  background: var(--club-yellow);
+  color: var(--club-green);
+  font-weight: 900;
+}
 
 
 /* ======================================================
@@ -735,6 +855,10 @@
 ====================================================== */
 
 @media (max-width: 992px) {
+  .dashboard-page .kpi-value { 
+    font-size: 2.2rem; 
+  }
+
   .dashboard-page .kpi-row {
     grid-template-columns: 1fr;
   }
