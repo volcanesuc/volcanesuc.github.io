@@ -175,6 +175,10 @@ function renderCards(list) {
               <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}">
                 ${escapeHtml(S.actions.edit)}
               </button>
+              <a class="btn btn-sm btn-outline-secondary me-2"
+                href="tournament_details.html?id=${encodeURIComponent(t.id)}">
+                Detalles
+              </a>
             </div>
           </div>
         `;
@@ -357,7 +361,7 @@ function applyStrings() {
   // modal buttons
   f.btnCancel.textContent = S.actions.cancel;
   f.btnSave.textContent = S.actions.save;
-  deleteBtn.textContent = S.actions.delete;
+  deleteBtn && (deleteBtn.textContent = S.actions.delete);
 
   // selects from strings
   fillSelect(f.type, S.fields.type.options);
