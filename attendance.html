@@ -78,30 +78,60 @@
         </div>
 
         <!-- INSIGHTS -->
-        <div class="row g-3 mb-4">
-          <!-- GRÁFICO -->
-          <div class="col-md-8">
-            <div class="card h-100">
-              <div class="card-header bg-white border-0">
-                <h5 class="mb-0">📈 Asistencia mensual</h5>
-              </div>
-              <div class="card-body">
-                <canvas id="attendanceChart" height="120"></canvas>
-              </div>
+        <div class="row g-3 mb-4 align-items-stretch">
+            <!-- GRÁFICO -->
+            <div class="col-12 col-lg-8">
+                <div class="card h-100 card-modern">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">📈 Asistencia mensual</h5>
+                    <small class="text-muted">Por entrenamiento (% del roster activo)</small>
+                </div>
+                <div class="card-body">
+                    <canvas id="attendanceChart" height="120"></canvas>
+                </div>
+                </div>
             </div>
-          </div>
 
-          <!-- TOP 3 -->
-          <div class="col-md-4">
-            <div class="card h-100">
-              <div class="card-header bg-white border-0">
-                <h5 class="mb-0">🥇 Top 3 jugadores</h5>
-              </div>
-              <div class="card-body">
-                <div id="topPlayers" class="top3-wrap"></div>
-              </div>
+            <!-- COLUMNA DERECHA: TOP 3 + ENTRENAMIENTOS -->
+            <div class="col-12 col-lg-4">
+                <div class="d-flex flex-column gap-3 h-100">
+
+                <div class="card card-modern">
+                    <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">🥇 Top 3 jugadores</h5>
+                    </div>
+                    <div class="card-body">
+                    <div id="topPlayers" class="top3-wrap"></div>
+                    </div>
+                </div>
+
+                <div class="card card-modern flex-grow-1">
+                    <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">Entrenamientos</h5>
+                    <small class="text-muted">Lista del mes</small>
+                    </div>
+
+                    <!-- (Opcional) cards mobile -->
+                    <div id="trainingsCards" class="d-md-none px-3 pb-3"></div>
+
+                    <div class="card-body pt-0 d-none d-md-block">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-uppercase small">
+                            <tr>
+                            <th>Fecha</th>
+                            <th>Asistencia</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trainingsTable"></tbody>
+                        </table>
+                    </div>
+                    </div>
+
+                </div>
+
+                </div>
             </div>
-          </div>
         </div>
 
         <!-- ENTRENAMIENTOS -->

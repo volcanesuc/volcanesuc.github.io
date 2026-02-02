@@ -117,7 +117,8 @@ function applyFilter() {
   renderPlayers(playersToRender, totalTrainings);
   updateKPIs(filteredTrainings);
   renderTopPlayers(filteredPlayersArr, totalTrainings);
-  renderChart(filteredTrainings);
+  const activeRoster = Object.values(allPlayers).filter(p => p.player.active !== false).length;
+  renderChart(trainings, activeRoster);
 }
 
 
@@ -252,12 +253,18 @@ function renderTopPlayers(playersArr, totalTrainings) {
    CHART (LINE)
 ========================== */
 
-function renderChart(trainings) {
-  const labels = trainings
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map(t => t.date);
+function renderChart(trainings, activeRoster = 0) {
+  const threshold = 67.5;
 
-  const data = trainings.map(t => t.count);
+  const sorted = [...trainings].sort((a, b) => a.date.localeCompare(b.date));
+
+  const labels = sorted.map(t => t.date);
+
+  // % por entrenamiento (si no hay roster activo, cae a 0)
+  const pct = sorted.map(t => {
+    if (!activeRoster) return 0;
+    return Math.round((t.count / activeRoster) * 1000) / 10; // 1 decimal
+  });
 
   const ctx = document.getElementById("attendanceChart");
 
@@ -269,24 +276,56 @@ function renderChart(trainings) {
       labels,
       datasets: [
         {
-          label: "Asistencia",
-          data,
-          tension: 0.3,
-          fill: false
+          label: "% Asistencia",
+          data: pct,
+          tension: 0.35,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+
+          // Puntos verdes/amarillos
+          pointBackgroundColor: (context) => {
+            const v = context.raw ?? 0;
+            return v >= threshold ? "#198754" : "#e8ce26"; // verde / amarillo volcanes
+          },
+
+          // Segmentos verdes/amarillos (línea cambia por tramo)
+          segment: {
+            borderColor: (ctx) => {
+              const y0 = ctx.p0.parsed.y ?? 0;
+              const y1 = ctx.p1.parsed.y ?? 0;
+              // si el promedio del segmento supera threshold → verde
+              const avg = (y0 + y1) / 2;
+              return avg >= threshold ? "#198754" : "#e8ce26";
+            }
+          }
         }
       ]
     },
     options: {
       responsive: true,
       plugins: {
-        legend: { display: false }
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (c) => `${c.raw}%`
+          }
+        }
       },
       scales: {
-        y: { beginAtZero: true }
+        y: {
+          beginAtZero: true,
+          suggestedMax: 100,
+          ticks: {
+            callback: (v) => `${v}%`
+          }
+        }
       }
     }
   });
 }
+
 
 /* ==========================
    FILTROS
