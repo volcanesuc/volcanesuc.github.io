@@ -164,6 +164,8 @@ function renderTrainings(list) {
 
 
 function renderPlayers(list, totalTrainings) {
+  const threshold = 67.5;
+  const barColor = pct >= threshold ? "var(--club-green)" : "var(--club-yellow)";
   // TABLE (desktop)
   playersTable.innerHTML = list
     .map(({ player, count, pct }) => {
@@ -175,9 +177,9 @@ function renderPlayers(list, totalTrainings) {
           <td>
             <div class="d-flex align-items-center gap-2">
               <div class="progress slim flex-grow-1" style="min-width:120px;">
-                <div class="progress-bar" style="width:${pct}%"></div>
+                <div class="progress-bar" style="width:${pct}%; background:${pct >= 67.5 ? "var(--club-green)" : "var(--club-yellow)"};"></div>
               </div>
-              <span class="${pillClass}">${pct}%</span>
+              <span class="pill ${pct >= 67.5 ? "pill--good" : "pill--warn"}">${pct}%</span>
             </div>
           </td>
         </tr>
@@ -254,19 +256,25 @@ function renderTopPlayers(playersArr, totalTrainings) {
 ========================== */
 
 function renderChart(trainings, activeRoster = 0) {
+  const canvas = document.getElementById("attendanceChart");
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
   const threshold = 67.5;
 
   const sorted = [...trainings].sort((a, b) => a.date.localeCompare(b.date));
 
   const labels = sorted.map(t => t.date);
 
-  // % por entrenamiento (si no hay roster activo, cae a 0)
-  const pct = sorted.map(t => {
-    if (!activeRoster) return 0;
-    return Math.round((t.count / activeRoster) * 1000) / 10; // 1 decimal
+  // si pasás activeRoster (>0) lo usa para %; si no, usa counts (para que NO desaparezca)
+  const values = sorted.map(t => {
+    if (activeRoster > 0) {
+      return Math.round((t.count / activeRoster) * 1000) / 10; // % con 1 decimal
+    }
+    return t.count; // fallback
   });
-
-  const ctx = document.getElementById("attendanceChart");
 
   if (attendanceChart) attendanceChart.destroy();
 
@@ -274,34 +282,31 @@ function renderChart(trainings, activeRoster = 0) {
     type: "line",
     data: {
       labels,
-      datasets: [
-        {
-          label: "% Asistencia",
-          data: pct,
-          tension: 0.35,
-          fill: false,
-          borderWidth: 3,
-          pointRadius: 4,
-          pointHoverRadius: 6,
+      datasets: [{
+        label: activeRoster > 0 ? "% Asistencia" : "Asistencia",
+        data: values,
+        tension: 0.35,
+        borderWidth: 3,
+        pointRadius: 4,
+        pointHoverRadius: 6,
 
-          // Puntos verdes/amarillos
-          pointBackgroundColor: (context) => {
-            const v = context.raw ?? 0;
-            return v >= threshold ? "#198754" : "#e8ce26"; // verde / amarillo volcanes
-          },
+        // puntos verde / amarillo
+        pointBackgroundColor: (c) => {
+          const v = c.raw ?? 0;
+          if (activeRoster > 0) return v >= threshold ? "#198754" : "#e8ce26";
+          return "#19473f";
+        },
 
-          // Segmentos verdes/amarillos (línea cambia por tramo)
-          segment: {
-            borderColor: (ctx) => {
-              const y0 = ctx.p0.parsed.y ?? 0;
-              const y1 = ctx.p1.parsed.y ?? 0;
-              // si el promedio del segmento supera threshold → verde
-              const avg = (y0 + y1) / 2;
-              return avg >= threshold ? "#198754" : "#e8ce26";
-            }
+        // segmentos verde / amarillo (solo si es %)
+        segment: activeRoster > 0 ? {
+          borderColor: (seg) => {
+            const y0 = seg.p0.parsed.y ?? 0;
+            const y1 = seg.p1.parsed.y ?? 0;
+            const avg = (y0 + y1) / 2;
+            return avg >= threshold ? "#198754" : "#e8ce26";
           }
-        }
-      ]
+        } : {}
+      }]
     },
     options: {
       responsive: true,
@@ -309,22 +314,23 @@ function renderChart(trainings, activeRoster = 0) {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: (c) => `${c.raw}%`
+            label: (c) => activeRoster > 0 ? `${c.raw}%` : `${c.raw}`
           }
         }
       },
       scales: {
         y: {
           beginAtZero: true,
-          suggestedMax: 100,
+          suggestedMax: activeRoster > 0 ? 100 : undefined,
           ticks: {
-            callback: (v) => `${v}%`
+            callback: (v) => activeRoster > 0 ? `${v}%` : `${v}`
           }
         }
       }
     }
   });
 }
+
 
 
 /* ==========================
