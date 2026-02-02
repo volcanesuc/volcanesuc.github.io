@@ -209,6 +209,8 @@ th.sortable.sorted-desc::after {
 
 /* Tabs base */
 .nav-tabs a {
+  transition: all 0.15s ease;
+
   display: inline-flex;         
   align-items: center;          
   justify-content: center;
