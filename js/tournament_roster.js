@@ -25,6 +25,12 @@ document.getElementById("logoutBtn")?.addEventListener("click", logout);
 const S = TOURNAMENT_STRINGS;
 
 /* ==========================
+   COLLECTIONS FROM CONFIG
+========================== */
+const TOURNAMENTS_COL = APP_CONFIG?.club?.tournamentsCollection || "tournaments";
+const PLAYERS_COL = APP_CONFIG?.club?.playersCollection || "club_players";
+
+/* ==========================
    DOM
 ========================== */
 const appVersion = document.getElementById("appVersion");
@@ -55,6 +61,10 @@ const playersEmpty = document.getElementById("playersEmpty");
 const playersTitle = document.getElementById("playersTitle");
 const playersSubtitle = document.getElementById("playersSubtitle");
 
+// Team fee UI (optional)
+const teamFeePaidPill = document.getElementById("teamFeePaidPill");
+const toggleTeamFeePaidBtn = document.getElementById("toggleTeamFeePaidBtn");
+
 /* ==========================
    PARAMS / STATE
 ========================== */
@@ -65,12 +75,6 @@ let tournament = null;
 let roster = [];   // roster entries
 let players = [];  // club players
 let addPanelVisible = true;
-
-/* ==========================
-   COLLECTIONS FROM CONFIG
-========================== */
-const TOURNAMENTS_COL = APP_CONFIG?.club?.tournamentsCollection || "tournaments";
-const PLAYERS_COL = APP_CONFIG?.club?.playersCollection || "club_players";
 
 /* ==========================
    STRINGS -> UI
@@ -88,6 +92,8 @@ openAddBtn?.addEventListener("click", () => {
   if (playersList) playersList.style.display = addPanelVisible ? "" : "none";
   if (playersSearch) playersSearch.style.display = addPanelVisible ? "" : "none";
 });
+
+toggleTeamFeePaidBtn?.addEventListener("click", toggleTeamFeePaid);
 
 /* ==========================
    INIT
@@ -146,7 +152,6 @@ async function loadPlayers() {
     .map(d => ({ id: d.id, ...d.data() }))
     .map(p => ({
       ...p,
-      // normalizamos name por si lo tenés como "nombre" u otro
       name: p.name || p.fullName || p.displayName || p.nombre || ""
     }))
     .filter(p => (p.name || "").trim().length > 0)
@@ -171,6 +176,13 @@ function render() {
   // header
   if (tName) tName.textContent = tournament.name || "—";
   if (tMeta) tMeta.textContent = formatTournamentMeta(tournament);
+
+  // team fee pill
+  if (teamFeePaidPill) {
+    const paid = !!tournament.teamFeePaid;
+    teamFeePaidPill.className = paid ? "pill pill--good" : "pill pill--warn";
+    teamFeePaidPill.textContent = paid ? "Team fee: Pagado" : "Team fee: Pendiente";
+  }
 
   const q = (searchInput?.value || "").trim().toLowerCase();
   const list = q
@@ -200,6 +212,13 @@ function render() {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-toggle-status");
       await toggleStatus(id);
+    });
+  });
+
+  rosterList?.querySelectorAll("[data-toggle-paid]")?.forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-toggle-paid");
+      await togglePlayerPaid(id);
     });
   });
 }
@@ -244,7 +263,7 @@ async function addToRoster(playerId) {
 
   showLoader();
   try {
-    // usamos playerId como docId => idempotente
+    // playerId como docId => idempotente
     const ref = doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerId);
 
     await setDoc(ref, {
@@ -253,6 +272,7 @@ async function addToRoster(playerId) {
       number: p.number ?? null,
       role: p.role || "",
       status: "convocado",
+      playerFeePaid: false, // 👈 nuevo
       createdAt: serverTimestamp()
     }, { merge: true });
 
@@ -309,6 +329,52 @@ async function toggleStatus(playerIdOrDocId) {
   }
 }
 
+async function togglePlayerPaid(playerIdOrDocId) {
+  const r = roster.find(x => x.id === playerIdOrDocId);
+  if (!r) return;
+
+  const next = !r.playerFeePaid;
+
+  showLoader();
+  try {
+    await setDoc(doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerIdOrDocId), {
+      playerFeePaid: next,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    await loadRoster();
+    render();
+    renderPlayers();
+  } catch (e) {
+    console.error(e);
+    alert("Error actualizando pago del jugador.");
+  } finally {
+    hideLoader();
+  }
+}
+
+async function toggleTeamFeePaid() {
+  if (!tournament) return;
+
+  const next = !tournament.teamFeePaid;
+
+  showLoader();
+  try {
+    await setDoc(doc(db, TOURNAMENTS_COL, tournamentId), {
+      teamFeePaid: next,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    tournament.teamFeePaid = next;
+    render();
+  } catch (e) {
+    console.error(e);
+    alert("Error actualizando team fee.");
+  } finally {
+    hideLoader();
+  }
+}
+
 function nextStatus(s) {
   const v = (s || "").toLowerCase();
   if (v === "convocado") return "confirmado";
@@ -321,8 +387,13 @@ function nextStatus(s) {
 ========================== */
 function rosterRow(r) {
   const role = r.role || "—";
+
   const status = prettyStatus(r.status);
   const statusClass = status === "Confirmado" ? "pill pill--yellow" : "pill";
+
+  const paid = !!r.playerFeePaid;
+  const paidClass = paid ? "pill pill--good" : "pill pill--warn";
+  const paidLabel = paid ? "Fee pagado" : "Fee pendiente";
 
   return `
     <div class="roster-row">
@@ -342,6 +413,12 @@ function rosterRow(r) {
             <i class="bi bi-arrow-repeat"></i>
           </button>
 
+          <button class="btn btn-sm btn-outline-success"
+                  title="Toggle pago"
+                  data-toggle-paid="${escapeHtml(r.id)}">
+            <i class="bi bi-cash-coin"></i>
+          </button>
+
           <button class="btn btn-sm btn-outline-danger"
                   title="Quitar"
                   data-remove="${escapeHtml(r.id)}">
@@ -352,6 +429,7 @@ function rosterRow(r) {
 
       <div class="roster-row__badges">
         <span class="${statusClass}">${escapeHtml(status)}</span>
+        <span class="${paidClass}">${escapeHtml(paidLabel)}</span>
       </div>
     </div>
   `;
