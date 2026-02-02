@@ -402,6 +402,178 @@
   padding-right: 12px;
 }
 
+/* ==============================
+   ATTENDANCE — MODERN UI
+============================== */
+
+.attendance-page .card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.attendance-page .card-header {
+  background: #fff !important;
+  border: 0 !important;
+  padding: 1rem 1.1rem 0.75rem 1.1rem;
+}
+
+.attendance-page .card-body {
+  padding: 1rem 1.1rem;
+}
+
+/* KPI cards más modernos */
+.attendance-page .kpi-card {
+  position: relative;
+  border-left: 0;
+  background: linear-gradient(135deg, rgba(25,71,63,.08), rgba(232,206,38,.10));
+  box-shadow: 0 10px 25px rgba(25, 71, 63, 0.12);
+}
+
+.attendance-page .kpi-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(25,71,63,.12);
+  pointer-events: none;
+}
+
+.attendance-page .kpi-value {
+  font-size: 2.6rem;
+  letter-spacing: -1px;
+}
+
+.attendance-page .kpi-label {
+  color: rgba(25,71,63,.75);
+}
+
+/* Top 3 cards */
+.top3-wrap {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.top3-card {
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  background: rgba(25,71,63,.06);
+  border: 1px solid rgba(25,71,63,.10);
+}
+
+.top3-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.top3-name {
+  font-weight: 800;
+  color: var(--club-green);
+}
+
+.top3-meta {
+  color: rgba(0,0,0,.55);
+  font-size: .85rem;
+  margin-top: 2px;
+}
+
+.mini-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(25,71,63,.12);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.mini-bar > div {
+  height: 100%;
+  background: var(--club-yellow);
+  border-radius: 999px;
+}
+
+/* Tables más “clean” */
+.attendance-page .table thead {
+  background: rgba(25,71,63,.95);
+  color: #fff;
+}
+
+.attendance-page .table tbody tr {
+  border-color: rgba(0,0,0,.06);
+}
+
+.attendance-page .table tbody tr:hover {
+  background: rgba(232,206,38,.10);
+}
+
+/* Pills / badges */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  font-size: .82rem;
+  font-weight: 700;
+  border: 1px solid rgba(25,71,63,.15);
+  background: rgba(25,71,63,.06);
+  color: var(--club-green);
+}
+
+.pill--good {
+  background: rgba(25,71,63,.10);
+}
+
+.pill--warn {
+  background: rgba(232,206,38,.20);
+}
+
+/* Mobile cards */
+.mobile-card {
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(25,71,63,.10);
+  background: #fff;
+  box-shadow: 0 10px 25px rgba(25, 71, 63, 0.10);
+  margin-bottom: .75rem;
+}
+
+.mobile-card__title {
+  font-weight: 900;
+  color: var(--club-green);
+}
+
+.mobile-card__sub {
+  color: rgba(0,0,0,.55);
+  font-size: .9rem;
+}
+
+.mobile-card__row {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  align-items: center;
+  margin-top: .6rem;
+}
+
+.progress.slim {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(25,71,63,.10);
+}
+
+.progress.slim .progress-bar {
+  background: var(--club-yellow);
+}
+
+/* Pequena mejora del input search */
+#playerSearch.form-control {
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(25,71,63,.08);
+  border: 1px solid rgba(25,71,63,.12);
+}
+
+
 /* ======================================================
    RESPONSIVE (HOME + attendance)
 ====================================================== */
@@ -426,3 +598,4 @@
     padding: 1.1rem;
   }
 }
+

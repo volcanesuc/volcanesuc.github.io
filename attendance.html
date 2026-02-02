@@ -26,15 +26,15 @@
                 <small class="text-muted">Resumen mensual del equipo</small>
             </div>
 
-            <div>
-                <label class="form-label small text-muted mb-1">Mes</label>
-                <input
-                type="month"
-                id="monthFilter"
-                class="form-control"
-                style="max-width: 180px"
-                />
-            </div>
+            <div class="d-flex align-items-end gap-2">
+                <div>
+                    <label class="form-label small text-muted mb-1">Mes</label>
+                    <input type="month" id="monthFilter" class="form-control" style="max-width: 180px" />
+                </div>
+
+                <button id="clearFilter" class="btn btn-outline-primary btn-sm mb-1" type="button">
+                    Limpiar
+                </button>
             </div>
 
             <!-- KPIs -->
@@ -88,7 +88,7 @@
                     <h5 class="mb-0">🥇 Top 3 jugadores</h5>
                 </div>
                 <div class="card-body">
-                    <ul class="list-group list-group-flush" id="topPlayers"></ul>
+                    <div id="topPlayers" class="top3-wrap"></div>
                 </div>
                 </div>
             </div>
@@ -115,10 +115,17 @@
             </div>
 
             <!-- JUGADORES -->
-            <div class="card mb-4">
-            <div class="card-header bg-white border-0">
-                <h5 class="mb-0">Asistencia de jugadores</h5>
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+                <div>
+                    <h5 class="mb-0">Asistencia de jugadores</h5>
+                    <small class="text-muted">Ranking y participación</small>
+                </div>
+
+                <div style="min-width: 240px;">
+                    <input id="playerSearch" class="form-control" placeholder="Buscar jugador..." />
+                </div>
             </div>
+            <div id="playersCards" class="d-md-none"></div>
             <div class="card-body pt-0">
                 <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
