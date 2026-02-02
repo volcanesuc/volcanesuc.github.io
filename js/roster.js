@@ -155,6 +155,34 @@ function render() {
     )
     .join("");
     updateRosterStats(); //muestra contadores
+    renderMobileCards();
+}
+
+function renderMobileCards() {
+  const container = document.getElementById("playersCards");
+  if (!container) return;
+
+  container.innerHTML = players.map(p => `
+    <div class="card mb-2 player-card" data-id="${p.id}">
+      <div class="card-body p-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="fw-semibold">${p.fullName}</div>
+            <div class="text-muted small">
+              ${p.roleLabel} · #${p.number ?? "—"}
+            </div>
+          </div>
+          <span class="badge ${p.active ? "bg-success" : "bg-secondary"}">
+            ${p.active ? "Activo" : "Inactivo"}
+          </span>
+        </div>
+
+        <div class="mt-2 small text-muted">
+          ${p.gender ?? "—"} · ${p.birthday ?? "—"}
+        </div>
+      </div>
+    </div>
+  `).join("");
 }
 
 //Contadores
@@ -229,6 +257,29 @@ table.onclick = e => {
 
   const id = row.dataset.id;
   const p = players.find(pl => pl.id === id);
+  if (!p) return;
+
+  fields.id.value = p.id;
+  fields.firstName.value = p.firstName;
+  fields.lastName.value = p.lastName;
+  fields.number.value = p.number ?? "";
+  fields.gender.value = p.gender ?? "";
+  fields.birthday.value = p.birthday ?? "";
+  fields.role.value = p.role ?? "cutter";
+  fields.active.checked = p.active;
+
+  modal.show();
+};
+
+/*************************************************
+ * CLICK EN CARD (MOBILE)
+ *************************************************/
+
+document.getElementById("playersCards").onclick = e => {
+  const card = e.target.closest(".player-card");
+  if (!card) return;
+
+  const p = players.find(pl => pl.id === card.dataset.id);
   if (!p) return;
 
   fields.id.value = p.id;
