@@ -197,7 +197,7 @@ function renderTrainings(list) {
 }
 
 function renderPlayers(list) {
-  const threshold = 67.5;
+  const threshold = 66;
 
   // TABLE (desktop)
   if (playersTable) {
@@ -297,7 +297,7 @@ function renderChart(trainings, activeRoster = 0) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const threshold = 67.5;
+  const threshold = 66;
 
   const sorted = [...trainings].sort((a, b) => (a.date || "").localeCompare(a.date || ""));
   const labels = sorted.map(t => t.date ?? "—");
