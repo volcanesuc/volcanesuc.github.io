@@ -4,7 +4,7 @@ import { watchAuth, logout } from "./auth.js";
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
-import { TOURNAMENT_STRINGS } from "./strings.js";
+import { TOURNAMENT_STRINGS, CLUB_DATA } from "./strings.js";
 
 import {
   collection,
@@ -47,6 +47,9 @@ const playersSearch = document.getElementById("playersSearch");
 const playersList = document.getElementById("playersList");
 const playersEmpty = document.getElementById("playersEmpty");
 
+const playersTitle = document.getElementById("playersTitle");
+const playersSubtitle = document.getElementById("playersSubtitle");
+
 // ---- Params
 const params = new URLSearchParams(window.location.search);
 const tournamentId = (params.get("id") || "").trim();
@@ -65,9 +68,8 @@ searchInput?.addEventListener("input", render);
 playersSearch?.addEventListener("input", renderPlayers);
 openAddBtn?.addEventListener("click", () => {
   addPanelVisible = !addPanelVisible;
-  // toggle visibility by simply collapsing list container
-  const col = playersList?.closest(".panel");
-  if (col) col.style.display = addPanelVisible ? "" : "none";
+  playersList.style.display = addPanelVisible ? "" : "none";
+  playersSearch.style.display = addPanelVisible ? "" : "none";
 });
 
 // ---- Init
@@ -116,12 +118,54 @@ async function loadRoster() {
 }
 
 async function loadPlayers() {
-  // Asumimos colección "players"
-  const snap = await getDocs(collection(db, "players"));
-  players = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  // Rutas posibles (escalable). Se usa la primera que tenga docs.
+  const clubId = CLUB_DATA?.club?.id || "volcanes";
+
+  const candidates = [
+    { label: "players", ref: collection(db, "players") },
+    { label: "roster", ref: collection(db, "roster") },
+    { label: `clubs/${clubId}/players`, ref: collection(db, "clubs", clubId, "players") },
+    { label: `clubs/${clubId}/roster`, ref: collection(db, "clubs", clubId, "roster") }
+  ];
+
+  let found = [];
+  let source = null;
+
+  for (const c of candidates) {
+    try {
+      const snap = await getDocs(c.ref);
+      if (!snap.empty) {
+        found = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        source = c.label;
+        break;
+      }
+    } catch (e) {
+      // si rules bloquean o la ruta no existe, seguimos con la siguiente
+      console.warn("No se pudo leer:", c.label, e?.message || e);
+    }
+  }
+
+  players = (found || [])
+    .map(p => ({
+      ...p,
+      // normalizamos name por si lo tenés como fullName o displayName
+      name: p.name || p.fullName || p.displayName || ""
+    }))
+    .filter(p => (p.name || "").trim().length > 0)
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
+
+  // Debug visible (opcional)
+  console.log("Players loaded:", players.length, "source:", source);
+
+  // Si querés, mostramos de dónde viene
+  if (playersSubtitle) {
+    playersSubtitle.textContent =
+      players.length
+        ? `Fuente: ${source} · ${players.length} jugador(es)`
+        : `No se encontraron jugadores (revisar colección / permisos)`;
+  }
 }
+
 
 // ---- Render main roster
 function render() {
