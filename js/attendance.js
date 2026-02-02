@@ -165,7 +165,7 @@ function renderTrainings(list) {
 function renderPlayers(list, totalTrainings) {
   // TABLE (desktop)
   playersTable.innerHTML = list
-    .map(({ player, count, pct, missed }) => {
+    .map(({ player, count, pct }) => {
       const pillClass = pct >= 70 ? "pill pill--good" : "pill pill--warn";
       return `
         <tr>
@@ -177,7 +177,6 @@ function renderPlayers(list, totalTrainings) {
                 <div class="progress-bar" style="width:${pct}%"></div>
               </div>
               <span class="${pillClass}">${pct}%</span>
-              <span class="text-muted small d-none d-lg-inline">faltó ${missed}</span>
             </div>
           </td>
         </tr>
@@ -188,13 +187,13 @@ function renderPlayers(list, totalTrainings) {
   // CARDS (mobile)
   if (playersCards) {
     playersCards.innerHTML = list
-      .slice(0, 50) // evita infinito en móvil; ajustá si querés
-      .map(({ player, count, pct, missed }) => {
+      .slice(0, 50)
+      .map(({ player, count, pct }) => {
         const pillClass = pct >= 70 ? "pill pill--good" : "pill pill--warn";
         return `
           <div class="mobile-card">
             <div class="mobile-card__title">${player.fullName}</div>
-            <div class="mobile-card__sub">${count} asistencias · faltó ${missed} de ${totalTrainings}</div>
+            <div class="mobile-card__sub">${count} asistencias</div>
 
             <div class="mobile-card__row">
               <div class="progress slim flex-grow-1">
@@ -208,6 +207,7 @@ function renderPlayers(list, totalTrainings) {
       .join("");
   }
 }
+
 
 
 function updateKPIs(trainings) {

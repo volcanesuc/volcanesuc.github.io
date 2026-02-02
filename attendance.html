@@ -16,134 +16,161 @@
     <!-- HEADER ESTÁNDAR -->
     <div id="app-header"></div>
 
-   <main id="content" class="attendance-page">
-        <div class="container py-4">
+    <main id="content" class="attendance-page">
+      <div class="container py-4">
 
-            <!-- TÍTULO + FILTRO GLOBAL -->
-            <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-3">
+        <!-- TÍTULO + FILTRO GLOBAL -->
+        <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-3">
+          <div>
+            <h1 class="page-title mb-1">Control de asistencia</h1>
+            <small class="text-muted">Resumen mensual del equipo</small>
+          </div>
+
+          <div class="d-flex align-items-end gap-2">
             <div>
-                <h1 class="page-title mb-1">Control de asistencia</h1>
-                <small class="text-muted">Resumen mensual del equipo</small>
+              <label class="form-label small text-muted mb-1">Mes</label>
+              <input
+                type="month"
+                id="monthFilter"
+                class="form-control"
+                style="max-width: 180px"
+              />
             </div>
 
-            <div class="d-flex align-items-end gap-2">
-                <div>
-                    <label class="form-label small text-muted mb-1">Mes</label>
-                    <input type="month" id="monthFilter" class="form-control" style="max-width: 180px" />
-                </div>
-
-                <button id="clearFilter" class="btn btn-outline-primary btn-sm mb-1" type="button">
-                    Limpiar
-                </button>
-            </div>
-
-            <!-- KPIs -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <div class="card kpi-card">
-                    <div class="card-body">
-                        <small class="kpi-label">Entrenamientos</small>
-                        <h2 id="kpiTrainings" class="kpi-value">–</h2>
-                    </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card kpi-card">
-                    <div class="card-body">
-                        <small class="kpi-label">Asistencias totales</small>
-                        <h2 id="kpiAttendance" class="kpi-value">–</h2>
-                    </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card kpi-card">
-                    <div class="card-body">
-                        <small class="kpi-label">Promedio por entrenamiento</small>
-                        <h2 id="kpiAverage" class="kpi-value">–</h2>
-                    </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- INSIGHTS -->
-            <div class="row g-3 mb-4">
-            <!-- GRÁFICO -->
-            <div class="col-md-8">
-                <div class="card h-100">
-                <div class="card-header bg-white border-0">
-                    <h5 class="mb-0">📈 Asistencia mensual</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="attendanceChart" height="120"></canvas>
-                </div>
-                </div>
-            </div>
-
-            <!-- TOP 3 -->
-            <div class="col-md-4">
-                <div class="card h-100">
-                <div class="card-header bg-white border-0">
-                    <h5 class="mb-0">🥇 Top 3 jugadores</h5>
-                </div>
-                <div class="card-body">
-                    <div id="topPlayers" class="top3-wrap"></div>
-                </div>
-                </div>
-            </div>
-            </div>
-
-            <!-- ENTRENAMIENTOS -->
-            <div class="card mb-4">
-            <div class="card-header bg-white border-0">
-                <h5 class="mb-0">Entrenamientos</h5>
-            </div>
-            <div class="card-body pt-0">
-                <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light text-uppercase small">
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Asistencia</th>
-                    </tr>
-                    </thead>
-                    <tbody id="trainingsTable"></tbody>
-                </table>
-                </div>
-            </div>
-            </div>
-
-            <!-- JUGADORES -->
-            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
-                <div>
-                    <h5 class="mb-0">Asistencia de jugadores</h5>
-                    <small class="text-muted">Ranking y participación</small>
-                </div>
-
-                <div style="min-width: 240px;">
-                    <input id="playerSearch" class="form-control" placeholder="Buscar jugador..." />
-                </div>
-            </div>
-            <div id="playersCards" class="d-md-none"></div>
-            <div class="card-body pt-0">
-                <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light text-uppercase small">
-                    <tr>
-                        <th>Jugador</th>
-                        <th>Asistencias</th>
-                        <th>% Participación</th>
-                    </tr>
-                    </thead>
-                    <tbody id="playersTable"></tbody>
-                </table>
-                </div>
-            </div>
-            </div>
-
-            <span id="appVersion" class="text-muted small"></span>
+            <button
+              id="clearFilter"
+              class="btn btn-outline-primary btn-sm mb-1"
+              type="button"
+            >
+              Limpiar
+            </button>
+          </div>
         </div>
+
+        <!-- KPIs -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="card kpi-card">
+              <div class="card-body">
+                <small class="kpi-label">Entrenamientos</small>
+                <h2 id="kpiTrainings" class="kpi-value">–</h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card kpi-card">
+              <div class="card-body">
+                <small class="kpi-label">Asistencias totales</small>
+                <h2 id="kpiAttendance" class="kpi-value">–</h2>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="card kpi-card">
+              <div class="card-body">
+                <small class="kpi-label">Promedio por entrenamiento</small>
+                <h2 id="kpiAverage" class="kpi-value">–</h2>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INSIGHTS -->
+        <div class="row g-3 mb-4">
+          <!-- GRÁFICO -->
+          <div class="col-md-8">
+            <div class="card h-100">
+              <div class="card-header bg-white border-0">
+                <h5 class="mb-0">📈 Asistencia mensual</h5>
+              </div>
+              <div class="card-body">
+                <canvas id="attendanceChart" height="120"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- TOP 3 -->
+          <div class="col-md-4">
+            <div class="card h-100">
+              <div class="card-header bg-white border-0">
+                <h5 class="mb-0">🥇 Top 3 jugadores</h5>
+              </div>
+              <div class="card-body">
+                <div id="topPlayers" class="top3-wrap"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ENTRENAMIENTOS -->
+        <div class="card mb-4">
+          <div class="card-header bg-white border-0">
+            <h5 class="mb-0">Entrenamientos</h5>
+          </div>
+
+          <!-- (Opcional) cards mobile si las usás en JS -->
+          <div id="trainingsCards" class="d-md-none px-3 pb-3"></div>
+
+          <!-- tabla desktop -->
+          <div class="card-body pt-0 d-none d-md-block">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-uppercase small">
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Asistencia</th>
+                  </tr>
+                </thead>
+                <tbody id="trainingsTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- JUGADORES -->
+        <div class="card mb-4">
+          <!-- HEADER CARD -->
+          <div class="card-header bg-white border-0">
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+              <div>
+                <h5 class="mb-0">Asistencia de jugadores</h5>
+                <small class="text-muted">Ranking y participación</small>
+              </div>
+
+              <div style="min-width: 240px;">
+                <input
+                  id="playerSearch"
+                  class="form-control"
+                  placeholder="Buscar jugador..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- MOBILE CARDS -->
+          <div id="playersCards" class="d-md-none px-3 pb-3"></div>
+
+          <!-- DESKTOP TABLE -->
+          <div class="card-body pt-0 d-none d-md-block">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-uppercase small">
+                  <tr>
+                    <th>Jugador</th>
+                    <th>Asistencias</th>
+                    <th>% Participación</th>
+                  </tr>
+                </thead>
+                <tbody id="playersTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <span id="appVersion" class="text-muted small"></span>
+      </div>
     </main>
 
     <!-- LOADER -->
