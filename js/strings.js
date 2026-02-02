@@ -171,3 +171,134 @@ export const CLUB_DATA = {
     copyright: "© Volcanes Ultimate"
   }
 };
+
+
+export const TOURNAMENT_STRINGS = {
+  page: {
+    title: "Torneos",
+    subtitle: "Planificación de torneos y participación del equipo",
+    empty: "No hay torneos registrados todavía."
+  },
+
+  actions: {
+    add: "Nuevo torneo",
+    edit: "Editar torneo",
+    delete: "Eliminar torneo",
+    save: "Guardar",
+    cancel: "Cancelar",
+    confirmDelete: "¿Eliminar este torneo? Esta acción no se puede deshacer."
+  },
+
+  fields: {
+    name: {
+      label: "Nombre del torneo",
+      placeholder: "Ej: Torneo Pura Vida"
+    },
+    dateStart: {
+      label: "Fecha inicio"
+    },
+    dateEnd: {
+      label: "Fecha fin"
+    },
+    type: {
+      label: "Tipo",
+      options: {
+        mixto: "Mixto",
+        open: "Open",
+        fem: "Femenino"
+      }
+    },
+    age: {
+      label: "Categoría",
+      options: {
+        open: "Open",
+        master: "Master",
+        u24: "U24",
+        u17: "U17",
+        u15: "U15"
+      }
+    },
+    venue: {
+      label: "Modalidad",
+      options: {
+        outdoor: "Outdoor",
+        indoor: "Indoor"
+      }
+    },
+    location: {
+      label: "Lugar",
+      placeholder: "Ciudad, cancha, país…"
+    },
+    teamFee: {
+      label: "Team fee",
+      helper: "Costo total del equipo"
+    },
+    playerFee: {
+      label: "Player fee",
+      helper: "Costo por jugador"
+    },
+    notes: {
+      label: "Notas",
+      placeholder: "Fechas, logística, uniformes, horarios…"
+    },
+    confirmed: {
+      label: "Torneo confirmado"
+    }
+  },
+
+  list: {
+    headers: {
+      name: "Nombre",
+      date: "Fecha",
+      type: "Tipo",
+      age: "Edad",
+      venue: "Indoor / Outdoor",
+      fees: "Fees",
+      actions: "Acciones"
+    }
+  },
+
+  fees: {
+    team: "Team",
+    player: "Player",
+    currency: "₡"
+  },
+
+  search: {
+    placeholder: "Buscar torneo…"
+  },
+
+  roster: {
+    title: "Roster del torneo",
+    subtitle: "Jugadores convocados",
+    empty: "No hay jugadores asignados a este torneo."
+  },
+
+  games: {
+    title: "Partidos",
+    add: "Agregar partido",
+    empty: "No hay partidos registrados.",
+    fields: {
+      opponent: "Rival",
+      score: "Marcador",
+      date: "Fecha",
+      notes: "Notas del partido"
+    }
+  },
+
+  stats: {
+    title: "Estadísticas individuales",
+    goals: "Goles",
+    assists: "Asistencias",
+    defs: "Defensas",
+    total: "Total"
+  },
+
+  messages: {
+    saved: "Torneo guardado correctamente.",
+    deleted: "Torneo eliminado.",
+    errorSave: "Error al guardar el torneo.",
+    errorDelete: "Error al eliminar el torneo.",
+    missingRequired: "Faltan campos obligatorios."
+  }
+};

@@ -14,10 +14,17 @@ import {
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
+import { TOURNAMENT_STRINGS } from "./strings.js";
 
 loadHeader("tournaments");
-
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
+
+const S = TOURNAMENT_STRINGS;
+
+/* ==========================
+   STRINGS -> UI
+========================== */
+applyStrings();
 
 /* ==========================
    DOM
@@ -46,7 +53,24 @@ const f = {
   playerFee: document.getElementById("playerFee"),
   notes: document.getElementById("notes"),
   confirmed: document.getElementById("confirmed"),
-  title: document.getElementById("tournamentModalTitle")
+  title: document.getElementById("tournamentModalTitle"),
+  subtitle: document.getElementById("tournamentModalSubtitle"),
+
+  // labels (HTML tiene ids)
+  lblName: document.getElementById("lblName"),
+  lblDateStart: document.getElementById("lblDateStart"),
+  lblDateEnd: document.getElementById("lblDateEnd"),
+  lblType: document.getElementById("lblType"),
+  lblAge: document.getElementById("lblAge"),
+  lblVenue: document.getElementById("lblVenue"),
+  lblLocation: document.getElementById("lblLocation"),
+  lblTeamFee: document.getElementById("lblTeamFee"),
+  lblPlayerFee: document.getElementById("lblPlayerFee"),
+  lblNotes: document.getElementById("lblNotes"),
+  lblConfirmed: document.getElementById("lblConfirmed"),
+
+  btnCancel: document.getElementById("btnCancel"),
+  btnSave: document.getElementById("btnSave")
 };
 
 let allTournaments = [];
@@ -104,17 +128,19 @@ function renderTable(list) {
           <tr>
             <td class="fw-bold">${escapeHtml(t.name)}</td>
             <td>${formatDateRange(t.dateStart, t.dateEnd)}</td>
-            <td>${badge(t.type)}</td>
-            <td>${badge(t.age)}</td>
-            <td>${badge(t.venue)}</td>
+            <td>${badgeLabel(S.fields.type.options?.[t.type] ?? t.type)}</td>
+            <td>${badgeLabel(S.fields.age.options?.[t.age] ?? t.age)}</td>
+            <td>${badgeLabel(S.fields.venue.options?.[t.venue] ?? t.venue)}</td>
             <td>${fees}</td>
             <td class="text-end">
-              <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}">Editar</button>
+              <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}">
+                ${escapeHtml(S.actions.edit)}
+              </button>
             </td>
           </tr>
         `;
       }).join("")
-    : `<tr><td colspan="7" class="text-muted p-3">No hay torneos todavía.</td></tr>`;
+    : `<tr><td colspan="7" class="text-muted p-3">${escapeHtml(S.page.empty)}</td></tr>`;
 
   tableEl.querySelectorAll("[data-edit]").forEach(btn => {
     btn.addEventListener("click", () => openEdit(btn.getAttribute("data-edit")));
@@ -127,25 +153,33 @@ function renderCards(list) {
   cardsEl.innerHTML = list.length
     ? list.map(t => {
         const fees = formatFees(t.teamFee, t.playerFee);
+        const typeLbl = S.fields.type.options?.[t.type] ?? t.type ?? "—";
+        const ageLbl = S.fields.age.options?.[t.age] ?? t.age ?? "—";
+        const venueLbl = S.fields.venue.options?.[t.venue] ?? t.venue ?? "—";
+
         return `
           <div class="mobile-card mb-3">
             <div class="mobile-card__title">${escapeHtml(t.name)}</div>
-            <div class="mobile-card__sub">${formatDateRange(t.dateStart, t.dateEnd)} · ${escapeHtml(t.location || "—")}</div>
+            <div class="mobile-card__sub">
+              ${formatDateRange(t.dateStart, t.dateEnd)} · ${escapeHtml(t.location || "—")}
+            </div>
 
             <div class="d-flex flex-wrap gap-2 mt-2">
-              <span class="pill">${t.type || "—"}</span>
-              <span class="pill">${t.age || "—"}</span>
-              <span class="pill">${t.venue || "—"}</span>
+              <span class="pill">${escapeHtml(typeLbl)}</span>
+              <span class="pill">${escapeHtml(ageLbl)}</span>
+              <span class="pill">${escapeHtml(venueLbl)}</span>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mt-3">
               <div class="text-muted small">${fees}</div>
-              <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}">Editar</button>
+              <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}">
+                ${escapeHtml(S.actions.edit)}
+              </button>
             </div>
           </div>
         `;
       }).join("")
-    : `<div class="text-muted p-2">No hay torneos todavía.</div>`;
+    : `<div class="text-muted p-2">${escapeHtml(S.page.empty)}</div>`;
 
   cardsEl.querySelectorAll("[data-edit]").forEach(btn => {
     btn.addEventListener("click", () => openEdit(btn.getAttribute("data-edit")));
@@ -160,7 +194,8 @@ searchEl?.addEventListener("input", render);
 
 function openNew() {
   clearForm();
-  f.title.textContent = "Nuevo torneo";
+  f.title.textContent = S.actions.add;
+  f.subtitle.textContent = S.actions.add;
   deleteBtn.style.display = "none";
   modal?.show();
 }
@@ -182,7 +217,8 @@ function openEdit(id) {
   f.notes.value = t.notes || "";
   f.confirmed.checked = !!t.confirmed;
 
-  f.title.textContent = "Editar torneo";
+  f.title.textContent = S.actions.edit;
+  f.subtitle.textContent = S.actions.edit;
   deleteBtn.style.display = "inline-block";
   modal?.show();
 }
@@ -217,16 +253,16 @@ form?.addEventListener("submit", async (e) => {
       type: f.type.value,
       age: f.age.value,
       venue: f.venue.value,
-      location: f.location.value.trim(),
+      location: (f.location.value || "").trim(),
       teamFee: toNumberOrNull(f.teamFee.value),
       playerFee: toNumberOrNull(f.playerFee.value),
-      notes: f.notes.value.trim(),
+      notes: (f.notes.value || "").trim(),
       confirmed: !!f.confirmed.checked,
       updatedAt: serverTimestamp()
     };
 
     if (!payload.name || !payload.dateStart) {
-      alert("Faltan campos obligatorios: nombre y fecha inicio.");
+      alert(S.messages?.missingRequired || S.actions?.missingRequired || "Faltan campos obligatorios.");
       return;
     }
 
@@ -244,7 +280,7 @@ form?.addEventListener("submit", async (e) => {
     modal?.hide();
   } catch (err) {
     console.error(err);
-    alert("Error guardando torneo. Revisa consola.");
+    alert(S.messages?.errorSave || "Error guardando torneo.");
   } finally {
     hideLoader();
   }
@@ -254,7 +290,7 @@ deleteBtn?.addEventListener("click", async () => {
   const id = f.id.value;
   if (!id) return;
 
-  const ok = confirm("¿Eliminar este torneo? Esto no se puede deshacer.");
+  const ok = confirm(S.actions?.confirmDelete || "¿Eliminar este torneo?");
   if (!ok) return;
 
   showLoader();
@@ -265,11 +301,80 @@ deleteBtn?.addEventListener("click", async () => {
     modal?.hide();
   } catch (e) {
     console.error(e);
-    alert("Error eliminando torneo. Revisa consola.");
+    alert(S.messages?.errorDelete || "Error eliminando torneo.");
   } finally {
     hideLoader();
   }
 });
+
+/* ==========================
+   STRINGS APPLY
+========================== */
+function applyStrings() {
+  // title
+  document.getElementById("pageTitle").textContent = S.page.title;
+  document.getElementById("pageHeading").textContent = S.page.title;
+  document.getElementById("pageSubtitle").textContent = S.page.subtitle;
+
+  // search
+  document.getElementById("searchLabel").textContent = S.search?.label || "Buscar";
+  document.getElementById("tournamentSearch").placeholder = S.search?.placeholder || "";
+
+  // main buttons
+  document.getElementById("addTournamentBtn").textContent = `+ ${S.actions.add}`;
+
+  // table headers
+  document.getElementById("thName").textContent = S.list.headers.name;
+  document.getElementById("thDate").textContent = S.list.headers.date;
+  document.getElementById("thType").textContent = S.list.headers.type;
+  document.getElementById("thAge").textContent = S.list.headers.age;
+  document.getElementById("thVenue").textContent = S.list.headers.venue;
+  document.getElementById("thFees").textContent = S.list.headers.fees;
+  document.getElementById("thActions").textContent = S.list.headers.actions;
+
+  // modal labels
+  f.lblName.textContent = S.fields.name.label;
+  f.name.placeholder = S.fields.name.placeholder || "";
+
+  f.lblDateStart.textContent = S.fields.dateStart.label;
+  f.lblDateEnd.textContent = `${S.fields.dateEnd.label} (${S.fields.dateEnd.optional || "opcional"})`.replace(" (opcional)", " (opcional)");
+
+  f.lblType.textContent = S.fields.type.label;
+  f.lblAge.textContent = S.fields.age.label;
+  f.lblVenue.textContent = S.fields.venue.label;
+
+  f.lblLocation.textContent = `${S.fields.location.label} (${S.fields.location.optional || "opcional"})`.replace(" (opcional)", " (opcional)");
+  f.location.placeholder = S.fields.location.placeholder || "";
+
+  f.lblTeamFee.textContent = S.fields.teamFee.label;
+  f.lblPlayerFee.textContent = S.fields.playerFee.label;
+
+  f.lblNotes.textContent = S.fields.notes.label;
+  f.notes.placeholder = S.fields.notes.placeholder || "";
+
+  f.lblConfirmed.textContent = S.fields.confirmed.label;
+
+  // modal buttons
+  f.btnCancel.textContent = S.actions.cancel;
+  f.btnSave.textContent = S.actions.save;
+  deleteBtn.textContent = S.actions.delete;
+
+  // selects from strings
+  fillSelect(f.type, S.fields.type.options);
+  fillSelect(f.age, S.fields.age.options);
+  fillSelect(f.venue, S.fields.venue.options);
+
+  // default modal title
+  f.title.textContent = S.page.title;
+  f.subtitle.textContent = "";
+}
+
+function fillSelect(selectEl, optionsObj) {
+  if (!selectEl || !optionsObj) return;
+  selectEl.innerHTML = Object.entries(optionsObj)
+    .map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`)
+    .join("");
+}
 
 /* ==========================
    HELPERS
@@ -287,17 +392,21 @@ function formatDateRange(start, end) {
 }
 
 function formatFees(teamFee, playerFee) {
-  const tf = teamFee != null ? `Team ₡${Number(teamFee).toLocaleString("es-CR")}` : null;
-  const pf = playerFee != null ? `Player ₡${Number(playerFee).toLocaleString("es-CR")}` : null;
+  const cur = S.fees?.currency || "₡";
+  const tfLabel = S.fees?.team || "Team";
+  const pfLabel = S.fees?.player || "Player";
+
+  const tf = teamFee != null ? `${tfLabel} ${cur}${Number(teamFee).toLocaleString("es-CR")}` : null;
+  const pf = playerFee != null ? `${pfLabel} ${cur}${Number(playerFee).toLocaleString("es-CR")}` : null;
+
   if (tf && pf) return `${tf} · ${pf}`;
   return tf || pf || "—";
 }
 
-function badge(txt) {
+function badgeLabel(txt) {
   return `<span class="pill">${escapeHtml(txt || "—")}</span>`;
 }
 
-// minimal escape para evitar html raro
 function escapeHtml(str) {
   return String(str ?? "")
     .replaceAll("&", "&amp;")
