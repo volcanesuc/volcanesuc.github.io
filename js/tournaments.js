@@ -22,11 +22,6 @@ document.getElementById("logoutBtn")?.addEventListener("click", logout);
 const S = TOURNAMENT_STRINGS;
 
 /* ==========================
-   STRINGS -> UI
-========================== */
-applyStrings();
-
-/* ==========================
    DOM
 ========================== */
 const tableEl = document.getElementById("tournamentsTable");
@@ -72,6 +67,11 @@ const f = {
   btnCancel: document.getElementById("btnCancel"),
   btnSave: document.getElementById("btnSave")
 };
+
+/* ==========================
+   STRINGS -> UI
+========================== */
+applyStrings();
 
 let allTournaments = [];
 
