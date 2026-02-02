@@ -1,7 +1,10 @@
 // attendance.js
 import { db } from "./firebase.js";
 import { watchAuth, logout } from "./auth.js";
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
@@ -9,19 +12,33 @@ import { Player } from "./models/player.js";
 
 loadHeader("attendance");
 
+/* ==========================
+   DOM
+========================== */
+
 const trainingsTable = document.getElementById("trainingsTable");
 const playersTable = document.getElementById("playersTable");
 const monthFilter = document.getElementById("monthFilter");
 const clearFilterBtn = document.getElementById("clearFilter");
-const trainingsCards = document.getElementById("trainingsCards");
-const playersCards = document.getElementById("playersCards");
-const playerSearch = document.getElementById("playerSearch");
+
+const trainingsCards = document.getElementById("trainingsCards"); // optional
+const playersCards = document.getElementById("playersCards");     // optional
+const playerSearch = document.getElementById("playerSearch");     // optional
+
+/* ==========================
+   STATE
+========================== */
 
 let allTrainings = {};
 let allPlayers = {};
 let attendanceChart;
+
 let filteredTrainings = [];
 let filteredPlayersArr = [];
+
+/* ==========================
+   AUTH
+========================== */
 
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
@@ -37,6 +54,10 @@ watchAuth(async () => {
   }
 });
 
+/* ==========================
+   LOAD DATA
+========================== */
+
 async function loadAttendance() {
   allTrainings = {};
   allPlayers = {};
@@ -45,21 +66,17 @@ async function loadAttendance() {
   const playersSnap = await getDocs(collection(db, "club_players"));
   playersSnap.forEach(d => {
     const player = Player.fromFirestore(d);
-    allPlayers[player.id] = {
-      player,
-      count: 0
-    };
+    allPlayers[player.id] = { player, count: 0 };
   });
 
-  // TRAININGS (nuevo modelo)
+  // TRAININGS
   const trainingsSnap = await getDocs(collection(db, "trainings"));
   trainingsSnap.forEach(d => {
     const data = d.data();
-
     allTrainings[d.id] = {
       id: d.id,
-      date: data.date,
-      month: data.month,
+      date: data.date,             // "YYYY-MM-DD" (ideal)
+      month: data.month,           // "YYYY-MM"
       attendees: data.attendees ?? [],
       count: 0
     };
@@ -69,65 +86,76 @@ async function loadAttendance() {
   console.log("Trainings:", Object.keys(allTrainings).length);
 }
 
+/* ==========================
+   FILTER + COMPUTE
+========================== */
 
 function applyFilter() {
-  const selectedMonth = monthFilter.value;
+  const selectedMonth = monthFilter?.value;
 
   filteredTrainings = Object.values(allTrainings).filter(t =>
     selectedMonth ? t.month === selectedMonth : true
   );
 
-  if (monthFilter.value && filteredTrainings.length === 0) {
-    trainingsTable.innerHTML = `<tr><td colspan="2" class="text-muted p-3">No hay entrenamientos registrados en este mes.</td></tr>`;
-    playersTable.innerHTML = `<tr><td colspan="3" class="text-muted p-3">No hay datos para calcular asistencia.</td></tr>`;
+  // Si hay filtro y no hay entrenos: muestra mensaje y aún así actualiza KPIs/top/chart en 0
+  if (selectedMonth && filteredTrainings.length === 0) {
+    trainingsTable.innerHTML =
+      `<tr><td colspan="2" class="text-muted p-3">No hay entrenamientos registrados en este mes.</td></tr>`;
+    playersTable.innerHTML =
+      `<tr><td colspan="3" class="text-muted p-3">No hay datos para calcular asistencia.</td></tr>`;
+
+    trainingsCards && (trainingsCards.innerHTML = "");
+    playersCards && (playersCards.innerHTML = "");
   }
 
   // reset counts
   filteredTrainings.forEach(t => (t.count = 0));
   Object.values(allPlayers).forEach(p => (p.count = 0));
 
+  // compute counts
   filteredTrainings.forEach(training => {
     training.count = training.attendees.length;
-
     training.attendees.forEach(playerId => {
-      if (allPlayers[playerId]) {
-        allPlayers[playerId].count++;
-      }
+      if (allPlayers[playerId]) allPlayers[playerId].count++;
     });
   });
 
   const totalTrainings = filteredTrainings.length;
 
-  // array para render
   filteredPlayersArr = Object.values(allPlayers)
     .map(p => ({
       ...p,
-      pct: totalTrainings ? Math.round((p.count / totalTrainings) * 100) : 0,
-      missed: totalTrainings ? (totalTrainings - p.count) : 0
+      pct: totalTrainings ? Math.round((p.count / totalTrainings) * 100) : 0
     }))
     .sort((a, b) => b.count - a.count);
 
-  // aplica search si hay
+  // search
   const q = (playerSearch?.value || "").trim().toLowerCase();
   const playersToRender = q
-    ? filteredPlayersArr.filter(({ player }) => player.fullName.toLowerCase().includes(q))
+    ? filteredPlayersArr.filter(({ player }) =>
+        (player.fullName || "").toLowerCase().includes(q)
+      )
     : filteredPlayersArr;
 
+  // renders
   renderTrainings(filteredTrainings);
-  renderPlayers(playersToRender, totalTrainings);
+  renderPlayers(playersToRender);
   updateKPIs(filteredTrainings);
   renderTopPlayers(filteredPlayersArr, totalTrainings);
-  const activeRoster = Object.values(allPlayers).filter(p => p.player.active !== false).length;
-  renderChart(trainings, activeRoster);
-}
 
+  // roster activo (si tu modelo no tiene active, se cuenta igual)
+  const activeRoster = Object.values(allPlayers).filter(p => p.player.active !== false).length;
+
+  // OJO: era el bug principal en tu script: estabas pasando "trainings" (no existe aquí)
+  renderChart(filteredTrainings, activeRoster);
+}
 
 /* ==========================
    RENDERS
 ========================== */
 
 function renderTrainings(list) {
-  const sorted = [...list].sort((a, b) => b.date.localeCompare(a.date));
+  const sorted = [...list].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
   // TABLE (desktop)
   trainingsTable.innerHTML = sorted
@@ -135,11 +163,10 @@ function renderTrainings(list) {
       const pillClass = t.count >= 12 ? "pill pill--good" : "pill pill--warn";
       return `
         <tr>
-          <td>${t.date}</td>
-          <td>
-            <span class="${pillClass}">👥 ${t.count}</span>
-          </td>
-        </tr>`;
+          <td>${t.date ?? "—"}</td>
+          <td><span class="${pillClass}">👥 ${t.count ?? 0}</span></td>
+        </tr>
+      `;
     })
     .join("");
 
@@ -150,10 +177,10 @@ function renderTrainings(list) {
         const pillClass = t.count >= 12 ? "pill pill--good" : "pill pill--warn";
         return `
           <div class="mobile-card">
-            <div class="mobile-card__title">${t.date}</div>
+            <div class="mobile-card__title">${t.date ?? "—"}</div>
             <div class="mobile-card__row">
               <div class="mobile-card__sub">Asistencia</div>
-              <span class="${pillClass}">👥 ${t.count}</span>
+              <span class="${pillClass}">👥 ${t.count ?? 0}</span>
             </div>
           </div>
         `;
@@ -162,24 +189,25 @@ function renderTrainings(list) {
   }
 }
 
-
-function renderPlayers(list, totalTrainings) {
+function renderPlayers(list) {
   const threshold = 67.5;
-  const barColor = pct >= threshold ? "var(--club-green)" : "var(--club-yellow)";
+
   // TABLE (desktop)
   playersTable.innerHTML = list
     .map(({ player, count, pct }) => {
-      const pillClass = pct >= 70 ? "pill pill--good" : "pill pill--warn";
+      const pillClass = pct >= threshold ? "pill pill--good" : "pill pill--warn";
+      const barColor = pct >= threshold ? "var(--club-green)" : "var(--club-yellow)";
+
       return `
         <tr>
-          <td>${player.fullName}</td>
-          <td>${count}</td>
+          <td>${player.fullName ?? "—"}</td>
+          <td>${count ?? 0}</td>
           <td>
             <div class="d-flex align-items-center gap-2">
               <div class="progress slim flex-grow-1" style="min-width:120px;">
-                <div class="progress-bar" style="width:${pct}%; background:${pct >= 67.5 ? "var(--club-green)" : "var(--club-yellow)"};"></div>
+                <div class="progress-bar" style="width:${pct}%; background:${barColor};"></div>
               </div>
-              <span class="pill ${pct >= 67.5 ? "pill--good" : "pill--warn"}">${pct}%</span>
+              <span class="${pillClass}">${pct}%</span>
             </div>
           </td>
         </tr>
@@ -192,15 +220,17 @@ function renderPlayers(list, totalTrainings) {
     playersCards.innerHTML = list
       .slice(0, 50)
       .map(({ player, count, pct }) => {
-        const pillClass = pct >= 70 ? "pill pill--good" : "pill pill--warn";
+        const pillClass = pct >= threshold ? "pill pill--good" : "pill pill--warn";
+        const barColor = pct >= threshold ? "var(--club-green)" : "var(--club-yellow)";
+
         return `
           <div class="mobile-card">
-            <div class="mobile-card__title">${player.fullName}</div>
-            <div class="mobile-card__sub">${count} asistencias</div>
+            <div class="mobile-card__title">${player.fullName ?? "—"}</div>
+            <div class="mobile-card__sub">${count ?? 0} asistencias</div>
 
             <div class="mobile-card__row">
               <div class="progress slim flex-grow-1">
-                <div class="progress-bar" style="width:${pct}%"></div>
+                <div class="progress-bar" style="width:${pct}%; background:${barColor};"></div>
               </div>
               <span class="${pillClass}">${pct}%</span>
             </div>
@@ -211,14 +241,10 @@ function renderPlayers(list, totalTrainings) {
   }
 }
 
-
-
 function updateKPIs(trainings) {
   const totalTrainings = trainings.length;
-  const totalAttendance = trainings.reduce((sum, t) => sum + t.count, 0);
-  const avg = totalTrainings
-    ? (totalAttendance / totalTrainings).toFixed(1)
-    : 0;
+  const totalAttendance = trainings.reduce((sum, t) => sum + (t.count || 0), 0);
+  const avg = totalTrainings ? (totalAttendance / totalTrainings).toFixed(1) : "0";
 
   document.getElementById("kpiTrainings").textContent = totalTrainings;
   document.getElementById("kpiAttendance").textContent = totalAttendance;
@@ -227,21 +253,23 @@ function updateKPIs(trainings) {
 
 function renderTopPlayers(playersArr, totalTrainings) {
   const top = playersArr.slice(0, 3);
-
   const medals = ["🥇", "🥈", "🥉"];
   const maxCount = top[0]?.count || 1;
 
-  document.getElementById("topPlayers").innerHTML = top
+  const el = document.getElementById("topPlayers");
+  if (!el) return;
+
+  el.innerHTML = top
     .map(({ player, count, pct }, i) => {
-      const w = Math.round((count / maxCount) * 100);
+      const w = Math.round(((count || 0) / maxCount) * 100);
       return `
         <div class="top3-card">
           <div class="top3-row">
             <div>
-              <div class="top3-name">${medals[i]} ${player.fullName}</div>
-              <div class="top3-meta">${count} de ${totalTrainings} · ${pct}%</div>
+              <div class="top3-name">${medals[i]} ${player.fullName ?? "—"}</div>
+              <div class="top3-meta">${count ?? 0} de ${totalTrainings} · ${pct ?? 0}%</div>
             </div>
-            <span class="pill pill--good">${count}</span>
+            <span class="pill pill--good">${count ?? 0}</span>
           </div>
           <div class="mini-bar"><div style="width:${w}%"></div></div>
         </div>
@@ -250,9 +278,8 @@ function renderTopPlayers(playersArr, totalTrainings) {
     .join("");
 }
 
-
 /* ==========================
-   CHART (LINE)
+   CHART
 ========================== */
 
 function renderChart(trainings, activeRoster = 0) {
@@ -264,16 +291,16 @@ function renderChart(trainings, activeRoster = 0) {
 
   const threshold = 67.5;
 
-  const sorted = [...trainings].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = [...trainings].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
-  const labels = sorted.map(t => t.date);
+  const labels = sorted.map(t => t.date ?? "—");
 
-  // si pasás activeRoster (>0) lo usa para %; si no, usa counts (para que NO desaparezca)
+  // Si hay roster activo -> % (1 decimal). Si no -> counts (para que siempre haya chart)
   const values = sorted.map(t => {
     if (activeRoster > 0) {
-      return Math.round((t.count / activeRoster) * 1000) / 10; // % con 1 decimal
+      return Math.round(((t.count || 0) / activeRoster) * 1000) / 10;
     }
-    return t.count; // fallback
+    return t.count || 0;
   });
 
   if (attendanceChart) attendanceChart.destroy();
@@ -282,31 +309,33 @@ function renderChart(trainings, activeRoster = 0) {
     type: "line",
     data: {
       labels,
-      datasets: [{
-        label: activeRoster > 0 ? "% Asistencia" : "Asistencia",
-        data: values,
-        tension: 0.35,
-        borderWidth: 3,
-        pointRadius: 4,
-        pointHoverRadius: 6,
+      datasets: [
+        {
+          label: activeRoster > 0 ? "% Asistencia" : "Asistencia",
+          data: values,
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
 
-        // puntos verde / amarillo
-        pointBackgroundColor: (c) => {
-          const v = c.raw ?? 0;
-          if (activeRoster > 0) return v >= threshold ? "#198754" : "#e8ce26";
-          return "#19473f";
-        },
+          pointBackgroundColor: (c) => {
+            const v = c.raw ?? 0;
+            if (activeRoster > 0) return v >= threshold ? "#198754" : "#e8ce26";
+            return "#19473f";
+          },
 
-        // segmentos verde / amarillo (solo si es %)
-        segment: activeRoster > 0 ? {
-          borderColor: (seg) => {
-            const y0 = seg.p0.parsed.y ?? 0;
-            const y1 = seg.p1.parsed.y ?? 0;
-            const avg = (y0 + y1) / 2;
-            return avg >= threshold ? "#198754" : "#e8ce26";
-          }
-        } : {}
-      }]
+          segment: activeRoster > 0
+            ? {
+                borderColor: (seg) => {
+                  const y0 = seg.p0.parsed.y ?? 0;
+                  const y1 = seg.p1.parsed.y ?? 0;
+                  const avg = (y0 + y1) / 2;
+                  return avg >= threshold ? "#198754" : "#e8ce26";
+                }
+              }
+            : {}
+        }
+      ]
     },
     options: {
       responsive: true,
@@ -314,7 +343,7 @@ function renderChart(trainings, activeRoster = 0) {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: (c) => activeRoster > 0 ? `${c.raw}%` : `${c.raw}`
+            label: (c) => (activeRoster > 0 ? `${c.raw}%` : `${c.raw}`)
           }
         }
       },
@@ -323,7 +352,7 @@ function renderChart(trainings, activeRoster = 0) {
           beginAtZero: true,
           suggestedMax: activeRoster > 0 ? 100 : undefined,
           ticks: {
-            callback: (v) => activeRoster > 0 ? `${v}%` : `${v}`
+            callback: (v) => (activeRoster > 0 ? `${v}%` : `${v}`)
           }
         }
       }
@@ -331,19 +360,19 @@ function renderChart(trainings, activeRoster = 0) {
   });
 }
 
-
-
 /* ==========================
-   FILTROS
+   EVENTS
 ========================== */
 
-monthFilter.onchange = applyFilter;
+monthFilter && (monthFilter.onchange = applyFilter);
 
-clearFilterBtn.onclick = () => {
+clearFilterBtn && (clearFilterBtn.onclick = () => {
   monthFilter.value = "";
   applyFilter();
-};
+});
 
 playerSearch?.addEventListener("input", applyFilter);
 
-document.getElementById("appVersion").textContent = `v${APP_CONFIG.version}`;
+// version
+const v = document.getElementById("appVersion");
+if (v) v.textContent = `v${APP_CONFIG.version}`;
