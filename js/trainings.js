@@ -39,8 +39,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 ========================= */
 let players = [];
 let attendees = [];
-let currentTrainingId = null;
 let trainings = [];
+let currentTrainingId = null;
+let editingTrainingId = null;
 
 /* =========================
    LOADER
@@ -118,43 +119,46 @@ async function loadTrainings() {
 ========================= */
 
 function bindEditEvents() {
-  document.querySelectorAll(".edit-training, .training-card")
+  document
+    .querySelectorAll(".edit-training, .training-card")
     .forEach(el => {
       el.onclick = () => {
         const id = el.closest("[data-id]").dataset.id;
-        openEditTraining(id);
+        const training = trainings.find(t => t.id === id);
+        if (!training) return;
+
+        openEditTraining(training);
       };
     });
 }
 
-function openEditTraining(id) {
-  const t = trainings.find(tr => tr.id === id);
-  if (!t) return;
 
-  currentTrainingId = id;
+function openEditTraining(training) {
+  currentTrainingId = training.id;
 
-  document.querySelector("#trainingModal .modal-title")
-    .innerText = "Editar entrenamiento";
+  document.querySelector("#trainingModal .modal-title").innerText =
+    "Editar entrenamiento";
 
-  document.getElementById("trainingDate").value = t.date;
-  document.getElementById("trainingSummary").value = t.summary ?? "";
-  document.getElementById("trainingNotes").value = t.notes ?? "";
+  trainingDate.value = training.date;
+  trainingSummary.value = training.summary ?? "";
+  trainingNotes.value = training.notes ?? "";
 
-  attendees = Array.isArray(t.attendees)
-    ? [...t.attendees]
+  attendees = Array.isArray(training.attendees)
+    ? [...training.attendees]
     : [];
 
-  setTimeout(() => {
-    document.querySelectorAll(".attendance-check")
-      .forEach(cb => {
-        cb.checked = attendees.includes(cb.dataset.id);
-      });
-    }, 0);
+  document
+    .querySelectorAll(".attendance-check")
+    .forEach(cb => {
+      cb.checked = attendees.includes(cb.dataset.id);
+    });
 
   bootstrap.Modal
     .getOrCreateInstance(trainingModal)
     .show();
 }
+
+
 
 
 /* =========================
@@ -279,6 +283,7 @@ async function saveTraining() {
     );
   }
 
+
   bootstrap.Modal
     .getInstance(trainingModal)
     .hide();
@@ -293,14 +298,14 @@ async function saveTraining() {
 ========================= */
 const trainingModal = document.getElementById("trainingModal");
 
-trainingModal.addEventListener("show.bs.modal", resetModal);
+trainingModal.addEventListener("hidden.bs.modal", resetModal);
 
 function resetModal() {
   currentTrainingId = null;
   attendees = [];
 
   document.querySelector("#trainingModal .modal-title")
-    .innerText = "Editar entrenamiento";
+    .innerText = "Nuevo entrenamiento";
 
   trainingDate.value = "";
   trainingSummary.value = "";
