@@ -133,9 +133,13 @@ function renderTable(list) {
             <td>${badgeLabel(S.fields.venue.options?.[t.venue] ?? t.venue)}</td>
             <td>${fees}</td>
             <td class="text-end">
-              <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}">
-                ${escapeHtml(S.actions.edit)}
-              </button>
+                <a class="btn btn-sm btn-outline-secondary me-2"
+                    href="tournament_detail.html?id=${encodeURIComponent(t.id)}">
+                    Detalles
+                </a>
+                <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}">
+                    ${escapeHtml(S.actions.edit)}
+                </button>
             </td>
           </tr>
         `;
@@ -182,6 +186,7 @@ function renderCards(list) {
                     </button>
                 </div>
             </div>
+          </div>
         `;
       }).join("")
     : `<div class="text-muted p-2">${escapeHtml(S.page.empty)}</div>`;
@@ -401,12 +406,14 @@ function formatFees(teamFee, playerFee) {
   const tfLabel = S.fees?.team || "Team";
   const pfLabel = S.fees?.player || "Player";
 
-  const tf = teamFee != null ? `${tfLabel} ${cur}${Number(teamFee).toLocaleString("es-CR")}` : null;
-  const pf = playerFee != null ? `${pfLabel} ${cur}${Number(playerFee).toLocaleString("es-CR")}` : null;
+  const tf = teamFee !== null && teamFee !== undefined && teamFee !== ""
+    ? `${tfLabel} ${cur}${Number(teamFee).toLocaleString("es-CR")}`
+    : null;
+    const pf = playerFee != null ? `${pfLabel} ${cur}${Number(playerFee).toLocaleString("es-CR")}` : null;
 
-  if (tf && pf) return `${tf} · ${pf}`;
-  return tf || pf || "—";
-}
+    if (tf && pf) return `${tf} · ${pf}`;
+    return tf || pf || "—";
+  }
 
 function badgeLabel(txt) {
   return `<span class="pill">${escapeHtml(txt || "—")}</span>`;
