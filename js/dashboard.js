@@ -102,35 +102,35 @@ function renderBirthdays(players) {
 
 function calculateMonthlyKPIs({ players, trainings }) {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
+  const since = new Date(now.getTime() - THIRTY_DAYS);
 
-  // Entrenamientos activos del mes (por fecha real)
-  const monthlyTrainings = trainings.filter(t => {
-    if (!t.active || !t.date) return false;
-    const d = new Date(t.date);
-    return d.getFullYear() === year && d.getMonth() === month;
+  // Entrenamientos de los últimos 30 días
+  const recentTrainings = trainings.filter(t => {
+    if (!t.date) return false;
+    const d = t.date.toDate?.() ?? new Date(t.date);
+    return d >= since && d <= now;
   });
 
   // Asistencia total
-  const totalAttendance = monthlyTrainings.reduce(
+  const totalAttendance = recentTrainings.reduce(
     (sum, t) => sum + (t.attendees?.length ?? 0),
     0
   );
 
-  const avgAttendance = monthlyTrainings.length
-    ? Math.round(totalAttendance / monthlyTrainings.length)
+  const avgAttendance = recentTrainings.length
+    ? Math.round(totalAttendance / recentTrainings.length)
     : 0;
 
-  // IDs activos en roster
+  // IDs de jugadores activos en roster
   const activeRosterIds = new Set(
     players.filter(p => p.active).map(p => p.id)
   );
 
-  // Activos que sí participaron
+  // Jugadores activos que participaron al menos una vez
   const activeParticipants = new Set();
 
-  monthlyTrainings.forEach(t => {
+  recentTrainings.forEach(t => {
     (t.attendees || []).forEach(id => {
       if (activeRosterIds.has(id)) {
         activeParticipants.add(id);
@@ -138,20 +138,13 @@ function calculateMonthlyKPIs({ players, trainings }) {
     });
   });
 
-  // Jugadores nuevos del mes
-  const newPlayers = players.filter(p => {
-    if (!p.createdAt) return false;
-    const d = p.createdAt.toDate?.() ?? new Date(p.createdAt);
-    return d.getFullYear() === year && d.getMonth() === month;
-  }).length;
-
   return {
-    activePlayers: activeParticipants.size,  
+    activePlayers: activeParticipants.size, // activos que entrenaron en últimos 30 días
     avgAttendance,
-    trainingsCount: monthlyTrainings.length
-};
-
+    trainingsCount: recentTrainings.length
+  };
 }
+
 
 function renderKPIs(kpis) {
   document.getElementById("kpiActivePlayers").textContent =
