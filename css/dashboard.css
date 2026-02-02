@@ -1,15 +1,12 @@
 /* ======================================================
-   VARIABLES DE CLUB (si no existen ya en main.css)
+   DASHBOARD.CSS — Volcanes Ultimate
+   (Estilos de páginas específicas: Home/Dashboard, Attendance, Roster modal, etc.)
+   Nota: Variables globales idealmente van en main.css
 ====================================================== */
-
-:root {
-  --club-green: #19473f;
-  --club-yellow: #e8ce26;
-}
 
 /* ======================================================
    HOME – DASHBOARD PRINCIPAL
-   (solo aplica cuando body / main tiene .dashboard-page)
+   (solo aplica cuando el contenedor tenga .dashboard-page)
 ====================================================== */
 
 .dashboard-page {
@@ -56,7 +53,7 @@
   align-items: stretch;
 }
 
-/* ===== ALERTAS ===== */
+/* ===== ALERTAS (HOME) ===== */
 .dashboard-page .alerts-card {
   background: #ffffff;
   border-radius: 16px;
@@ -78,7 +75,7 @@
   font-size: 0.95rem;
 }
 
-/* ===== PRÓXIMO TORNEO ===== */
+/* ===== PRÓXIMO TORNEO (HOME) ===== */
 .dashboard-page .next-tournament-card {
   background: var(--club-green);
   border-radius: 16px;
@@ -93,18 +90,18 @@
   color: var(--club-yellow);
 }
 
-.dashboard-page .t-date {
+.dashboard-page .next-tournament-card .t-date {
   font-size: 1.4rem;
   font-weight: 800;
   margin: 0;
 }
 
-.dashboard-page .t-name {
+.dashboard-page .next-tournament-card .t-name {
   font-size: 0.95rem;
   opacity: 0.9;
 }
 
-/* ===== CUMPLEAÑOS ===== */
+/* ===== CUMPLEAÑOS (HOME) ===== */
 .dashboard-page .birthdays-card {
   background: var(--club-green);
   border-radius: 16px;
@@ -125,8 +122,24 @@
 }
 
 /* ======================================================
+   CUMPLEAÑOS – ITEMS (HOME)
+====================================================== */
+.birthday-item {
+  padding: 6px 8px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  background: rgba(25, 71, 63, 0.05);
+}
+
+.birthday-item.today {
+  background: var(--club-yellow);
+  color: var(--club-green);
+  font-weight: 700;
+}
+
+/* ======================================================
    ASISTENCIA – KPIs
-   (solo aplica cuando main tiene .attendance-page)
+   (solo aplica cuando el contenedor tenga .attendance-page)
 ====================================================== */
 
 .attendance-page .kpi-card {
@@ -152,88 +165,8 @@
 }
 
 /* ======================================================
-   CUMPLEAÑOS – ITEMS (HOME)
-====================================================== */
-
-.birthday-item {
-  padding: 6px 8px;
-  border-radius: 6px;
-  margin-bottom: 4px;
-  background: rgba(25, 71, 63, 0.05);
-}
-
-.birthday-item.today {
-  background: var(--club-yellow);
-  color: var(--club-green);
-  font-weight: 700;
-}
-
-/* =====================
-   DASHBOARD – HOME
-   ===================== */
-
-.kpi-box {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-}
-
-.kpi-value {
-  font-size: 2.2rem;
-  font-weight: 700;
-  color: #19473f;
-  line-height: 1;
-}
-
-.kpi-label {
-  font-size: 0.9rem;
-  color: #6c757d;
-  margin-top: 6px;
-}
-
-/* Cards generales */
-.alerts-card,
-.next-tournament-card,
-.birthdays-card {
-  background: #ffffff;
-  border-radius: 14px;
-  padding: 20px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-}
-
-/* Alertas */
-.alerts-card h3,
-.birthdays-card h3,
-.next-tournament-card h3 {
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 12px;
-}
-
-/* Torneo */
-.next-tournament-card .t-date {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #e8ce26;
-}
-
-.next-tournament-card .t-name {
-  color: #19473f;
-  font-weight: 600;
-}
-
-/* Birthdays list */
-#birthdaysList div,
-#birthdaysList li {
-  padding: 4px 0;
-}
-
-
-/* ==============================
    ATTENDANCE CHECKLIST (MODAL)
-================================ */
+====================================================== */
 
 .attendance-box {
   max-height: 55vh;           /* scroll interno */
@@ -244,7 +177,6 @@
   background: #fff;
 }
 
-/* item jugador */
 .attendance-item {
   display: flex;
   align-items: center;
@@ -264,52 +196,23 @@
   background: #e8f3f1;
 }
 
-/* checkbox grande */
 .attendance-item input[type="checkbox"] {
   transform: scale(1.4);
 }
 
-/* nombre */
 .attendance-name {
   flex: 1;
   font-size: 1rem;
 }
 
-/* número */
 .attendance-number {
   font-size: 0.9rem;
   opacity: 0.6;
 }
 
-
 /* ======================================================
-   RESPONSIVE
+   ALERTAS DASHBOARD (items)
 ====================================================== */
-
-/* mobile tuning */
-@media (max-width: 576px) {
-  .attendance-box {
-    max-height: 60vh;
-  }
-
-  .attendance-item {
-    padding: 1.1rem;
-  }
-}
-
-@media (max-width: 992px) {
-  .dashboard-page .kpi-row {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-page .home-main {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ==============================
-   ALERTAS DASHBOARD
-================================ */
 
 .alert-item {
   display: flex;
@@ -339,7 +242,6 @@
   line-height: 1.3;
 }
 
-/* tipos */
 .alert-danger {
   border-left-color: #dc3545;
   background: #fff5f5;
@@ -350,67 +252,92 @@
   background: #fffbea;
 }
 
-/* ===== HEADER ===== */
+/* ======================================================
+   PLAYER MODAL (ROSTER) — FULLSCREEN
+   Requiere que tu modal-content tenga class="player-modal"
+====================================================== */
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #19473f;
-  color: #fff;
-  padding: 0.75rem 1rem;
-}
-
-.logo {
-  font-weight: 600;
-}
-
-.nav-tabs a {
-  color: #fff;
-  text-decoration: none;
-  margin-left: 1rem;
-}
-
-.nav-tabs a.active {
-  border-bottom: 2px solid #e8ce26;
-}
-
-.hamburger {
-  display: none;
-  font-size: 1.6rem;
-  background: none;
-  border: none;
+.player-modal {
+  background: #0f1413;
   color: #fff;
 }
 
-/* =========================
-   MOBILE DRAWER MODAL
-========================= */
+.player-modal__header {
+  background: linear-gradient(90deg, var(--club-green), var(--club-green-dark));
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+.player-modal__subtitle {
+  opacity: .85;
+  font-size: .85rem;
+}
+
+.player-modal__body {
+  background: #0f1413;
+}
+
+.player-modal__footer {
+  background: rgba(25,71,63,.20);
+  border-top: 1px solid rgba(255,255,255,.12);
+}
+
+.player-modal .form-label {
+  color: rgba(255,255,255,.85);
+}
+
+.player-modal .form-control,
+.player-modal .form-select {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
+  color: #fff;
+}
+
+.player-modal .form-control:focus,
+.player-modal .form-select:focus {
+  border-color: var(--club-yellow);
+  box-shadow: 0 0 0 .2rem rgba(232,206,38,.22);
+}
+
+.player-modal .btn-warning {
+  background: var(--club-yellow);
+  border-color: var(--club-yellow);
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.player-modal .form-check-label {
+  color: rgba(255,255,255,.85);
+}
+
+/* ======================================================
+   MOBILE: Drawer modal (SOLO modales con clase .drawer-modal)
+   Esto evita que se rompa el fullscreen de playerModal
+====================================================== 
+
 @media (max-width: 768px) {
-
-  .modal.fade .modal-dialog {
+  .drawer-modal.modal.fade .modal-dialog {
     transform: translateY(100%);
     transition: transform 0.25s ease-out;
   }
 
-  .modal.show .modal-dialog {
+  .drawer-modal.modal.show .modal-dialog {
     transform: translateY(0);
   }
 
-  .modal.modal-fullscreen-md-down {
+  .drawer-modal.modal.modal-fullscreen-md-down {
     --bs-modal-margin: 0;
   }
 
-  .modal.modal-fullscreen-md-down .modal-dialog {
+  .drawer-modal.modal.modal-fullscreen-md-down .modal-dialog {
     margin: 0;
   }
 
-  .modal.modal-fullscreen-md-down .modal-content {
+  .drawer-modal.modal.modal-fullscreen-md-down .modal-content {
     border-radius: 16px 16px 0 0;
     height: 100%;
   }
 
-  .modal.modal-fullscreen-md-down .modal-header {
+  .drawer-modal.modal.modal-fullscreen-md-down .modal-header {
     border-bottom: 1px solid #eee;
     position: sticky;
     top: 0;
@@ -418,7 +345,7 @@
     z-index: 10;
   }
 
-  .modal.modal-fullscreen-md-down .modal-footer {
+  .drawer-modal.modal.modal-fullscreen-md-down .modal-footer {
     position: sticky;
     bottom: 0;
     background: #fff;
@@ -431,5 +358,71 @@
     background: #ccc;
     border-radius: 2px;
     margin: 0 auto 8px;
+  }
+}*/
+
+/* Offcanvas (Bootstrap) style */
+.offcanvas {
+  background: var(--club-gray);
+  border-left: 1px solid rgba(0,0,0,0.08);
+}
+
+.offcanvas-header {
+  background: var(--club-green);
+  color: #fff;
+}
+
+.offcanvas-header .btn-close {
+  filter: invert(1);
+}
+
+.offcanvas-title {
+  font-family: "Recons";
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.offcanvas-body a {
+  display: block;
+  padding: 0.75rem 0;
+  font-weight: 700;
+  color: var(--club-green);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.offcanvas-body a:hover {
+  color: var(--club-green-dark);
+}
+
+.offcanvas-body a.active {
+  background: rgba(232,206,38,0.25);
+  border-radius: 10px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* ======================================================
+   RESPONSIVE (HOME + attendance)
+====================================================== */
+
+@media (max-width: 992px) {
+  .dashboard-page .kpi-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-page .home-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* mobile tuning */
+@media (max-width: 576px) {
+  .attendance-box {
+    max-height: 60vh;
+  }
+
+  .attendance-item {
+    padding: 1.1rem;
   }
 }
