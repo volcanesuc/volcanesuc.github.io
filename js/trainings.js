@@ -19,8 +19,8 @@ import { Training } from "./models/training.js";
 document.addEventListener("DOMContentLoaded", async () => {
   loadHeader("trainings");
 
-  await loadTrainings();
   await loadPlayers();
+  await loadTrainings();
 
   document
     .getElementById("saveTrainingBtn")
@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   hideLoading();
 });
+
 
 /* =========================
    STATE
