@@ -178,4 +178,225 @@ function renderCards(list) {
               <span class="pill">${escapeHtml(venueLbl)}</span>
             </div>
 
-            <div class="d-flex j
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div class="text-muted small">${fees}</div>
+              <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-secondary"
+                   title="Detalles"
+                   href="tournament_detail.html?id=${encodeURIComponent(t.id)}">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-primary"
+                        title="Editar"
+                        data-edit="${t.id}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("")
+    : `<div class="text-muted p-2">${escapeHtml(S.page.empty)}</div>`;
+
+  cardsEl.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => openEdit(btn.dataset.edit));
+  });
+}
+
+/* ==========================
+   MODAL
+========================== */
+addBtn?.addEventListener("click", openNew);
+searchEl?.addEventListener("input", render);
+
+function openNew() {
+  clearForm();
+  f.title.textContent = S.actions.add;
+  f.subtitle.textContent = S.actions.add;
+  deleteBtn.style.display = "none";
+  modal?.show();
+}
+
+function openEdit(id) {
+  const t = allTournaments.find(x => x.id === id);
+  if (!t) return;
+
+  f.id.value = t.id;
+  f.name.value = t.name || "";
+  f.dateStart.value = t.dateStart || "";
+  f.dateEnd.value = t.dateEnd || "";
+  f.type.value = t.type || "mixto";
+  f.age.value = t.age || "open";
+  f.venue.value = t.venue || "outdoor";
+  f.location.value = t.location || "";
+  f.teamFee.value = t.teamFee ?? "";
+  f.playerFee.value = t.playerFee ?? "";
+  f.notes.value = t.notes || "";
+  f.confirmed.checked = !!t.confirmed;
+
+  f.title.textContent = S.actions.edit;
+  f.subtitle.textContent = S.actions.edit;
+  deleteBtn.style.display = "inline-block";
+  modal?.show();
+}
+
+function clearForm() {
+  Object.values(f).forEach(el => {
+    if (!el || !("value" in el)) return;
+    el.value = "";
+  });
+  f.type.value = "mixto";
+  f.age.value = "open";
+  f.venue.value = "outdoor";
+  f.confirmed.checked = false;
+}
+
+/* ==========================
+   SAVE / DELETE
+========================== */
+form?.addEventListener("submit", async e => {
+  e.preventDefault();
+  showLoader();
+
+  try {
+    const payload = {
+      name: f.name.value.trim(),
+      dateStart: f.dateStart.value,
+      dateEnd: f.dateEnd.value || "",
+      type: f.type.value,
+      age: f.age.value,
+      venue: f.venue.value,
+      location: f.location.value.trim(),
+      teamFee: toNumberOrNull(f.teamFee.value),
+      playerFee: toNumberOrNull(f.playerFee.value),
+      notes: f.notes.value.trim(),
+      confirmed: !!f.confirmed.checked,
+      updatedAt: serverTimestamp()
+    };
+
+    if (!payload.name || !payload.dateStart) {
+      alert(S.messages.missingRequired);
+      return;
+    }
+
+    if (f.id.value) {
+      await setDoc(doc(db, "tournaments", f.id.value), payload, { merge: true });
+    } else {
+      await addDoc(collection(db, "tournaments"), {
+        ...payload,
+        createdAt: serverTimestamp()
+      });
+    }
+
+    await loadTournaments();
+    render();
+    modal?.hide();
+  } catch (err) {
+    console.error(err);
+    alert(S.messages.errorSave);
+  } finally {
+    hideLoader();
+  }
+});
+
+deleteBtn?.addEventListener("click", async () => {
+  if (!f.id.value) return;
+  if (!confirm(S.actions.confirmDelete)) return;
+
+  showLoader();
+  try {
+    await deleteDoc(doc(db, "tournaments", f.id.value));
+    await loadTournaments();
+    render();
+    modal?.hide();
+  } catch (e) {
+    console.error(e);
+    alert(S.messages.errorDelete);
+  } finally {
+    hideLoader();
+  }
+});
+
+/* ==========================
+   STRINGS APPLY
+========================== */
+function applyStrings() {
+  document.getElementById("pageTitle").textContent = S.page.title;
+  document.getElementById("pageHeading").textContent = S.page.title;
+  document.getElementById("pageSubtitle").textContent = S.page.subtitle;
+
+  document.getElementById("searchLabel").textContent = S.search?.label || "Buscar";
+  searchEl.placeholder = S.search?.placeholder || "";
+
+  addBtn.textContent = `+ ${S.actions.add}`;
+
+  document.getElementById("thName").textContent = S.list.headers.name;
+  document.getElementById("thDate").textContent = S.list.headers.date;
+  document.getElementById("thType").textContent = S.list.headers.type;
+  document.getElementById("thAge").textContent = S.list.headers.age;
+  document.getElementById("thVenue").textContent = S.list.headers.venue;
+  document.getElementById("thFees").textContent = S.list.headers.fees;
+  document.getElementById("thActions").textContent = S.list.headers.actions;
+
+  f.lblName.textContent = S.fields.name.label;
+  f.lblDateStart.textContent = S.fields.dateStart.label;
+  f.lblDateEnd.textContent = S.fields.dateEnd.label;
+  f.lblType.textContent = S.fields.type.label;
+  f.lblAge.textContent = S.fields.age.label;
+  f.lblVenue.textContent = S.fields.venue.label;
+  f.lblLocation.textContent = S.fields.location.label;
+  f.lblTeamFee.textContent = S.fields.teamFee.label;
+  f.lblPlayerFee.textContent = S.fields.playerFee.label;
+  f.lblNotes.textContent = S.fields.notes.label;
+  f.lblConfirmed.textContent = S.fields.confirmed.label;
+
+  f.btnCancel.textContent = S.actions.cancel;
+  f.btnSave.textContent = S.actions.save;
+  deleteBtn && (deleteBtn.textContent = S.actions.delete);
+
+  fillSelect(f.type, S.fields.type.options);
+  fillSelect(f.age, S.fields.age.options);
+  fillSelect(f.venue, S.fields.venue.options);
+}
+
+/* ==========================
+   HELPERS
+========================== */
+function fillSelect(el, opts) {
+  if (!el || !opts) return;
+  el.innerHTML = Object.entries(opts)
+    .map(([v, l]) => `<option value="${escapeHtml(v)}">${escapeHtml(l)}</option>`)
+    .join("");
+}
+
+function toNumberOrNull(v) {
+  if (v === "" || v == null) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatDateRange(start, end) {
+  if (!start) return "—";
+  if (!end) return start;
+  return `${start} → ${end}`;
+}
+
+function formatFees(teamFee, playerFee) {
+  const cur = S.fees.currency;
+  const tf = teamFee != null ? `Team ${cur}${Number(teamFee).toLocaleString("es-CR")}` : null;
+  const pf = playerFee != null ? `Player ${cur}${Number(playerFee).toLocaleString("es-CR")}` : null;
+  return tf && pf ? `${tf} · ${pf}` : tf || pf || "—";
+}
+
+function badgeLabel(txt) {
+  return `<span class="pill">${escapeHtml(txt)}</span>`;
+}
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
