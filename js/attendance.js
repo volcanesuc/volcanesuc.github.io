@@ -1,10 +1,7 @@
 // attendance.js
 import { db } from "./firebase.js";
 import { watchAuth, logout } from "./auth.js";
-import {
-  collection,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
@@ -13,9 +10,14 @@ import { Player } from "./models/player.js";
 loadHeader("attendance");
 
 /* ==========================
+   COLLECTIONS (CONFIG)
+========================== */
+const PLAYERS_COL = APP_CONFIG?.club?.playersCollection || "club_players";
+const TRAININGS_COL = APP_CONFIG?.club?.trainingsCollection || "trainings";
+
+/* ==========================
    DOM
 ========================== */
-
 const trainingsTable = document.getElementById("trainingsTable");
 const playersTable = document.getElementById("playersTable");
 const monthFilter = document.getElementById("monthFilter");
@@ -32,7 +34,6 @@ const closeChartBtn = document.getElementById("closeChartBtn");
 /* ==========================
    STATE
 ========================== */
-
 let allTrainings = {};
 let allPlayers = {};
 let attendanceChart;
@@ -43,7 +44,6 @@ let filteredPlayersArr = [];
 /* ==========================
    AUTH
 ========================== */
-
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
 watchAuth(async () => {
@@ -61,39 +61,37 @@ watchAuth(async () => {
 /* ==========================
    LOAD DATA
 ========================== */
-
 async function loadAttendance() {
   allTrainings = {};
   allPlayers = {};
 
   // PLAYERS
-  const playersSnap = await getDocs(collection(db, "club_players"));
+  const playersSnap = await getDocs(collection(db, PLAYERS_COL));
   playersSnap.forEach(d => {
     const player = Player.fromFirestore(d);
     allPlayers[player.id] = { player, count: 0 };
   });
 
   // TRAININGS
-  const trainingsSnap = await getDocs(collection(db, "trainings"));
+  const trainingsSnap = await getDocs(collection(db, TRAININGS_COL));
   trainingsSnap.forEach(d => {
     const data = d.data();
     allTrainings[d.id] = {
       id: d.id,
-      date: data.date,             // "YYYY-MM-DD" (ideal)
+      date: data.date,             // "YYYY-MM-DD"
       month: data.month,           // "YYYY-MM"
       attendees: data.attendees ?? [],
       count: 0
     };
   });
 
-  console.log("Players:", Object.keys(allPlayers).length);
-  console.log("Trainings:", Object.keys(allTrainings).length);
+  console.log("Players:", Object.keys(allPlayers).length, `(${PLAYERS_COL})`);
+  console.log("Trainings:", Object.keys(allTrainings).length, `(${TRAININGS_COL})`);
 }
 
 /* ==========================
    FILTER + COMPUTE
 ========================== */
-
 function applyFilter() {
   const selectedMonth = monthFilter?.value;
 
@@ -103,10 +101,15 @@ function applyFilter() {
 
   // Si hay filtro y no hay entrenos: muestra mensaje y aún así actualiza KPIs/top/chart en 0
   if (selectedMonth && filteredTrainings.length === 0) {
-    trainingsTable.innerHTML =
-      `<tr><td colspan="2" class="text-muted p-3">No hay entrenamientos registrados en este mes.</td></tr>`;
-    playersTable.innerHTML =
-      `<tr><td colspan="3" class="text-muted p-3">No hay datos para calcular asistencia.</td></tr>`;
+    if (trainingsTable) {
+      trainingsTable.innerHTML =
+        `<tr><td colspan="2" class="text-muted p-3">No hay entrenamientos registrados en este mes.</td></tr>`;
+    }
+
+    if (playersTable) {
+      playersTable.innerHTML =
+        `<tr><td colspan="3" class="text-muted p-3">No hay datos para calcular asistencia.</td></tr>`;
+    }
 
     trainingsCards && (trainingsCards.innerHTML = "");
     playersCards && (playersCards.innerHTML = "");
@@ -150,29 +153,29 @@ function applyFilter() {
   // roster activo (si tu modelo no tiene active, se cuenta igual)
   const activeRoster = Object.values(allPlayers).filter(p => p.player.active !== false).length;
 
-  // OJO: era el bug principal en tu script: estabas pasando "trainings" (no existe aquí)
   renderChart(filteredTrainings, activeRoster);
 }
 
 /* ==========================
    RENDERS
 ========================== */
-
 function renderTrainings(list) {
   const sorted = [...list].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
   // TABLE (desktop)
-  trainingsTable.innerHTML = sorted
-    .map(t => {
-      const pillClass = t.count >= 12 ? "pill pill--good" : "pill pill--warn";
-      return `
-        <tr>
-          <td>${t.date ?? "—"}</td>
-          <td><span class="${pillClass}">👥 ${t.count ?? 0}</span></td>
-        </tr>
-      `;
-    })
-    .join("");
+  if (trainingsTable) {
+    trainingsTable.innerHTML = sorted
+      .map(t => {
+        const pillClass = t.count >= 12 ? "pill pill--good" : "pill pill--warn";
+        return `
+          <tr>
+            <td>${t.date ?? "—"}</td>
+            <td><span class="${pillClass}">👥 ${t.count ?? 0}</span></td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
 
   // CARDS (mobile)
   if (trainingsCards) {
@@ -197,27 +200,29 @@ function renderPlayers(list) {
   const threshold = 67.5;
 
   // TABLE (desktop)
-  playersTable.innerHTML = list
-    .map(({ player, count, pct }) => {
-      const pillClass = pct >= threshold ? "pill pill--good" : "pill pill--warn";
-      const barColor = pct >= threshold ? "var(--club-green)" : "var(--club-yellow)";
+  if (playersTable) {
+    playersTable.innerHTML = list
+      .map(({ player, count, pct }) => {
+        const pillClass = pct >= threshold ? "pill pill--good" : "pill pill--warn";
+        const barColor = pct >= threshold ? "var(--club-green)" : "var(--club-yellow)";
 
-      return `
-        <tr>
-          <td>${player.fullName ?? "—"}</td>
-          <td>${count ?? 0}</td>
-          <td>
-            <div class="d-flex align-items-center gap-2">
-              <div class="progress slim flex-grow-1" style="min-width:120px;">
-                <div class="progress-bar" style="width:${pct}%; background:${barColor};"></div>
+        return `
+          <tr>
+            <td>${player.fullName ?? "—"}</td>
+            <td>${count ?? 0}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress slim flex-grow-1" style="min-width:120px;">
+                  <div class="progress-bar" style="width:${pct}%; background:${barColor};"></div>
+                </div>
+                <span class="${pillClass}">${pct}%</span>
               </div>
-              <span class="${pillClass}">${pct}%</span>
-            </div>
-          </td>
-        </tr>
-      `;
-    })
-    .join("");
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
 
   // CARDS (mobile)
   if (playersCards) {
@@ -285,7 +290,6 @@ function renderTopPlayers(playersArr, totalTrainings) {
 /* ==========================
    CHART
 ========================== */
-
 function renderChart(trainings, activeRoster = 0) {
   const canvas = document.getElementById("attendanceChart");
   if (!canvas) return;
@@ -295,15 +299,11 @@ function renderChart(trainings, activeRoster = 0) {
 
   const threshold = 67.5;
 
-  const sorted = [...trainings].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-
+  const sorted = [...trainings].sort((a, b) => (a.date || "").localeCompare(a.date || ""));
   const labels = sorted.map(t => t.date ?? "—");
 
-  // Si hay roster activo -> % (1 decimal). Si no -> counts (para que siempre haya chart)
   const values = sorted.map(t => {
-    if (activeRoster > 0) {
-      return Math.round(((t.count || 0) / activeRoster) * 1000) / 10;
-    }
+    if (activeRoster > 0) return Math.round(((t.count || 0) / activeRoster) * 1000) / 10;
     return t.count || 0;
   });
 
@@ -321,13 +321,11 @@ function renderChart(trainings, activeRoster = 0) {
           borderWidth: 3,
           pointRadius: 4,
           pointHoverRadius: 6,
-
           pointBackgroundColor: (c) => {
             const v = c.raw ?? 0;
             if (activeRoster > 0) return v >= threshold ? "#198754" : "#e8ce26";
             return "#19473f";
           },
-
           segment: activeRoster > 0
             ? {
                 borderColor: (seg) => {
@@ -346,18 +344,14 @@ function renderChart(trainings, activeRoster = 0) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          callbacks: {
-            label: (c) => (activeRoster > 0 ? `${c.raw}%` : `${c.raw}`)
-          }
+          callbacks: { label: (c) => (activeRoster > 0 ? `${c.raw}%` : `${c.raw}`) }
         }
       },
       scales: {
         y: {
           beginAtZero: true,
           suggestedMax: activeRoster > 0 ? 100 : undefined,
-          ticks: {
-            callback: (v) => (activeRoster > 0 ? `${v}%` : `${v}`)
-          }
+          ticks: { callback: (v) => (activeRoster > 0 ? `${v}%` : `${v}`) }
         }
       }
     }
@@ -365,9 +359,8 @@ function renderChart(trainings, activeRoster = 0) {
 }
 
 /* ==========================
-   EVENTS
+   UI EVENTS
 ========================== */
-
 monthFilter && (monthFilter.onchange = applyFilter);
 
 clearFilterBtn && (clearFilterBtn.onclick = () => {
@@ -380,7 +373,6 @@ playerSearch?.addEventListener("input", applyFilter);
 function showChartPanel() {
   if (!chartPanel) return;
   chartPanel.classList.remove("d-none");
-  // re-render para asegurar tamaño correcto si estaba oculto
   const activeRoster = Object.values(allPlayers).filter(p => p.player.active !== false).length;
   renderChart(filteredTrainings, activeRoster);
 }
@@ -395,7 +387,8 @@ kpiAvgCard?.addEventListener("keydown", (e) => {
 });
 closeChartBtn?.addEventListener("click", hideChartPanel);
 
-
-// version
+/* ==========================
+   VERSION
+========================== */
 const v = document.getElementById("appVersion");
 if (v) v.textContent = `v${APP_CONFIG.version}`;

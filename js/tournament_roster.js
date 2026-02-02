@@ -4,7 +4,7 @@ import { watchAuth, logout } from "./auth.js";
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
-import { TOURNAMENT_STRINGS, CLUB_DATA } from "./strings.js";
+import { TOURNAMENT_STRINGS } from "./strings.js";
 
 import {
   collection,
@@ -16,12 +16,17 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* ==========================
+   HEADER / AUTH
+========================== */
 loadHeader("tournaments");
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
 const S = TOURNAMENT_STRINGS;
 
-// ---- DOM
+/* ==========================
+   DOM
+========================== */
 const appVersion = document.getElementById("appVersion");
 
 const pageTitle = document.getElementById("pageTitle");
@@ -50,33 +55,47 @@ const playersEmpty = document.getElementById("playersEmpty");
 const playersTitle = document.getElementById("playersTitle");
 const playersSubtitle = document.getElementById("playersSubtitle");
 
-// ---- Params
+/* ==========================
+   PARAMS / STATE
+========================== */
 const params = new URLSearchParams(window.location.search);
 const tournamentId = (params.get("id") || "").trim();
 
-// ---- State
 let tournament = null;
 let roster = [];   // roster entries
-let players = [];  // global players
+let players = [];  // club players
 let addPanelVisible = true;
 
-// ---- Strings to UI
+/* ==========================
+   COLLECTIONS FROM CONFIG
+========================== */
+const TOURNAMENTS_COL = APP_CONFIG?.club?.tournamentsCollection || "tournaments";
+const PLAYERS_COL = APP_CONFIG?.club?.playersCollection || "club_players";
+
+/* ==========================
+   STRINGS -> UI
+========================== */
 applyStrings();
 
-// ---- Events
+/* ==========================
+   EVENTS
+========================== */
 searchInput?.addEventListener("input", render);
 playersSearch?.addEventListener("input", renderPlayers);
+
 openAddBtn?.addEventListener("click", () => {
   addPanelVisible = !addPanelVisible;
-  playersList.style.display = addPanelVisible ? "" : "none";
-  playersSearch.style.display = addPanelVisible ? "" : "none";
+  if (playersList) playersList.style.display = addPanelVisible ? "" : "none";
+  if (playersSearch) playersSearch.style.display = addPanelVisible ? "" : "none";
 });
 
-// ---- Init
+/* ==========================
+   INIT
+========================== */
 watchAuth(async () => {
   showLoader();
   try {
-    appVersion && (appVersion.textContent = `v${APP_CONFIG.version}`);
+    if (appVersion) appVersion.textContent = `v${APP_CONFIG.version}`;
 
     if (!tournamentId) {
       showError("Falta el parámetro del torneo. Ej: tournament_roster.html?id=XXXX");
@@ -89,9 +108,10 @@ watchAuth(async () => {
       return;
     }
 
-    detailBtn && (detailBtn.href = `tournament_detail.html?id=${encodeURIComponent(tournamentId)}`);
+    if (detailBtn) {
+      detailBtn.href = `tournament_detail.html?id=${encodeURIComponent(tournamentId)}`;
+    }
 
-    // Load roster + players
     await Promise.all([loadRoster(), loadPlayers()]);
     render();
     renderPlayers();
@@ -103,99 +123,80 @@ watchAuth(async () => {
   }
 });
 
-// ---- Data
+/* ==========================
+   DATA
+========================== */
 async function fetchTournament(id) {
-  const snap = await getDoc(doc(db, "tournaments", id));
+  const snap = await getDoc(doc(db, TOURNAMENTS_COL, id));
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() };
 }
 
 async function loadRoster() {
-  const snap = await getDocs(collection(db, "tournaments", tournamentId, "roster"));
+  const snap = await getDocs(collection(db, TOURNAMENTS_COL, tournamentId, "roster"));
   roster = snap.docs
     .map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
 }
 
 async function loadPlayers() {
-  // Rutas posibles (escalable). Se usa la primera que tenga docs.
-  const clubId = CLUB_DATA?.club?.id || "volcanes";
+  const snap = await getDocs(collection(db, PLAYERS_COL));
 
-  const candidates = [
-    { label: "players", ref: collection(db, "players") },
-    { label: "roster", ref: collection(db, "roster") },
-    { label: `clubs/${clubId}/players`, ref: collection(db, "clubs", clubId, "players") },
-    { label: `clubs/${clubId}/roster`, ref: collection(db, "clubs", clubId, "roster") }
-  ];
-
-  let found = [];
-  let source = null;
-
-  for (const c of candidates) {
-    try {
-      const snap = await getDocs(c.ref);
-      if (!snap.empty) {
-        found = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        source = c.label;
-        break;
-      }
-    } catch (e) {
-      // si rules bloquean o la ruta no existe, seguimos con la siguiente
-      console.warn("No se pudo leer:", c.label, e?.message || e);
-    }
-  }
-
-  players = (found || [])
+  players = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
     .map(p => ({
       ...p,
-      // normalizamos name por si lo tenés como fullName o displayName
-      name: p.name || p.fullName || p.displayName || ""
+      // normalizamos name por si lo tenés como "nombre" u otro
+      name: p.name || p.fullName || p.displayName || p.nombre || ""
     }))
     .filter(p => (p.name || "").trim().length > 0)
     .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
 
-  // Debug visible (opcional)
-  console.log("Players loaded:", players.length, "source:", source);
+  console.log("Players loaded:", players.length, `source: ${PLAYERS_COL}`);
 
-  // Si querés, mostramos de dónde viene
   if (playersSubtitle) {
     playersSubtitle.textContent =
       players.length
-        ? `Fuente: ${source} · ${players.length} jugador(es)`
-        : `No se encontraron jugadores (revisar colección / permisos)`;
+        ? `Fuente: ${PLAYERS_COL} · ${players.length} jugador(es)`
+        : `No hay jugadores en ${PLAYERS_COL}.`;
   }
 }
 
-
-// ---- Render main roster
+/* ==========================
+   RENDER: ROSTER
+========================== */
 function render() {
   if (!tournament) return;
 
   // header
-  tName.textContent = tournament.name || "—";
-  tMeta.textContent = formatTournamentMeta(tournament);
+  if (tName) tName.textContent = tournament.name || "—";
+  if (tMeta) tMeta.textContent = formatTournamentMeta(tournament);
 
   const q = (searchInput?.value || "").trim().toLowerCase();
   const list = q
-    ? roster.filter(r => `${r.name || ""} ${r.role || ""} ${r.status || ""}`.toLowerCase().includes(q))
+    ? roster.filter(r =>
+        `${r.name || ""} ${r.role || ""} ${r.status || ""}`.toLowerCase().includes(q)
+      )
     : roster;
 
-  rosterList.innerHTML = list.length
-    ? list.map(r => rosterRow(r)).join("")
-    : "";
+  if (rosterList) {
+    rosterList.innerHTML = list.length ? list.map(r => rosterRow(r)).join("") : "";
+  }
 
-  rosterEmpty.classList.toggle("d-none", list.length > 0);
-  rosterEmpty.textContent = S.roster?.empty || "No hay jugadores asignados a este torneo.";
+  if (rosterEmpty) {
+    rosterEmpty.classList.toggle("d-none", list.length > 0);
+    rosterEmpty.textContent = S.roster?.empty || "No hay jugadores asignados a este torneo.";
+  }
 
-  // listeners remove / quick edit
-  rosterList.querySelectorAll("[data-remove]").forEach(btn => {
+  // listeners
+  rosterList?.querySelectorAll("[data-remove]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-remove");
       await removeFromRoster(id);
     });
   });
 
-  rosterList.querySelectorAll("[data-toggle-status]").forEach(btn => {
+  rosterList?.querySelectorAll("[data-toggle-status]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-toggle-status");
       await toggleStatus(id);
@@ -203,23 +204,30 @@ function render() {
   });
 }
 
-// ---- Render players picker
+/* ==========================
+   RENDER: PLAYERS PICKER
+========================== */
 function renderPlayers() {
   const q = (playersSearch?.value || "").trim().toLowerCase();
   const rosterIds = new Set(roster.map(r => r.playerId || r.id));
 
   const list = q
-    ? players.filter(p => `${p.name || ""} ${p.nickname || ""}`.toLowerCase().includes(q))
+    ? players.filter(p =>
+        `${p.name || ""} ${p.nickname || ""}`.toLowerCase().includes(q)
+      )
     : players;
 
-  // show all players but disable those already in roster
-  playersList.innerHTML = list.length
-    ? list.map(p => playerPickRow(p, rosterIds.has(p.id))).join("")
-    : "";
+  if (playersList) {
+    playersList.innerHTML = list.length
+      ? list.map(p => playerPickRow(p, rosterIds.has(p.id))).join("")
+      : "";
+  }
 
-  playersEmpty.classList.toggle("d-none", list.length > 0);
+  if (playersEmpty) {
+    playersEmpty.classList.toggle("d-none", list.length > 0);
+  }
 
-  playersList.querySelectorAll("[data-add]").forEach(btn => {
+  playersList?.querySelectorAll("[data-add]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-add");
       await addToRoster(id);
@@ -227,22 +235,24 @@ function renderPlayers() {
   });
 }
 
-// ---- Actions
+/* ==========================
+   ACTIONS
+========================== */
 async function addToRoster(playerId) {
   const p = players.find(x => x.id === playerId);
   if (!p) return;
 
   showLoader();
   try {
-    // Use playerId as doc id for idempotency
-    const ref = doc(db, "tournaments", tournamentId, "roster", playerId);
+    // usamos playerId como docId => idempotente
+    const ref = doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerId);
 
     await setDoc(ref, {
       playerId,
       name: p.name || "—",
       number: p.number ?? null,
       role: p.role || "",
-      status: "convocado", // default (puedes cambiar luego)
+      status: "convocado",
       createdAt: serverTimestamp()
     }, { merge: true });
 
@@ -263,7 +273,7 @@ async function removeFromRoster(playerIdOrDocId) {
 
   showLoader();
   try {
-    await deleteDoc(doc(db, "tournaments", tournamentId, "roster", playerIdOrDocId));
+    await deleteDoc(doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerIdOrDocId));
     await loadRoster();
     render();
     renderPlayers();
@@ -276,14 +286,14 @@ async function removeFromRoster(playerIdOrDocId) {
 }
 
 async function toggleStatus(playerIdOrDocId) {
-  // ciclo simple: convocado -> confirmado -> tentative -> convocado
   const r = roster.find(x => x.id === playerIdOrDocId);
   if (!r) return;
 
   const next = nextStatus(r.status);
+
   showLoader();
   try {
-    await setDoc(doc(db, "tournaments", tournamentId, "roster", playerIdOrDocId), {
+    await setDoc(doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerIdOrDocId), {
       status: next,
       updatedAt: serverTimestamp()
     }, { merge: true });
@@ -306,11 +316,12 @@ function nextStatus(s) {
   return "convocado";
 }
 
-// ---- UI builders
+/* ==========================
+   UI BUILDERS
+========================== */
 function rosterRow(r) {
   const role = r.role || "—";
   const status = prettyStatus(r.status);
-
   const statusClass = status === "Confirmado" ? "pill pill--yellow" : "pill";
 
   return `
@@ -367,7 +378,9 @@ function playerPickRow(p, already) {
   `;
 }
 
-// ---- Strings
+/* ==========================
+   STRINGS
+========================== */
 function applyStrings() {
   pageTitle && (pageTitle.textContent = S.roster?.title || "Roster del torneo");
   pageSubtitle && (pageSubtitle.textContent = S.roster?.subtitle || "Jugadores convocados");
@@ -378,10 +391,13 @@ function applyStrings() {
   lblSearch && (lblSearch.textContent = S.search?.label || "Buscar");
   searchInput && (searchInput.placeholder = S.search?.placeholder || "Buscar jugador…");
 
+  playersTitle && (playersTitle.textContent = "Jugadores");
   btnAddLabel && (btnAddLabel.textContent = "Agregar jugador");
 }
 
-// ---- Helpers
+/* ==========================
+   HELPERS
+========================== */
 function prettyStatus(s) {
   const v = (s || "").toLowerCase();
   if (v === "confirmado") return "Confirmado";
