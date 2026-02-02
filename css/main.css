@@ -1,7 +1,11 @@
 /* =========================================================
-   VARIABLES GLOBALES
+   MAIN.CSS — Volcanes Ultimate (limpio)
+   Base global + header + tablas + botones + loader
 ========================================================= */
 
+/* =========================
+   VARIABLES GLOBALES
+========================= */
 :root {
   --club-green: #19473f;
   --club-green-dark: #12352f;
@@ -10,31 +14,25 @@
   --club-gray: #f4f4f4;
 }
 
-
-/* =========================================================
-   RESET BÁSICO
-========================================================= */
-
-* {
-  box-sizing: border-box;
-}
+/* =========================
+   RESET + BASE
+========================= */
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
   color: #222;
-  background: white;
+  background: #fff;
 }
 
-
-/* =========================================================
+/* =========================
    TIPOGRAFÍA
-========================================================= */
-
+========================= */
 @font-face {
   font-family: "Recons";
   src: url("./fonts/Recons-Regular.ttf") format("truetype");
-  font-weight: normal;
+  font-weight: 400;
   font-style: normal;
 }
 
@@ -43,24 +41,15 @@ h1 {
   color: var(--club-green);
 }
 
+/* =========================
+   UTILIDADES
+========================= */
+.text-success { color: var(--club-green-light) !important; }
+.text-warning { color: var(--club-yellow) !important; }
 
-/* =========================================================
-   UTILIDADES DE TEXTO
-========================================================= */
-
-.text-success {
-  color: var(--club-green-light) !important;
-}
-
-.text-warning {
-  color: var(--club-yellow) !important;
-}
-
-
-/* =========================================================
+/* =========================
    LOADER GLOBAL
-========================================================= */
-
+========================= */
 .loading-overlay {
   position: fixed;
   inset: 0;
@@ -71,9 +60,7 @@ h1 {
   z-index: 9999;
 }
 
-body:not(.loading) .loading-overlay {
-  display: none;
-}
+body:not(.loading) .loading-overlay { display: none; }
 
 .spinner-border {
   color: var(--club-yellow);
@@ -81,43 +68,35 @@ body:not(.loading) .loading-overlay {
   height: 3rem;
 }
 
-
-/* =========================================================
+/* =========================
    COMPONENTES BASE
-========================================================= */
-
-/* Cards base (para tablas, contenedores, etc.) */
+========================= */
 .card {
   border: none;
   border-radius: 12px;
   box-shadow: 0 6px 20px rgba(25, 71, 63, 0.12);
 }
 
-/* Títulos dentro de cards */
 .card h3 {
   color: var(--club-green);
   font-weight: 700;
 }
 
-
-/* =========================================================
+/* =========================
    TABLAS
-========================================================= */
-
+========================= */
 .table thead {
   background-color: var(--club-green);
-  color: #ffffff;
+  color: #fff;
 }
 
 .table tbody tr:hover {
   background-color: rgba(232, 206, 38, 0.12);
 }
 
-
-/* =========================================================
+/* =========================
    BOTONES
-========================================================= */
-
+========================= */
 .btn-primary {
   background-color: var(--club-green);
   border-color: var(--club-green);
@@ -139,14 +118,12 @@ body:not(.loading) .loading-overlay {
   color: var(--club-green);
 }
 
-
-/* =========================================================
-   HEADER / NAV PRINCIPAL (APP)
-========================================================= */
-
+/* =========================
+   HEADER / NAV PRINCIPAL
+========================= */
 .topbar {
   background: var(--club-green);
-  color: white;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -170,14 +147,11 @@ body:not(.loading) .loading-overlay {
   cursor: pointer;
 }
 
-.logout-btn:hover {
-  background: #f1db4f;
-}
+.logout-btn:hover { background: #f1db4f; }
 
-/* =========================================================
+/* =========================
    SORTABLE TABLE HEADERS
-========================================================= */
-
+========================= */
 th.sortable {
   cursor: pointer;
   user-select: none;
@@ -189,34 +163,25 @@ th.sortable::after {
   opacity: 0.4;
 }
 
-th.sortable.sorted-asc::after {
-  content: " ↑";
-}
-
-th.sortable.sorted-desc::after {
-  content: " ↓";
-}
+th.sortable.sorted-asc::after { content: " ↑"; }
+th.sortable.sorted-desc::after { content: " ↓"; }
 
 /* =========================
-   HEADER NAV TABS (FIX ALIGN)
+   NAV TABS (alineados)
 ========================= */
-
 .nav-tabs {
   display: flex;
-  align-items: center; /* 🔑 alinea verticalmente todos */
+  align-items: center;
   gap: 1rem;
 }
 
-/* Tabs base */
 .nav-tabs a {
-  transition: all 0.15s ease;
-
-  display: inline-flex;         
-  align-items: center;          
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
 
-  height: 36px;                  /* todos igual alto */
-  padding: 0 0.75rem;            /* padding horizontal only */
+  height: 36px;
+  padding: 0 0.75rem;
 
   font-family: "Recons";
   font-size: 0.9rem;
@@ -224,37 +189,28 @@ th.sortable.sorted-desc::after {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 
-  color: #ffffff;
+  color: #fff;
   text-decoration: none;
 
-  border-radius: 999px;          /* pill */
-  border: 1px solid transparent; /* evita salto */
+  border-radius: 999px;
+  border: 1px solid transparent;
 
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-/* Hover */
-.nav-tabs a:hover {
-  background: rgba(255,255,255,0.15);
-}
+.nav-tabs a:hover { background: rgba(255,255,255,0.15); }
 
-/* Activo */
 .nav-tabs a.active {
   background: var(--club-yellow);
   color: var(--club-green);
   font-weight: 800;
-
-  border: 1px solid rgba(0,0,0,0.08); /* mismo box model */
+  border-color: rgba(0,0,0,0.08);
 }
 
-
-/* =========================================================
-   OFFCANVAS - HEADER NAV DRAWER
-========================================================= */
-
-.offcanvas {
-  background: var(--club-gray);
-}
+/* =========================
+   OFFCANVAS (drawer)
+========================= */
+.offcanvas { background: var(--club-gray); }
 
 .offcanvas-title {
   font-family: "Recons";
@@ -269,52 +225,38 @@ th.sortable.sorted-desc::after {
   text-decoration: none;
 }
 
-.offcanvas-body a:hover {
-  color: var(--club-green-dark);
-}
-
-.hamburger {
-  background: none;
-  border: none;
-  color: #ffffff;
-
-  font-size: 1.6rem;
-  line-height: 1;
-
-  padding: 0;
-  margin: 0;
-
-  cursor: pointer;
-}
-
-@media (max-width: 768px) {
-  .nav-tabs {
-    display: none;
-  }
-
-  .hamburger {
-    display: block;
-  }
-}
-
-/* Desktop */
-@media (min-width: 769px) {
-  .hamburger {
-    display: none;
-  }
-}
+.offcanvas-body a:hover { color: var(--club-green-dark); }
 
 .offcanvas-body a.active {
   color: var(--club-green-dark);
   font-weight: 700;
 }
 
+/* Hamburger */
+.hamburger {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
 
+/* Responsive header controls */
+@media (max-width: 768px) {
+  .nav-tabs { display: none; }
+  .hamburger { display: block; }
+}
 
-/* =========================================================
+@media (min-width: 769px) {
+  .hamburger { display: none; }
+}
+
+/* =========================
    FOOTER / META
-========================================================= */
-
+========================= */
 .app-version {
   font-size: 0.75rem;
   color: var(--club-green);

@@ -13,7 +13,6 @@
   </head>
 
   <body class="loading">
-    <!-- HEADER ESTÁNDAR -->
     <div id="app-header"></div>
 
     <main id="content" class="attendance-page">
@@ -29,19 +28,10 @@
           <div class="d-flex align-items-end gap-2">
             <div>
               <label class="form-label small text-muted mb-1">Mes</label>
-              <input
-                type="month"
-                id="monthFilter"
-                class="form-control"
-                style="max-width: 180px"
-              />
+              <input type="month" id="monthFilter" class="form-control" style="max-width: 180px" />
             </div>
 
-            <button
-              id="clearFilter"
-              class="btn btn-outline-primary btn-sm mb-1"
-              type="button"
-            >
+            <button id="clearFilter" class="btn btn-outline-primary btn-sm mb-1" type="button">
               Limpiar
             </button>
           </div>
@@ -67,101 +57,80 @@
             </div>
           </div>
 
+          <!-- CLICKABLE -->
           <div class="col-md-4">
-            <div class="card kpi-card">
+            <div class="card kpi-card kpi-clickable" id="kpiAvgCard" role="button" tabindex="0">
               <div class="card-body">
                 <small class="kpi-label">Promedio por entrenamiento</small>
                 <h2 id="kpiAverage" class="kpi-value">–</h2>
+                <small class="text-muted d-block mt-1">Click para ver gráfico</small>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- INSIGHTS -->
-        <div class="row g-3 mb-4 align-items-stretch">
-            <!-- GRÁFICO -->
-            <div class="col-12 col-lg-8">
-                <div class="card h-100 card-modern">
-                <div class="card-header bg-white border-0">
-                    <h5 class="mb-0">📈 Asistencia mensual</h5>
-                    <small class="text-muted">Por entrenamiento (% del roster activo)</small>
-                </div>
-                <div class="card-body">
-                    <canvas id="attendanceChart" height="120"></canvas>
-                </div>
-                </div>
+        <!-- CHART PANEL (oculto por defecto) -->
+        <div id="chartPanel" class="card mb-4 d-none card-modern">
+          <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+            <div>
+              <h5 class="mb-0">📈 Asistencia mensual</h5>
+              <small class="text-muted">Por entrenamiento (% del roster activo)</small>
             </div>
-
-            <!-- COLUMNA DERECHA: TOP 3 + ENTRENAMIENTOS -->
-            <div class="col-12 col-lg-4">
-                <div class="d-flex flex-column gap-3 h-100">
-
-                <div class="card card-modern">
-                    <div class="card-header bg-white border-0">
-                    <h5 class="mb-0">🥇 Top 3 jugadores</h5>
-                    </div>
-                    <div class="card-body">
-                    <div id="topPlayers" class="top3-wrap"></div>
-                    </div>
-                </div>
-
-                <div class="card card-modern flex-grow-1">
-                    <div class="card-header bg-white border-0">
-                    <h5 class="mb-0">Entrenamientos</h5>
-                    <small class="text-muted">Lista del mes</small>
-                    </div>
-
-                    <!-- (Opcional) cards mobile -->
-                    <div id="trainingsCards" class="d-md-none px-3 pb-3"></div>
-
-                    <div class="card-body pt-0 d-none d-md-block">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light text-uppercase small">
-                            <tr>
-                            <th>Fecha</th>
-                            <th>Asistencia</th>
-                            </tr>
-                        </thead>
-                        <tbody id="trainingsTable"></tbody>
-                        </table>
-                    </div>
-                    </div>
-
-                </div>
-
-                </div>
-            </div>
+            <button id="closeChartBtn" class="btn btn-sm btn-outline-primary" type="button">
+              Cerrar
+            </button>
+          </div>
+          <div class="card-body">
+            <canvas id="attendanceChart" height="120"></canvas>
+          </div>
         </div>
 
-        <!-- ENTRENAMIENTOS -->
-        <div class="card mb-4">
-          <div class="card-header bg-white border-0">
-            <h5 class="mb-0">Entrenamientos</h5>
+        <!-- TOP 3 + ENTRENAMIENTOS (mismo alto) -->
+        <div class="row g-3 mb-4 align-items-stretch">
+          <!-- TOP 3 -->
+          <div class="col-12 col-lg-6">
+            <div class="card card-modern h-100">
+              <div class="card-header bg-white border-0">
+                <h5 class="mb-0">🥇 Top 3 jugadores</h5>
+              </div>
+              <div class="card-body top3-fill">
+                <div id="topPlayers" class="top3-wrap"></div>
+              </div>
+            </div>
           </div>
 
-          <!-- (Opcional) cards mobile si las usás en JS -->
-          <div id="trainingsCards" class="d-md-none px-3 pb-3"></div>
+          <!-- ENTRENAMIENTOS -->
+          <div class="col-12 col-lg-6">
+            <div class="card card-modern h-100">
+              <div class="card-header bg-white border-0">
+                <h5 class="mb-0">Entrenamientos</h5>
+                <small class="text-muted">Lista del mes</small>
+              </div>
 
-          <!-- tabla desktop -->
-          <div class="card-body pt-0 d-none d-md-block">
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light text-uppercase small">
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Asistencia</th>
-                  </tr>
-                </thead>
-                <tbody id="trainingsTable"></tbody>
-              </table>
+              <!-- Mobile cards -->
+              <div id="trainingsCards" class="d-md-none px-3 pb-3"></div>
+
+              <!-- Desktop table (scroll interno) -->
+              <div class="card-body pt-0 d-none d-md-block trainings-scroll">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-uppercase small">
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Asistencia</th>
+                      </tr>
+                    </thead>
+                    <tbody id="trainingsTable"></tbody>
+                  </table>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
 
         <!-- JUGADORES -->
-        <div class="card mb-4">
-          <!-- HEADER CARD -->
+        <div class="card mb-4 card-modern">
           <div class="card-header bg-white border-0">
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
               <div>
@@ -169,20 +138,14 @@
                 <small class="text-muted">Ranking y participación</small>
               </div>
 
-              <div style="min-width: 240px;">
-                <input
-                  id="playerSearch"
-                  class="form-control"
-                  placeholder="Buscar jugador..."
-                />
+              <div class="player-search-wrap">
+                <input id="playerSearch" class="form-control" placeholder="Buscar jugador..." />
               </div>
             </div>
           </div>
 
-          <!-- MOBILE CARDS -->
           <div id="playersCards" class="d-md-none px-3 pb-3"></div>
 
-          <!-- DESKTOP TABLE -->
           <div class="card-body pt-0 d-none d-md-block">
             <div class="table-responsive">
               <table class="table table-hover align-middle mb-0">
@@ -203,14 +166,12 @@
       </div>
     </main>
 
-    <!-- LOADER -->
     <div id="loadingOverlay" class="loading-overlay">
       <div class="spinner-border" role="status">
         <span class="visually-hidden">Cargando...</span>
       </div>
     </div>
 
-    <!-- SCRIPTS -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

@@ -25,6 +25,10 @@ const trainingsCards = document.getElementById("trainingsCards"); // optional
 const playersCards = document.getElementById("playersCards");     // optional
 const playerSearch = document.getElementById("playerSearch");     // optional
 
+const kpiAvgCard = document.getElementById("kpiAvgCard");
+const chartPanel = document.getElementById("chartPanel");
+const closeChartBtn = document.getElementById("closeChartBtn");
+
 /* ==========================
    STATE
 ========================== */
@@ -372,6 +376,25 @@ clearFilterBtn && (clearFilterBtn.onclick = () => {
 });
 
 playerSearch?.addEventListener("input", applyFilter);
+
+function showChartPanel() {
+  if (!chartPanel) return;
+  chartPanel.classList.remove("d-none");
+  // re-render para asegurar tamaño correcto si estaba oculto
+  const activeRoster = Object.values(allPlayers).filter(p => p.player.active !== false).length;
+  renderChart(filteredTrainings, activeRoster);
+}
+
+function hideChartPanel() {
+  chartPanel?.classList.add("d-none");
+}
+
+kpiAvgCard?.addEventListener("click", showChartPanel);
+kpiAvgCard?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") showChartPanel();
+});
+closeChartBtn?.addEventListener("click", hideChartPanel);
+
 
 // version
 const v = document.getElementById("appVersion");
