@@ -1,4 +1,4 @@
-// tournaments.js
+// js/tournaments.js
 import { db } from "./firebase.js";
 import { watchAuth, logout } from "./auth.js";
 import {
@@ -16,13 +16,13 @@ import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
 import { TOURNAMENT_STRINGS } from "./strings.js";
 
-/* ==========================
-   INIT HEADER / AUTH
-========================== */
 loadHeader("tournaments");
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
 const S = TOURNAMENT_STRINGS;
+
+// Collections from config
+const TOURNAMENTS_COL = APP_CONFIG?.club?.tournamentsCollection || "tournaments";
 
 /* ==========================
    DOM
@@ -71,14 +71,14 @@ const f = {
 };
 
 /* ==========================
-   STRINGS
+   STRINGS -> UI
 ========================== */
 applyStrings();
 
 let allTournaments = [];
 
 /* ==========================
-   LOAD DATA
+   INIT
 ========================== */
 watchAuth(async () => {
   showLoader();
@@ -92,10 +92,13 @@ watchAuth(async () => {
   }
 });
 
-document.getElementById("appVersion").textContent = `v${APP_CONFIG.version}`;
+document.getElementById("appVersion")?.textContent = `v${APP_CONFIG.version}`;
 
+/* ==========================
+   LOAD
+========================== */
 async function loadTournaments() {
-  const snap = await getDocs(collection(db, "tournaments"));
+  const snap = await getDocs(collection(db, TOURNAMENTS_COL));
   allTournaments = snap.docs
     .map(d => ({ id: d.id, ...d.data() }))
     .sort((a, b) => (a.dateStart || "").localeCompare(b.dateStart || ""));
@@ -117,7 +120,6 @@ function render() {
   renderCards(list);
 }
 
-/* ---------- TABLE (DESKTOP) ---------- */
 function renderTable(list) {
   if (!tableEl) return;
 
@@ -133,16 +135,14 @@ function renderTable(list) {
             <td>${badgeLabel(S.fields.venue.options?.[t.venue] ?? t.venue)}</td>
             <td>${fees}</td>
             <td class="text-end">
-              <a class="btn btn-sm btn-outline-secondary me-2"
-                 title="Detalles"
-                 href="tournament_detail.html?id=${encodeURIComponent(t.id)}">
-                <i class="bi bi-eye"></i>
-              </a>
-              <button class="btn btn-sm btn-outline-primary"
-                      title="Editar"
-                      data-edit="${t.id}">
+              <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}" title="Editar">
                 <i class="bi bi-pencil"></i>
               </button>
+              <a class="btn btn-sm btn-outline-secondary ms-2"
+                 href="tournament_detail.html?id=${encodeURIComponent(t.id)}"
+                 title="Detalles">
+                 <i class="bi bi-eye"></i>
+              </a>
             </td>
           </tr>
         `;
@@ -150,11 +150,10 @@ function renderTable(list) {
     : `<tr><td colspan="7" class="text-muted p-3">${escapeHtml(S.page.empty)}</td></tr>`;
 
   tableEl.querySelectorAll("[data-edit]").forEach(btn => {
-    btn.addEventListener("click", () => openEdit(btn.dataset.edit));
+    btn.addEventListener("click", () => openEdit(btn.getAttribute("data-edit")));
   });
 }
 
-/* ---------- CARDS (MOBILE) ---------- */
 function renderCards(list) {
   if (!cardsEl) return;
 
@@ -180,15 +179,15 @@ function renderCards(list) {
 
             <div class="d-flex justify-content-between align-items-center mt-3">
               <div class="text-muted small">${fees}</div>
+
               <div class="d-flex gap-2">
                 <a class="btn btn-sm btn-outline-secondary"
-                   title="Detalles"
-                   href="tournament_detail.html?id=${encodeURIComponent(t.id)}">
+                   href="tournament_detail.html?id=${encodeURIComponent(t.id)}"
+                   title="Detalles">
                   <i class="bi bi-eye"></i>
                 </a>
-                <button class="btn btn-sm btn-outline-primary"
-                        title="Editar"
-                        data-edit="${t.id}">
+
+                <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}" title="Editar">
                   <i class="bi bi-pencil"></i>
                 </button>
               </div>
@@ -199,21 +198,21 @@ function renderCards(list) {
     : `<div class="text-muted p-2">${escapeHtml(S.page.empty)}</div>`;
 
   cardsEl.querySelectorAll("[data-edit]").forEach(btn => {
-    btn.addEventListener("click", () => openEdit(btn.dataset.edit));
+    btn.addEventListener("click", () => openEdit(btn.getAttribute("data-edit")));
   });
 }
 
 /* ==========================
    MODAL
 ========================== */
-addBtn?.addEventListener("click", openNew);
+addBtn?.addEventListener("click", () => openNew());
 searchEl?.addEventListener("input", render);
 
 function openNew() {
   clearForm();
   f.title.textContent = S.actions.add;
   f.subtitle.textContent = S.actions.add;
-  deleteBtn.style.display = "none";
+  if (deleteBtn) deleteBtn.style.display = "none";
   modal?.show();
 }
 
@@ -236,25 +235,29 @@ function openEdit(id) {
 
   f.title.textContent = S.actions.edit;
   f.subtitle.textContent = S.actions.edit;
-  deleteBtn.style.display = "inline-block";
+  if (deleteBtn) deleteBtn.style.display = "inline-block";
   modal?.show();
 }
 
 function clearForm() {
-  Object.values(f).forEach(el => {
-    if (!el || !("value" in el)) return;
-    el.value = "";
-  });
+  f.id.value = "";
+  f.name.value = "";
+  f.dateStart.value = "";
+  f.dateEnd.value = "";
   f.type.value = "mixto";
   f.age.value = "open";
   f.venue.value = "outdoor";
+  f.location.value = "";
+  f.teamFee.value = "";
+  f.playerFee.value = "";
+  f.notes.value = "";
   f.confirmed.checked = false;
 }
 
 /* ==========================
    SAVE / DELETE
 ========================== */
-form?.addEventListener("submit", async e => {
+form?.addEventListener("submit", async (e) => {
   e.preventDefault();
   showLoader();
 
@@ -266,23 +269,23 @@ form?.addEventListener("submit", async e => {
       type: f.type.value,
       age: f.age.value,
       venue: f.venue.value,
-      location: f.location.value.trim(),
+      location: (f.location.value || "").trim(),
       teamFee: toNumberOrNull(f.teamFee.value),
       playerFee: toNumberOrNull(f.playerFee.value),
-      notes: f.notes.value.trim(),
+      notes: (f.notes.value || "").trim(),
       confirmed: !!f.confirmed.checked,
       updatedAt: serverTimestamp()
     };
 
     if (!payload.name || !payload.dateStart) {
-      alert(S.messages.missingRequired);
+      alert(S.messages?.missingRequired || "Faltan campos obligatorios.");
       return;
     }
 
     if (f.id.value) {
-      await setDoc(doc(db, "tournaments", f.id.value), payload, { merge: true });
+      await setDoc(doc(db, TOURNAMENTS_COL, f.id.value), payload, { merge: true });
     } else {
-      await addDoc(collection(db, "tournaments"), {
+      await addDoc(collection(db, TOURNAMENTS_COL), {
         ...payload,
         createdAt: serverTimestamp()
       });
@@ -293,25 +296,28 @@ form?.addEventListener("submit", async e => {
     modal?.hide();
   } catch (err) {
     console.error(err);
-    alert(S.messages.errorSave);
+    alert(S.messages?.errorSave || "Error guardando torneo.");
   } finally {
     hideLoader();
   }
 });
 
 deleteBtn?.addEventListener("click", async () => {
-  if (!f.id.value) return;
-  if (!confirm(S.actions.confirmDelete)) return;
+  const id = f.id.value;
+  if (!id) return;
+
+  const ok = confirm(S.actions?.confirmDelete || "¿Eliminar este torneo?");
+  if (!ok) return;
 
   showLoader();
   try {
-    await deleteDoc(doc(db, "tournaments", f.id.value));
+    await deleteDoc(doc(db, TOURNAMENTS_COL, id));
     await loadTournaments();
     render();
     modal?.hide();
   } catch (e) {
     console.error(e);
-    alert(S.messages.errorDelete);
+    alert(S.messages?.errorDelete || "Error eliminando torneo.");
   } finally {
     hideLoader();
   }
@@ -326,9 +332,9 @@ function applyStrings() {
   document.getElementById("pageSubtitle").textContent = S.page.subtitle;
 
   document.getElementById("searchLabel").textContent = S.search?.label || "Buscar";
-  searchEl.placeholder = S.search?.placeholder || "";
+  document.getElementById("tournamentSearch").placeholder = S.search?.placeholder || "";
 
-  addBtn.textContent = `+ ${S.actions.add}`;
+  document.getElementById("addTournamentBtn").textContent = `+ ${S.actions.add}`;
 
   document.getElementById("thName").textContent = S.list.headers.name;
   document.getElementById("thDate").textContent = S.list.headers.date;
@@ -339,15 +345,24 @@ function applyStrings() {
   document.getElementById("thActions").textContent = S.list.headers.actions;
 
   f.lblName.textContent = S.fields.name.label;
+  f.name.placeholder = S.fields.name.placeholder || "";
+
   f.lblDateStart.textContent = S.fields.dateStart.label;
-  f.lblDateEnd.textContent = S.fields.dateEnd.label;
+  f.lblDateEnd.textContent = `${S.fields.dateEnd.label} (opcional)`;
+
   f.lblType.textContent = S.fields.type.label;
   f.lblAge.textContent = S.fields.age.label;
   f.lblVenue.textContent = S.fields.venue.label;
-  f.lblLocation.textContent = S.fields.location.label;
+
+  f.lblLocation.textContent = `${S.fields.location.label} (opcional)`;
+  f.location.placeholder = S.fields.location.placeholder || "";
+
   f.lblTeamFee.textContent = S.fields.teamFee.label;
   f.lblPlayerFee.textContent = S.fields.playerFee.label;
+
   f.lblNotes.textContent = S.fields.notes.label;
+  f.notes.placeholder = S.fields.notes.placeholder || "";
+
   f.lblConfirmed.textContent = S.fields.confirmed.label;
 
   f.btnCancel.textContent = S.actions.cancel;
@@ -357,20 +372,23 @@ function applyStrings() {
   fillSelect(f.type, S.fields.type.options);
   fillSelect(f.age, S.fields.age.options);
   fillSelect(f.venue, S.fields.venue.options);
+
+  f.title.textContent = S.page.title;
+  f.subtitle.textContent = "";
+}
+
+function fillSelect(selectEl, optionsObj) {
+  if (!selectEl || !optionsObj) return;
+  selectEl.innerHTML = Object.entries(optionsObj)
+    .map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`)
+    .join("");
 }
 
 /* ==========================
    HELPERS
 ========================== */
-function fillSelect(el, opts) {
-  if (!el || !opts) return;
-  el.innerHTML = Object.entries(opts)
-    .map(([v, l]) => `<option value="${escapeHtml(v)}">${escapeHtml(l)}</option>`)
-    .join("");
-}
-
 function toNumberOrNull(v) {
-  if (v === "" || v == null) return null;
+  if (v === "" || v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -382,14 +400,19 @@ function formatDateRange(start, end) {
 }
 
 function formatFees(teamFee, playerFee) {
-  const cur = S.fees.currency;
-  const tf = teamFee != null ? `Team ${cur}${Number(teamFee).toLocaleString("es-CR")}` : null;
-  const pf = playerFee != null ? `Player ${cur}${Number(playerFee).toLocaleString("es-CR")}` : null;
-  return tf && pf ? `${tf} · ${pf}` : tf || pf || "—";
+  const cur = S.fees?.currency || "₡";
+  const tfLabel = S.fees?.team || "Team";
+  const pfLabel = S.fees?.player || "Player";
+
+  const tf = teamFee != null ? `${tfLabel} ${cur}${Number(teamFee).toLocaleString("es-CR")}` : null;
+  const pf = playerFee != null ? `${pfLabel} ${cur}${Number(playerFee).toLocaleString("es-CR")}` : null;
+
+  if (tf && pf) return `${tf} · ${pf}`;
+  return tf || pf || "—";
 }
 
 function badgeLabel(txt) {
-  return `<span class="pill">${escapeHtml(txt)}</span>`;
+  return `<span class="pill">${escapeHtml(txt || "—")}</span>`;
 }
 
 function escapeHtml(str) {
