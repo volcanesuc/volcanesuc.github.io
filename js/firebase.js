@@ -8,13 +8,19 @@ import { getFirestore } from
 import { getAuth } from
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
-  authDomain: "rifavolcanes.firebaseapp.com",
-  projectId: "rifavolcanes",
-};
+import { APP_CONFIG } from "./config.js";
 
-const app = initializeApp(firebaseConfig);
+function getFirebaseConfig() {
+  const cfg = APP_CONFIG?.firebase;
 
+  if (!cfg?.apiKey || !cfg?.authDomain || !cfg?.projectId) {
+    throw new Error(
+      "Falta APP_CONFIG.firebase (apiKey, authDomain, projectId). Revisa config.js"
+    );
+  }
+  return cfg;
+}
+
+const app = getApps().length ? getApps()[0] : initializeApp(getFirebaseConfig());
 export const db = getFirestore(app);
-export const auth = getAuth(app);
+export { app };
