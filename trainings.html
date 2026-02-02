@@ -31,21 +31,25 @@
         </button>
       </div>
 
-      <!-- TABLA ENTRENAMIENTOS -->
-      <div class="card">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-light text-uppercase small">
-              <tr>
-                <th>Fecha</th>
-                <th>Asistentes</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="trainingsTable">
-              <!-- JS -->
-            </tbody>
-          </table>
+         <!-- TABLA ENTRENAMIENTOS -->
+      <!-- MOBILE -->
+      <div id="trainingsCards" class="d-md-none  mb-2"></div>
+      <!-- DESKTOP -->
+      <div class="card d-none d-md-block">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light text-uppercase small">
+                <tr>
+                  <th>Fecha</th>
+                  <th>Nombre</th>
+                  <th>Asistentes</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="trainingsTable"> <!-- JS --> </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

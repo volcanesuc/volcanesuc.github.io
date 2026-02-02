@@ -2,6 +2,8 @@ import {
   collection,
   getDocs,
   addDoc,
+  updateDoc,
+  doc,
   query,
   orderBy,
   serverTimestamp
@@ -36,6 +38,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 ========================= */
 let players = [];
 let attendees = [];
+let currentTrainingId = null;
+let trainings = [];
 
 /* =========================
    LOADER
@@ -51,7 +55,11 @@ function hideLoading() {
 ========================= */
 async function loadTrainings() {
   const tbody = document.getElementById("trainingsTable");
+  const cards = document.getElementById("trainingsCards");
+
   tbody.innerHTML = "";
+  cards.innerHTML = "";
+  trainings = [];
 
   const q = query(
     collection(db, "trainings"),
@@ -61,27 +69,90 @@ async function loadTrainings() {
   const snapshot = await getDocs(q);
 
   snapshot.forEach(doc => {
-    const t = doc.data();
+    const t = { id: doc.id, ...doc.data() };
+    trainings.push(t);
+
     const count = Array.isArray(t.attendees)
       ? t.attendees.length
       : 0;
 
+    /* DESKTOP ROW */
     tbody.innerHTML += `
-      <tr>
+      <tr data-id="${t.id}" class="training-row">
         <td>${t.date}</td>
+        <td>${t.summary ?? "-"}</td>
         <td>${count}</td>
-        <td class="small text-muted">
-          ${t.summary ?? ""}
-        </td>
-        <td class="text-end">
-          <button class="btn btn-sm btn-outline-secondary" disabled>
+        <td>
+          <button class="btn btn-sm btn-outline-primary edit-training">
             Editar
           </button>
         </td>
       </tr>
     `;
+
+    /* MOBILE CARD */
+    cards.innerHTML += `
+      <div class="card mb-2 training-card" data-id="${t.id}">
+        <div class="card-body p-3">
+          <div class="fw-semibold">${t.date}</div>
+
+          <div class="text-muted small">
+            ${t.summary ?? "Entrenamiento"}
+          </div>
+
+          <div class="d-flex justify-content-between mt-2">
+            <span class="small">👥 ${count} asistentes</span>
+            <span class="text-primary small">Editar →</span>
+          </div>
+        </div>
+      </div>
+    `;
   });
+
+  bindEditEvents();
 }
+
+/* =========================
+   EDIT EVENTS
+========================= */
+
+function bindEditEvents() {
+  document.querySelectorAll(".edit-training, .training-card")
+    .forEach(el => {
+      el.onclick = () => {
+        const id = el.closest("[data-id]").dataset.id;
+        openEditTraining(id);
+      };
+    });
+}
+
+function openEditTraining(id) {
+  const t = trainings.find(tr => tr.id === id);
+  if (!t) return;
+
+  currentTrainingId = id;
+
+  document.querySelector("#trainingModal .modal-title")
+    .innerText = "Editar entrenamiento";
+
+  document.getElementById("trainingDate").value = t.date;
+  document.getElementById("trainingSummary").value = t.summary ?? "";
+  document.getElementById("trainingNotes").value = t.notes ?? "";
+
+  attendees = Array.isArray(t.attendees)
+    ? [...t.attendees]
+    : [];
+
+  document.querySelectorAll(".attendance-check")
+    .forEach(cb => {
+      cb.checked = attendees.includes(cb.dataset.id);
+    });
+
+  bootstrap.Modal
+    .getOrCreateInstance(trainingModal)
+    .show();
+}
+
 
 /* =========================
    LOAD PLAYERS
@@ -179,38 +250,40 @@ function processQuickText() {
    SAVE TRAINING
 ========================= */
 async function saveTraining() {
-  const date = document.getElementById("trainingDate").value;
-  const summary = document
-    .getElementById("trainingSummary")
-    .value
-    .trim();
-
-  const notes = document
-    .getElementById("trainingNotes")
-    .value
-    .trim();
-
+  const date = trainingDate.value;
   if (!date) {
     alert("Selecciona una fecha");
     return;
   }
 
-  const training = new Training(null, {
+  const payload = {
     date,
     attendees,
-    summary,
-    notes,
-    createdAt: serverTimestamp()
-  });
+    summary: trainingSummary.value.trim(),
+    notes: trainingNotes.value.trim(),
+  };
 
-  await addDoc(
-    collection(db, "trainings"),
-    training.toFirestore()
-  );
+  if (currentTrainingId) {
+    await updateDoc(
+      doc(db, "trainings", currentTrainingId),
+      payload
+    );
+  } else {
+    payload.createdAt = serverTimestamp();
+    await addDoc(
+      collection(db, "trainings"),
+      payload
+    );
+  }
+
+  bootstrap.Modal
+    .getInstance(trainingModal)
+    .hide();
 
   resetModal();
   await loadTrainings();
 }
+
 
 /* =========================
    MODAL RESET
@@ -220,12 +293,16 @@ const trainingModal = document.getElementById("trainingModal");
 trainingModal.addEventListener("show.bs.modal", resetModal);
 
 function resetModal() {
+  currentTrainingId = null;
   attendees = [];
 
-  document.getElementById("trainingDate").value = "";
-  document.getElementById("attendanceText").value = "";
-  document.getElementById("trainingSummary").value = "";
-  document.getElementById("trainingNotes").value = "";
+  document.querySelector("#trainingModal .modal-title")
+    .innerText = "Nuevo entrenamiento";
+
+  trainingDate.value = "";
+  trainingSummary.value = "";
+  trainingNotes.value = "";
+  attendanceText.value = "";
 
   document
     .querySelectorAll(".attendance-check")
