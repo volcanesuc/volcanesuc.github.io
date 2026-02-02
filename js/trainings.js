@@ -144,10 +144,12 @@ function openEditTraining(id) {
     ? [...t.attendees]
     : [];
 
-  document.querySelectorAll(".attendance-check")
-    .forEach(cb => {
-      cb.checked = attendees.includes(cb.dataset.id);
-    });
+  setTimeout(() => {
+    document.querySelectorAll(".attendance-check")
+      .forEach(cb => {
+        cb.checked = attendees.includes(cb.dataset.id);
+      });
+    }, 0);
 
   bootstrap.Modal
     .getOrCreateInstance(trainingModal)
@@ -298,7 +300,7 @@ function resetModal() {
   attendees = [];
 
   document.querySelector("#trainingModal .modal-title")
-    .innerText = "Nuevo entrenamiento";
+    .innerText = "Editar entrenamiento";
 
   trainingDate.value = "";
   trainingSummary.value = "";
