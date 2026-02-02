@@ -19,8 +19,7 @@ export const CLUB_DATA = {
       { id: "roster", label: "Roster", href: "roster.html" },
       { id: "trainings", label: "Entrenamientos", href: "trainings.html" },
       { id: "attendance", label: "Asistencia", href: "attendance.html" },
-      { id: "tournaments", label: "Torneos", href: "tournaments.html" },
-      { id: "stats", label: "Estadísticas", href: "stats2024.html" }
+      { id: "tournaments", label: "Torneos", href: "tournaments.html" }
     ],
      logout: {
       label: "SALIR"
