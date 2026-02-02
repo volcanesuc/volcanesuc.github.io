@@ -171,16 +171,17 @@ function renderCards(list) {
             </div>
 
             <div class="d-flex justify-content-between align-items-center mt-3">
-              <div class="text-muted small">${fees}</div>
-              <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}">
-                ${escapeHtml(S.actions.edit)}
-              </button>
-              <a class="btn btn-sm btn-outline-secondary me-2"
-                href="tournament_details.html?id=${encodeURIComponent(t.id)}">
-                Detalles
-              </a>
+                <div class="text-muted small">${fees}</div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-sm btn-outline-secondary"
+                    href="tournament_detail.html?id=${encodeURIComponent(t.id)}">
+                    Detalles
+                    </a>
+                    <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}">
+                    ${escapeHtml(S.actions.edit)}
+                    </button>
+                </div>
             </div>
-          </div>
         `;
       }).join("")
     : `<div class="text-muted p-2">${escapeHtml(S.page.empty)}</div>`;
