@@ -139,6 +139,8 @@ function openEditTraining(training) {
   document.querySelector("#trainingModal .modal-title").innerText =
     "Editar entrenamiento";
 
+  document.getElementById("quickTextSection").style.display = "none";
+
   trainingDate.value = training.date;
   trainingSummary.value = training.summary ?? "";
   trainingNotes.value = training.notes ?? "";
@@ -157,8 +159,6 @@ function openEditTraining(training) {
     .getOrCreateInstance(trainingModal)
     .show();
 }
-
-
 
 
 /* =========================
@@ -307,6 +307,8 @@ function resetModal() {
   document.querySelector("#trainingModal .modal-title")
     .innerText = "Nuevo entrenamiento";
 
+  document.getElementById("quickTextSection").style.display = "block";
+
   trainingDate.value = "";
   trainingSummary.value = "";
   trainingNotes.value = "";
@@ -316,3 +318,4 @@ function resetModal() {
     .querySelectorAll(".attendance-check")
     .forEach(cb => (cb.checked = false));
 }
+
