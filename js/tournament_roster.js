@@ -65,6 +65,10 @@ const playersSubtitle = document.getElementById("playersSubtitle");
 const teamFeePill = document.getElementById("teamFeePill");
 const toggleTeamFeeBtn = document.getElementById("toggleTeamFeeBtn");
 
+// Legend filters UX
+const clearLegendFiltersBtn = document.getElementById("clearLegendFilters");
+const filtersHintEl = document.getElementById("filtersHint");
+
 /* ==========================
    PARAMS / STATE
 ========================== */
@@ -74,7 +78,7 @@ const tournamentId = (params.get("id") || "").trim();
 let tournament = null;
 let roster = [];     // tournaments/{id}/roster
 let players = [];    // club players
-let addPanelVisible = true;
+
 let activeLegendFilters = new Set();
 
 /* ==========================
@@ -85,31 +89,10 @@ applyStrings();
 /* ==========================
    EVENTS
 ========================== */
+// roster search removed
 // searchInput?.addEventListener("input", render);
 
 playersSearch?.addEventListener("input", renderPlayers);
-
-document
-  .querySelectorAll(".legend-filter")
-  .forEach(el => {
-    el.style.cursor = "pointer";
-
-    el.addEventListener("click", () => {
-      const key = el.dataset.filter;
-      if (!key) return;
-
-      if (activeLegendFilters.has(key)) {
-        activeLegendFilters.delete(key);
-        el.classList.remove("legend-filter--active");
-      } else {
-        activeLegendFilters.add(key);
-        el.classList.add("legend-filter--active");
-      }
-
-      render();
-    });
-  });
-
 
 toggleTeamFeeBtn?.addEventListener("click", toggleTeamFeePaid);
 
@@ -119,15 +102,11 @@ toggleTeamFeeBtn?.addEventListener("click", toggleTeamFeePaid);
 watchAuth(async () => {
   showLoader();
   try {
-    // Version (arriba)
     if (appVersion) appVersion.textContent = `v${APP_CONFIG.version}`;
 
-    // ✅ Version en el botón (logout)
+    // Asegurar que el header diga solo "Salir"
     const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-      const base = (logoutBtn.textContent || "").trim() || "Salir";
-      logoutBtn.textContent = `${base}`;
-    }
+    if (logoutBtn) logoutBtn.textContent = "Salir";
 
     if (!tournamentId) {
       showError("Falta el parámetro del torneo. Ej: tournament_roster.html?id=XXXX");
@@ -140,12 +119,11 @@ watchAuth(async () => {
       return;
     }
 
-    // ✅ Quitar/ocultar botón de volver (detail)
-    if (detailBtn) {
-      detailBtn.classList.add("d-none");
-      // (si prefieres eliminarlo del DOM)
-      // detailBtn.remove();
-    }
+    // Ocultar detalle si no lo usas en esta pantalla
+    if (detailBtn) detailBtn.classList.add("d-none");
+
+    // Inicializar UX de filtros (ahora que el DOM ya existe)
+    initLegendFiltersUX();
 
     await Promise.all([loadRoster(), loadPlayers()]);
     render();
@@ -177,20 +155,19 @@ async function loadRoster() {
 async function loadPlayers() {
   const snap = await getDocs(collection(db, PLAYERS_COL));
 
-  //solo activos + datos para contadores (gender/role)
   players = snap.docs
-  .map(d => Player.fromFirestore(d))
-  .map(p => ({
-    id: p.id,
-    name: p.fullName,
-    nickname: "",
-    role: p.role,          // handler | cutter | hybrid
-    number: p.number ?? null,
-    gender: p.gender,  
-    active: p.active !== false
-  }))
-  .filter(p => p.active === true)
-  .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
+    .map(d => Player.fromFirestore(d))
+    .map(p => ({
+      id: p.id,
+      name: p.fullName,
+      nickname: "",
+      role: p.role,          // handler | cutter | hybrid
+      number: p.number ?? null,
+      gender: p.gender,
+      active: p.active !== false
+    }))
+    .filter(p => p.active === true)
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
 
   if (playersSubtitle) {
     playersSubtitle.textContent =
@@ -211,10 +188,11 @@ function render() {
 
   renderTeamFee();
 
-  //filtro/buscador del roster
   let list = [...roster];
+
+  // aplicar filtros de leyenda
   if (activeLegendFilters.size > 0) {
-    list = list.filter(r => matchesLegendFilters(r)); 
+    list = list.filter(matchesLegendFilters);
   }
 
   if (rosterList) rosterList.innerHTML = list.length ? list.map(rosterRow).join("") : "";
@@ -224,7 +202,6 @@ function render() {
     rosterEmpty.textContent = S.roster?.empty || "No hay jugadores asignados a este torneo.";
   }
 
-  // ✅ Contadores del roster (total + M/F + handlers/cutters)
   renderRosterCounters(list);
 
   rosterList?.querySelectorAll("[data-remove]")?.forEach(btn => {
@@ -250,18 +227,14 @@ function render() {
 }
 
 function renderRosterCounters(list) {
-  // total roster (convocados/confirmados/etc)
   const total = list.length;
 
-  // gender counts (tolerante a formatos)
   const m = list.filter(r => isMale(r.gender)).length;
   const f = list.filter(r => isFemale(r.gender)).length;
 
-  // role counts
   const handlers = list.filter(r => isHandler(r.role)).length;
   const cutters = list.filter(r => isCutter(r.role)).length;
 
-  // subtitle en el roster (y pageSubtitle si quieres también)
   const text = total
     ? `Total: ${total} · M: ${m} · F: ${f} · Handlers: ${handlers} · Cutters: ${cutters}`
     : (S.roster?.subtitle || "Jugadores convocados");
@@ -279,10 +252,9 @@ function renderPlayers() {
   // ids que ya están en el roster (por docId o playerId)
   const rosterIds = new Set(roster.map(r => r.playerId || r.id));
 
-  // ✅ lista base: SOLO jugadores que NO están en roster
+  // SOLO jugadores que NO están en roster
   let list = players.filter(p => !rosterIds.has(p.id));
 
-  // filtro de búsqueda del panel derecho
   if (q) {
     list = list.filter(p =>
       `${p.name || ""} ${p.nickname || ""} ${p.role || ""}`
@@ -293,7 +265,7 @@ function renderPlayers() {
 
   if (playersList) {
     playersList.innerHTML = list.length
-      ? list.map(p => playerPickRow(p, false)).join("")
+      ? list.map(p => playerPickRow(p)).join("")
       : "";
   }
 
@@ -305,10 +277,9 @@ function renderPlayers() {
   }
 
   if (playersSubtitle) {
-        playersSubtitle.textContent = `Disponibles: ${list.length}`;
+    playersSubtitle.textContent = `Disponibles: ${list.length}`;
   }
 
-  // listeners para agregar
   playersList?.querySelectorAll("[data-add]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-add");
@@ -316,7 +287,6 @@ function renderPlayers() {
     });
   });
 }
-
 
 /* ==========================
    ACTIONS
@@ -330,16 +300,15 @@ async function addToRoster(playerId) {
     const ref = doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerId);
 
     await setDoc(ref, {
-        playerId,
-        name: p.name,
-        number: p.number ?? null,
-        role: p.role,        // handler / cutter / hybrid
-        gender: p.gender,    // M / F (o como lo manejes)
-        status: "convocado",
-        playerFeePaid: false,
-        createdAt: serverTimestamp()
+      playerId,
+      name: p.name,
+      number: p.number ?? null,
+      role: p.role,
+      gender: p.gender,
+      status: "convocado",
+      playerFeePaid: false,
+      createdAt: serverTimestamp()
     }, { merge: true });
-
 
     await loadRoster();
     render();
@@ -513,7 +482,6 @@ function playerPickRow(p) {
   `;
 }
 
-
 /* ==========================
    TEAM FEE UI
 ========================== */
@@ -544,13 +512,87 @@ function applyStrings() {
   rosterTitle && (rosterTitle.textContent = S.roster?.title || "Roster del torneo");
   rosterSubtitle && (rosterSubtitle.textContent = S.roster?.subtitle || "Jugadores convocados");
 
-  // ✅ Quitamos UI de buscar roster
+  // quitar UI de buscar roster si existe en el HTML
   if (lblSearch) lblSearch.classList.add("d-none");
   if (searchInput) searchInput.classList.add("d-none");
 
-  // (Estos se mantienen: búsqueda dentro del picker de jugadores)
   playersTitle && (playersTitle.textContent = "Jugadores");
   btnAddLabel && (btnAddLabel.textContent = "Agregar jugador");
+}
+
+/* ==========================
+   FILTER UX (syncLegendUI)
+========================== */
+function initLegendFiltersUX() {
+  // Marca como botones "toggle" y aplica handlers
+  const btns = document.querySelectorAll(".legend-filter");
+
+  btns.forEach(btn => {
+    btn.setAttribute("aria-pressed", "false");
+
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.filter;
+      if (!key) return;
+
+      if (activeLegendFilters.has(key)) {
+        activeLegendFilters.delete(key);
+        btn.classList.remove("is-active");
+        btn.setAttribute("aria-pressed", "false");
+      } else {
+        activeLegendFilters.add(key);
+        btn.classList.add("is-active");
+        btn.setAttribute("aria-pressed", "true");
+      }
+
+      syncLegendUI();
+      render();
+    });
+  });
+
+  clearLegendFiltersBtn?.addEventListener("click", () => {
+    activeLegendFilters.clear();
+
+    btns.forEach(btn => {
+      btn.classList.remove("is-active");
+      btn.setAttribute("aria-pressed", "false");
+    });
+
+    syncLegendUI();
+    render();
+  });
+
+  syncLegendUI();
+}
+
+function syncLegendUI() {
+  // Mostrar botón "Limpiar" solo cuando hay filtros activos
+  if (clearLegendFiltersBtn) {
+    clearLegendFiltersBtn.classList.toggle("d-none", activeLegendFilters.size === 0);
+  }
+
+  // Hint: mostrar qué filtros están activos (más claro UX)
+  if (!filtersHintEl) return;
+
+  if (activeLegendFilters.size === 0) {
+    filtersHintEl.innerHTML = `Tip: puedes combinar filtros (ej. <strong>Confirmado</strong> + <strong>Fee pendiente</strong>).`;
+    return;
+  }
+
+  const labels = [];
+  for (const f of activeLegendFilters) {
+    if (f === "status:confirmado") labels.push("Confirmado");
+    else if (f === "status:convocado") labels.push("Convocado");
+    else if (f === "fee:pendiente") labels.push("Fee pendiente");
+    else if (f === "fee:pagado") labels.push("Fee pagado");
+    else labels.push(f);
+  }
+
+  filtersHintEl.innerHTML = `Mostrando: <strong>${labels.join(" + ")}</strong> · <a href="#" id="filtersClearLink">Limpiar</a>`;
+  // link inline para limpiar rápido
+  document.getElementById("filtersClearLink")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    clearLegendFiltersBtn?.click();
+  });
 }
 
 /* ==========================
@@ -588,7 +630,6 @@ function matchesLegendFilters(r) {
   return true;
 }
 
-
 function showError(msg) {
   if (!errorBox) return;
   errorBox.textContent = msg;
@@ -605,10 +646,6 @@ function escapeHtml(str) {
 }
 
 // ---- counters helpers ----
-function norm(s) {
-  return String(s || "").trim().toLowerCase();
-}
-
 function isMale(g) {
   return g === "M" || g === "m" || g === "male";
 }
@@ -624,6 +661,3 @@ function isHandler(role) {
 function isCutter(role) {
   return role === "cutter";
 }
-
-
-

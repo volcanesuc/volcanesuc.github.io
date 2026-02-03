@@ -155,3 +155,57 @@
   opacity: 1;
   box-shadow: 0 0 0 2px rgba(0,0,0,0.15);
 }
+
+.roster-filters {
+  margin-top: .25rem;
+}
+
+.roster-filters__top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:.5rem;
+  margin-bottom:.4rem;
+}
+
+.roster-filters__label{
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:.4rem;
+}
+
+.roster-filters__chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem;
+}
+
+.legend-filter{
+  cursor:pointer;
+  border: none;
+  background: transparent;
+  opacity: .75;
+  transition: transform .12s ease, opacity .12s ease, box-shadow .12s ease;
+}
+
+.legend-filter:hover{
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.legend-filter.is-active{
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px rgba(25,71,63,.35);
+}
+
+.legend-filter.is-active i{
+  transform: scale(1.05);
+}
+
+.roster-filters__hint{
+  margin-top:.4rem;
+  font-size:.85rem;
+  color: rgba(0,0,0,.6);
+}
