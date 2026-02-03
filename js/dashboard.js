@@ -28,48 +28,73 @@ watchAuth(async () => {
 });
 
 
+function setNextTournamentLoading() {
+  document.getElementById("nextTournamentDate")?.textContent = "Cargando…";
+  document.getElementById("nextTournamentName")?.textContent = "—";
+}
+
+function setNextTournamentError(msg = "No se pudo cargar") {
+  document.getElementById("nextTournamentDate")?.textContent = "—";
+  document.getElementById("nextTournamentName")?.textContent = msg;
+}
+
+
 /* =========================================================
    DASHBOARD LOAD
 ========================================================= */
 
 async function loadDashboard() {
-  //Torneos
+  setNextTournamentLoading();
+
   const TOURNAMENTS_COL = APP_CONFIG?.club?.tournamentsCollection || "tournaments";
 
-  // Jugadores
-  const playersSnap = await getDocs(collection(db, "club_players"));
-  const players = playersSnap.docs.map(doc =>
-    Player.fromFirestore(doc)
-  );
+  // arrancamos todo en paralelo
+  const playersP = getDocs(collection(db, "club_players"));
+  const trainingsP = getDocs(collection(db, "trainings"));
+  const tournamentsP = getDocs(collection(db, TOURNAMENTS_COL));
 
-  // Entrenamientos
-  const trainingsSnap = await getDocs(collection(db, "trainings"));
-  const trainings = trainingsSnap.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
+  const [playersRes, trainingsRes, tournamentsRes] = await Promise.allSettled([
+    playersP,
+    trainingsP,
+    tournamentsP
+  ]);
 
-  // Torneos (desde config)
-  const tournamentsSnap = await getDocs(collection(db, TOURNAMENTS_COL));
-  const tournaments = tournamentsSnap.docs.map(d => ({
-    id: d.id,
-    ...d.data()
-  }));
+  // --- Players
+  let players = [];
+  if (playersRes.status === "fulfilled") {
+    players = playersRes.value.docs.map(doc => Player.fromFirestore(doc));
+  } else {
+    console.error("Error cargando players:", playersRes.reason);
+  }
 
-  // Próximo torneo
-  renderNextTournament(tournaments);
+  // --- Trainings
+  let trainings = [];
+  if (trainingsRes.status === "fulfilled") {
+    trainings = trainingsRes.value.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } else {
+    console.error("Error cargando trainings:", trainingsRes.reason);
+  }
 
-  // Cumpleaños
+  // --- Tournaments
+  if (tournamentsRes.status === "fulfilled") {
+    const tournaments = tournamentsRes.value.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderNextTournament(tournaments);
+  } else {
+    console.error("Error cargando torneos:", tournamentsRes.reason);
+    // esto evita que se quede en "Cargando…"
+    setNextTournamentError("Sin acceso a torneos");
+  }
+
+  // Render resto aunque torneos falle
   renderBirthdays(players);
 
-  // KPIs
   const kpis = calculateMonthlyKPIs({ players, trainings });
   renderKPIs(kpis);
 
-  // Alertas
   const alerts = calculateAlerts({ players, trainings });
   renderAlerts(alerts);
 }
+
 
 
 /* =========================================================
@@ -332,7 +357,7 @@ function calculateAlerts({ players, trainings }) {
 
   trainings.forEach(t => {
     if (!t.active || !t.date) return;
-    const d = new Date(t.date);
+    const d = t.date?.toDate?.() ?? new Date(t.date);
     (t.attendees || []).forEach(pid => {
       if (!lastAttendance[pid] || d > lastAttendance[pid]) {
         lastAttendance[pid] = d;
