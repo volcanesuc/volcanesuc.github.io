@@ -256,8 +256,20 @@ th.sortable.sorted-desc::after { content: " ↓"; }
 
 
 /* =========================
-   HEADER
+   Header: logo-link blanco (clickeable)
 ========================= */
+#app-header .logo-link,
+#app-header .logo-link:visited {
+  color: #fff !important;
+  text-decoration: none !important;
+}
+
+#app-header .logo-link:hover,
+#app-header .logo-link:focus {
+  color: #e8ce26 !important; /* amarillo volcanes */
+  text-decoration: none !important;
+}
+
 
 /* Header brand / Volcanes */
 .app-header a,
