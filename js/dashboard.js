@@ -62,39 +62,85 @@ async function loadDashboard() {
    BIRTHDAYS
 ========================================================= */
 
-const birthdaysList = document.getElementById("birthdaysList");
-const currentMonth = new Date().getMonth();
+function toDateSafe(birthday) {
+  if (!birthday) return null;
 
-function parseBirthday(str) {
-  if (!str) return null;
-  const [y, m, d] = str.split("-").map(Number);
-  if (!y || !m || !d) return null;
-  return { month: m - 1, day: d };
+  // Firestore Timestamp (tiene .toDate())
+  if (typeof birthday === "object" && typeof birthday.toDate === "function") {
+    const d = birthday.toDate();
+    return isNaN(d) ? null : d;
+  }
+
+  // JS Date
+  if (birthday instanceof Date) {
+    return isNaN(birthday) ? null : birthday;
+  }
+
+  // String
+  if (typeof birthday === "string") {
+    const s = birthday.trim().replaceAll("/", "-"); // soporta "YYYY/MM/DD"
+    // intento directo
+    const d1 = new Date(s);
+    if (!isNaN(d1)) return d1;
+
+    // fallback manual "YYYY-MM-DD"
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const da = Number(m[3]);
+      const d2 = new Date(y, mo, da);
+      return isNaN(d2) ? null : d2;
+    }
+  }
+
+  return null;
 }
 
 function renderBirthdays(players) {
-  const today = new Date();
+  const birthdaysList = document.getElementById("birthdaysList");
+  if (!birthdaysList) return;
 
-  const list = players
+  const today = new Date();
+  const currentMonth = today.getMonth();
+
+  const list = (players || [])
     .map(p => {
-      const b = parseBirthday(p.birthday);
-      return b ? { player: p, ...b } : null;
+      const d = toDateSafe(p.birthday);
+      if (!d) return null;
+      return { player: p, month: d.getMonth(), day: d.getDate() };
     })
     .filter(Boolean)
-    .filter(p => p.month === currentMonth)
+    .filter(x => x.month === currentMonth)
     .sort((a, b) => a.day - b.day);
 
-  birthdaysList.innerHTML = list.length
-    ? list
-        .map(
-          ({ player, day }) =>
-            `<strong>${player.fullName}</strong> — ${day}${
-              day === today.getDate() ? " (HOY)" : ""
-            }`
-        )
-        .join("<br>")
-    : "No hay cumpleañeros este mes";
+  if (!list.length) {
+    birthdaysList.textContent = "No hay cumpleañeros este mes";
+    return;
+  }
+
+  birthdaysList.innerHTML = list
+    .map(({ player, day }) => {
+      const isToday = day === today.getDate();
+      return `
+        <div class="d-flex justify-content-between align-items-center py-1">
+          <div><strong>${escapeHtml(player.fullName)}</strong></div>
+          <div class="text-muted">${day}${isToday ? " <span class='badge text-bg-success ms-1'>HOY</span>" : ""}</div>
+        </div>
+      `;
+    })
+    .join("");
 }
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 
 /* =========================================================
    KPIs
