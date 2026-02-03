@@ -150,14 +150,14 @@ function formatTournamentRangePretty(startDate, endDate) {
   const end = endDate ? startOfDay(endDate) : null;
 
   const monthFmt = new Intl.DateTimeFormat("es-CR", { month: "short" });
-  const m1 = monthFmt.format(start).replace(".", ""); // "feb."
+  const m1 = capitalize(monthFmt.format(start).replace(".", ""));
   const d1 = start.getDate();
 
   if (!end || (end.getTime() === start.getTime())) {
     return `${m1} ${d1}`;
   }
 
-  const m2 = monthFmt.format(end).replace(".", "");
+  const m2 = capitalize(monthFmt.format(end).replace(".", ""));
   const d2 = end.getDate();
 
   if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
@@ -429,6 +429,11 @@ function renderAlerts(alerts) {
       `
     )
     .join("");
+}
+
+function capitalize(str) {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 /* =========================================================
