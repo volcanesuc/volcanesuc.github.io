@@ -256,20 +256,25 @@ function render() {
   });
 }
 
-function renderRosterCounters(list) {
-  const total = list.length;
+function renderRosterCounters(visibleList) {
+  const total = roster.length;
 
-  const m = list.filter(r => isMale(r.gender)).length;
-  const f = list.filter(r => isFemale(r.gender)).length;
+  const m = roster.filter(r => isMale(r.gender)).length;
+  const f = roster.filter(r => isFemale(r.gender)).length;
 
-  const handlers = list.filter(r => isHandler(r.role)).length;
-  const cutters = list.filter(r => isCutter(r.role)).length;
+  const handlers = roster.filter(r => isHandler(r.role)).length;
+  const cutters = roster.filter(r => isCutter(r.role)).length;
 
-  const guestsCount = list.filter(r => !!r.isGuest).length;
+  const guestsCount = roster.filter(r => r.isGuest).length;
+
+  const visibleText =
+    visibleList.length !== roster.length
+      ? ` · Mostrando: ${visibleList.length}`
+      : "";
 
   const text = total
-    ? `Total: ${total} · Invitados: ${guestsCount} · M: ${m} · F: ${f} · Handlers: ${handlers} · Cutters: ${cutters}`
-    : (S.roster?.subtitle || "Jugadores convocados");
+    ? `Total: ${total}${visibleText} · Invitados: ${guestsCount} · M: ${m} · F: ${f} · Handlers: ${handlers} · Cutters: ${cutters}`
+    : "Jugadores convocados";
 
   if (rosterSubtitle) rosterSubtitle.textContent = text;
   if (pageSubtitle) pageSubtitle.textContent = text;
@@ -291,6 +296,7 @@ function renderPlayers() {
 
   // quitar ya agregados
   let list = pool.filter(p => !rosterIds.has(p.id));
+
 
   // buscar
   if (q) {
@@ -318,6 +324,7 @@ function renderPlayers() {
     const pCount = list.length - gCount;
     playersSubtitle.textContent = `Disponibles: ${list.length} · Club: ${pCount} · Invitados: ${gCount}`;
   }
+  document.getElementById("addPanelState")?.textContent = `Disponibles: ${list.length}`;
 
   // listeners para agregar
   playersList?.querySelectorAll("[data-add]")?.forEach(btn => {
