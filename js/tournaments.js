@@ -121,6 +121,10 @@ function render() {
   renderCards(list);
 }
 
+function rosterUrl(id) {
+  return `tournament_roster.html?id=${encodeURIComponent(id)}`;
+}
+
 function renderTable(list) {
   if (!tableEl) return;
 
@@ -136,13 +140,16 @@ function renderTable(list) {
             <td>${badgeLabel(S.fields.venue.options?.[t.venue] ?? t.venue)}</td>
             <td>${fees}</td>
             <td class="text-end">
+              <!-- Editar torneo -->
               <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}" title="Editar">
                 <i class="bi bi-pencil"></i>
               </button>
-              <a class="btn btn-sm btn-outline-secondary ms-2"
-                 href="tournament_roster.html?id=${encodeURIComponent(t.id)}"
-                 title="Detalles">
-                 <i class="bi bi-eye"></i>
+
+              <!-- Roster / Jugadores -->
+              <a class="btn btn-sm btn-outline-success ms-2"
+                 href="${rosterUrl(t.id)}"
+                 title="Roster">
+                 <i class="bi bi-people"></i>
               </a>
             </td>
           </tr>
@@ -182,12 +189,14 @@ function renderCards(list) {
               <div class="text-muted small">${fees}</div>
 
               <div class="d-flex gap-2">
-                <a class="btn btn-sm btn-outline-secondary"
-                   href="tournament_roster.html?id=${encodeURIComponent(t.id)}"
-                   title="Detalles">
-                  <i class="bi bi-eye"></i>
+                <!-- Roster / Jugadores -->
+                <a class="btn btn-sm btn-outline-success"
+                   href="${rosterUrl(t.id)}"
+                   title="Roster">
+                  <i class="bi bi-people"></i>
                 </a>
 
+                <!-- Editar torneo -->
                 <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}" title="Editar">
                   <i class="bi bi-pencil"></i>
                 </button>
