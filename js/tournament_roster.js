@@ -126,7 +126,7 @@ watchAuth(async () => {
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
       const base = (logoutBtn.textContent || "").trim() || "Salir";
-      logoutBtn.textContent = `${base} · v${APP_CONFIG.version}`;
+      logoutBtn.textContent = `${base}`;
     }
 
     if (!tournamentId) {

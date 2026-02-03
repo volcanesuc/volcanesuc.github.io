@@ -36,6 +36,11 @@
         <div class="text-muted" id="pageSubtitle">—</div>
       </div>
 
+      <div class="d-flex align-items-center gap-2">
+        <div class="small text-muted" id="appVersion">v—</div>
+        <!-- Quitamos botones duplicados aquí; el header ya maneja salir/volver -->
+      </div>
+    </div>
 
     <!-- Tournament hero -->
     <section class="roster-hero mb-3">
@@ -45,7 +50,7 @@
           <div class="roster-hero__title" id="tName">—</div>
           <div class="roster-hero__sub" id="tMeta">—</div>
 
-          <!-- Pills (fee + estado) -->
+          <!-- Team fee -->
           <div class="roster-hero__fees mt-3 d-flex flex-wrap gap-2 align-items-center">
             <span class="pill" id="teamFeePill">Team fee: —</span>
 
@@ -53,16 +58,10 @@
               <i class="bi bi-cash-coin"></i>
               Marcar pagado
             </button>
-
-            <!-- badge extra opcional -->
-            <span class="pill pill--soft" id="teamFeeHint" style="display:none;">
-              <i class="bi bi-info-circle"></i>
-              Tip: marca pagado cuando el equipo cancela
-            </span>
           </div>
         </div>
 
-        <!-- Detalle-->
+        <!-- Detalle -->
         <a class="btn btn-outline-primary align-self-start" id="detailBtn" href="#" title="Ver detalle del torneo">
           <i class="bi bi-eye"></i>
           Detalle
@@ -73,20 +72,15 @@
     <!-- Errors -->
     <div class="alert alert-warning d-none" id="errorBox"></div>
 
-    <!-- Controls -->
+    <!-- Controls (dejado mínimo, no rompe layout) -->
     <section class="roster-controls mb-3">
-      <div class="row g-2 align-items-end">
-
-        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <div class="text-muted small">
-            <i class="bi bi-people"></i>
-            Administra convocados, confirmados y pagos
-          </div>
-        </div>
+      <div class="text-muted small d-flex align-items-center gap-2">
+        <i class="bi bi-people"></i>
+        Administra convocados, confirmados y pagos
       </div>
     </section>
 
-    <!-- Layout -->
+    <!-- Layout: 2 columnas como antes -->
     <section class="row g-3">
       <!-- Roster list -->
       <div class="col-12 col-xl-7">
@@ -97,28 +91,25 @@
               <div class="panel__sub text-muted" id="rosterSubtitle">—</div>
             </div>
 
-           <!-- Quick legend -->
+            <!-- Quick legend (filtros) -->
             <div class="d-flex flex-wrap gap-2 small" id="rosterLegend">
-            <span class="pill pill--yellow legend-filter"
-                    data-filter="status:confirmado">
+              <span class="pill pill--yellow legend-filter" data-filter="status:confirmado">
                 <i class="bi bi-check2-circle"></i> Confirmado
-            </span>
+              </span>
 
-            <span class="pill legend-filter"
-                    data-filter="status:convocado">
+              <span class="pill legend-filter" data-filter="status:convocado">
                 <i class="bi bi-person-check"></i> Convocado
-            </span>
+              </span>
 
-            <span class="pill pill--warn legend-filter"
-                    data-filter="fee:pendiente">
+              <span class="pill pill--warn legend-filter" data-filter="fee:pendiente">
                 <i class="bi bi-cash-coin"></i> Fee pendiente
-            </span>
+              </span>
 
-            <span class="pill pill--good legend-filter"
-                    data-filter="fee:pagado">
+              <span class="pill pill--good legend-filter" data-filter="fee:pagado">
                 <i class="bi bi-cash-coin"></i> Fee pagado
-            </span>
+              </span>
             </div>
+          </div>
 
           <div class="mt-3" id="rosterList"></div>
           <div class="text-muted p-3 d-none" id="rosterEmpty">—</div>
@@ -134,7 +125,6 @@
               <div class="panel__sub text-muted" id="playersSubtitle">Agregar al roster</div>
             </div>
 
-            <!-- chip opcional: panel abierto/cerrado -->
             <span class="badge text-bg-light border" id="addPanelState">Panel</span>
           </div>
 
@@ -142,9 +132,6 @@
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-search"></i></span>
               <input class="form-control" id="playersSearch" placeholder="Buscar jugadores activos..." />
-            </div>
-            <div class="form-text">
-              Los ya agregados salen con check.
             </div>
           </div>
 
