@@ -254,6 +254,28 @@ th.sortable.sorted-desc::after { content: " ↓"; }
   .hamburger { display: none; }
 }
 
+
+/* =========================
+   HEADER
+========================= */
+
+/* Header brand / Volcanes */
+.app-header a,
+.app-header a:visited {
+  color: #fff;                 /* blanco */
+  text-decoration: none;       /* sin underline */
+}
+
+.app-header a:hover {
+  color: var(--club-yellow); 
+  text-decoration: none;
+}
+
+.app-header a:active {
+  color: #fff;
+}
+
+
 /* =========================
    FOOTER / META
 ========================= */
