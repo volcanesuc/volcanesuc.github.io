@@ -429,5 +429,5 @@ function renderAlerts(alerts) {
    VERSION
 ========================================================= */
 
-document.getElementById("appVersion").textContent =
-  `v${APP_CONFIG.version}`;
+const appVer = document.getElementById("appVersion");
+if (appVer) appVer.textContent = `v${APP_CONFIG.version}`;
