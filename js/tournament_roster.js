@@ -76,6 +76,7 @@ let tournament = null;
 let roster = [];     // tournaments/{id}/roster
 let players = [];    // club players
 let addPanelVisible = true;
+let activeLegendFilters = new Set();
 
 /* ==========================
    STRINGS -> UI
@@ -95,6 +96,28 @@ openAddBtn?.addEventListener("click", () => {
   if (playersList) playersList.style.display = addPanelVisible ? "" : "none";
   if (playersSearch) playersSearch.style.display = addPanelVisible ? "" : "none";
 });
+
+document
+  .querySelectorAll(".legend-filter")
+  .forEach(el => {
+    el.style.cursor = "pointer";
+
+    el.addEventListener("click", () => {
+      const key = el.dataset.filter;
+      if (!key) return;
+
+      if (activeLegendFilters.has(key)) {
+        activeLegendFilters.delete(key);
+        el.classList.remove("legend-filter--active");
+      } else {
+        activeLegendFilters.add(key);
+        el.classList.add("legend-filter--active");
+      }
+
+      render();
+    });
+  });
+
 
 toggleTeamFeeBtn?.addEventListener("click", toggleTeamFeePaid);
 
@@ -196,8 +219,11 @@ function render() {
 
   renderTeamFee();
 
-  // ✅ Quitado: filtro/buscador del roster
-  const list = roster;
+  //filtro/buscador del roster
+  let list = [...roster];
+  if (activeLegendFilters.size > 0) {
+    list = list.filter(r => matchesLegendFilters(r)); 
+  }
 
   if (rosterList) rosterList.innerHTML = list.length ? list.map(rosterRow).join("") : "";
 
@@ -531,6 +557,24 @@ function formatTournamentMeta(t) {
   return end ? `${start} → ${end} · ${where}` : `${start} · ${where}`;
 }
 
+function matchesLegendFilters(r) {
+  for (const f of activeLegendFilters) {
+    const [type, value] = f.split(":");
+
+    if (type === "status") {
+      if ((r.status || "").toLowerCase() !== value) return false;
+    }
+
+    if (type === "fee") {
+      const paid = !!r.playerFeePaid;
+      if (value === "pagado" && !paid) return false;
+      if (value === "pendiente" && paid) return false;
+    }
+  }
+  return true;
+}
+
+
 function showError(msg) {
   if (!errorBox) return;
   errorBox.textContent = msg;
@@ -566,4 +610,6 @@ function isHandler(role) {
 function isCutter(role) {
   return role === "cutter";
 }
+
+
 

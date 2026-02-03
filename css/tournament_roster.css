@@ -140,3 +140,18 @@
   font-size: .86rem;
   margin-top: 2px;
 }
+
+.legend-filter {
+  opacity: 0.6;
+  transition: all 0.15s ease;
+}
+
+.legend-filter:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.legend-filter--active {
+  opacity: 1;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.15);
+}
