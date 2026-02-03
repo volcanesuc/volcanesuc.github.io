@@ -1,7 +1,7 @@
 export const CARTAGLOW_DATA = {
   meta: {
     title: "Cartaglow",
-    ogImage: "img/logo-cartaglow.jpeg"
+    ogImage: "img/cartaglow/logo-cartaglow-dark.png"
   },
 
   header: {
