@@ -297,7 +297,6 @@ function renderPlayers() {
   // quitar ya agregados
   let list = pool.filter(p => !rosterIds.has(p.id));
 
-
   // buscar
   if (q) {
     list = list.filter(p =>
@@ -324,7 +323,10 @@ function renderPlayers() {
     const pCount = list.length - gCount;
     playersSubtitle.textContent = `Disponibles: ${list.length} · Club: ${pCount} · Invitados: ${gCount}`;
   }
-  document.getElementById("addPanelState")?.textContent = `Disponibles: ${list.length}`;
+
+  // ✅ contador (sin optional chaining en el LHS)
+  const addPanelState = document.getElementById("addPanelState");
+  if (addPanelState) addPanelState.textContent = `Disponibles: ${list.length}`;
 
   // listeners para agregar
   playersList?.querySelectorAll("[data-add]")?.forEach(btn => {
@@ -334,6 +336,7 @@ function renderPlayers() {
     });
   });
 }
+
 
 /* ==========================
    ACTIONS
