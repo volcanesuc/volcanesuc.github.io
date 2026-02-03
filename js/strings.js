@@ -29,7 +29,7 @@ export const CLUB_DATA = {
   landing: {
     hero: {
       title: "Más que un equipo, una comunidad",
-      image: "img/volcanes/nicaragua.jpeg",
+      image: "img/volcanes/campeones2025.jpg",
       description:
         "La misión del club es fortalecer la comunidad y promover el conocimiento y la práctica del deporte bajo el correcto espíritu de juego. Queremos crear espacios donde se practique de manera saludable el Ultimate.",
       cta: {
