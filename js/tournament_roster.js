@@ -133,7 +133,9 @@ watchAuth(async () => {
 
     initLegendFiltersUX();
 
-    await Promise.all([loadRoster(), loadPlayers(), loadGuests()]);
+    await loadPlayers();
+    await loadGuests();
+    await loadRoster();  // roster último (ya puedo enriquecer)
     render();
     renderPlayers();
   } catch (e) {
@@ -155,9 +157,46 @@ async function fetchTournament(id) {
 
 async function loadRoster() {
   const snap = await getDocs(collection(db, TOURNAMENTS_COL, tournamentId, "roster"));
-  roster = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
+
+  const raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  const playersById = new Map(players.map(p => [p.id, p]));
+  const guestsById = new Map(guests.map(g => [g.id, g]));
+
+  roster = raw
+    .map(r => {
+      // ✅ id de referencia para buscar en players/guests
+      const refId = (r.playerId || r.guestId || r.id || "").trim();
+
+      // ✅ escoger fuente según isGuest (pero si isGuest no existe, intenta ambas)
+      const fromGuest = r.isGuest ? guestsById.get(refId) : null;
+      const fromPlayer = !r.isGuest ? playersById.get(refId) : null;
+
+      // fallback si isGuest está mal o no existe:
+      const source = fromPlayer || fromGuest || playersById.get(refId) || guestsById.get(refId);
+
+      return {
+        ...r,
+
+        // ✅ relleno para contadores y UI (no escribe DB)
+        name: r.name ?? source?.name ?? "—",
+        number: r.number ?? source?.number ?? null,
+        role: r.role ?? source?.role ?? null,
+        gender: r.gender ?? source?.gender ?? null,
+
+        // si el doc no trae playerId, lo normalizamos en memoria
+        playerId: r.playerId || refId || null
+      };
+    })
     .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
+
+  // DEBUG útil: ver cuántos quedaron sin género
+  console.log(
+    "Roster loaded:",
+    roster.length,
+    "with gender:",
+    roster.filter(x => !!x.gender).length
+  );
 }
 
 async function loadPlayers() {
@@ -745,11 +784,13 @@ function escapeHtml(str) {
 
 // counters helpers
 function isMale(g) {
-  return g === "M" || g === "m" || g === "male";
+  const v = String(g || "").trim().toLowerCase();
+  return ["m", "male", "masculino", "hombre", "man"].includes(v);
 }
 
 function isFemale(g) {
-  return g === "F" || g === "f" || g === "female";
+  const v = String(g || "").trim().toLowerCase();
+  return ["f", "female", "femenino", "mujer", "woman"].includes(v);
 }
 
 function isHandler(role) {
