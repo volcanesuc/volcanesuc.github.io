@@ -29,13 +29,19 @@ watchAuth(async () => {
 
 
 function setNextTournamentLoading() {
-  document.getElementById("nextTournamentDate")?.textContent = "Cargando…";
-  document.getElementById("nextTournamentName")?.textContent = "—";
+  const dateEl = document.getElementById("nextTournamentDate");
+  if (dateEl) dateEl.textContent = "Cargando…";
+
+  const nameEl = document.getElementById("nextTournamentName");
+  if (nameEl) nameEl.textContent = "—";
 }
 
 function setNextTournamentError(msg = "No se pudo cargar") {
-  document.getElementById("nextTournamentDate")?.textContent = "—";
-  document.getElementById("nextTournamentName")?.textContent = msg;
+  const dateEl = document.getElementById("nextTournamentDate");
+  if (dateEl) dateEl.textContent = "—";
+
+  const nameEl = document.getElementById("nextTournamentName");
+  if (nameEl) nameEl.textContent = msg;
 }
 
 
