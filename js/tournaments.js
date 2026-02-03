@@ -92,7 +92,8 @@ watchAuth(async () => {
   }
 });
 
-document.getElementById("appVersion")?.textContent = `v${APP_CONFIG.version}`;
+const appVersionEl = document.getElementById("appVersion");
+if (appVersionEl) appVersionEl.textContent = `v${APP_CONFIG.version}`;
 
 /* ==========================
    LOAD
