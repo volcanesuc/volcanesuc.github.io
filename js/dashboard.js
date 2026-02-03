@@ -33,6 +33,9 @@ watchAuth(async () => {
 ========================================================= */
 
 async function loadDashboard() {
+  //Torneos
+  const TOURNAMENTS_COL = APP_CONFIG?.club?.tournamentsCollection || "tournaments";
+
   // Jugadores
   const playersSnap = await getDocs(collection(db, "club_players"));
   const players = playersSnap.docs.map(doc =>
@@ -46,6 +49,16 @@ async function loadDashboard() {
     ...doc.data()
   }));
 
+  // Torneos (desde config)
+  const tournamentsSnap = await getDocs(collection(db, TOURNAMENTS_COL));
+  const tournaments = tournamentsSnap.docs.map(d => ({
+    id: d.id,
+    ...d.data()
+  }));
+
+  // Próximo torneo
+  renderNextTournament(tournaments);
+
   // Cumpleaños
   renderBirthdays(players);
 
@@ -57,6 +70,114 @@ async function loadDashboard() {
   const alerts = calculateAlerts({ players, trainings });
   renderAlerts(alerts);
 }
+
+
+/* =========================================================
+   TOURNAMENTS
+========================================================= */
+
+function toDateSafeAny(value) {
+  if (!value) return null;
+
+  // Firestore Timestamp
+  if (typeof value === "object" && typeof value.toDate === "function") {
+    const d = value.toDate();
+    return isNaN(d) ? null : d;
+  }
+
+  // JS Date
+  if (value instanceof Date) {
+    return isNaN(value) ? null : value;
+  }
+
+  // String YYYY-MM-DD (local)
+  if (typeof value === "string") {
+    const s = value.trim().replaceAll("/", "-");
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const da = Number(m[3]);
+      return new Date(y, mo, da);
+    }
+    // fallback: Date parse
+    const d2 = new Date(s);
+    return isNaN(d2) ? null : d2;
+  }
+
+  return null;
+}
+
+function startOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function formatTournamentRangePretty(startDate, endDate) {
+  if (!startDate) return "—";
+
+  const start = startOfDay(startDate);
+  const end = endDate ? startOfDay(endDate) : null;
+
+  const monthFmt = new Intl.DateTimeFormat("es-CR", { month: "short" });
+  const m1 = monthFmt.format(start).replace(".", ""); // "feb."
+  const d1 = start.getDate();
+
+  if (!end || (end.getTime() === start.getTime())) {
+    return `${m1} ${d1}`;
+  }
+
+  const m2 = monthFmt.format(end).replace(".", "");
+  const d2 = end.getDate();
+
+  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+    return `${m1} ${d1}–${d2}`;
+  }
+
+  return `${m1} ${d1} – ${m2} ${d2}`;
+}
+
+function pickNextTournament(tournaments) {
+  const now = startOfDay(new Date());
+
+  const parsed = (tournaments || [])
+    .map(t => {
+      const ds = toDateSafeAny(t.dateStart);
+      const de = toDateSafeAny(t.dateEnd);
+      return { ...t, _ds: ds, _de: de };
+    })
+    .filter(t => t._ds);
+
+  // futuros (incluye hoy)
+  const future = parsed
+    .filter(t => startOfDay(t._ds) >= now)
+    .sort((a, b) => a._ds - b._ds);
+
+  if (future.length) return future[0];
+
+  // si no hay futuros, agarrá el más reciente pasado
+  parsed.sort((a, b) => b._ds - a._ds);
+  return parsed[0] || null;
+}
+
+function renderNextTournament(tournaments) {
+  const dateEl = document.getElementById("nextTournamentDate");
+  const nameEl = document.getElementById("nextTournamentName");
+  if (!dateEl || !nameEl) return;
+
+  const t = pickNextTournament(tournaments);
+
+  if (!t) {
+    dateEl.textContent = "—";
+    nameEl.textContent = "Sin torneos próximos";
+    return;
+  }
+
+  const range = formatTournamentRangePretty(t._ds, t._de);
+
+  dateEl.textContent = range;                
+  nameEl.textContent = t.name || "Torneo";  
+}
+
 
 /* =========================================================
    BIRTHDAYS
@@ -118,11 +239,11 @@ function renderBirthdays(players) {
     .map(({ player, day }) => {
       const isToday = day === today.getDate();
       return `
-        <div class="d-flex justify-content-between align-items-center py-1">
-          <div><strong>${escapeHtml(player.fullName)}</strong></div>
-          <div class="text-muted">${day}${isToday ? " <span class='badge text-bg-success ms-1'>HOY</span>" : ""}</div>
-        </div>
-      `;
+          <div class="birthday-item ${isToday ? "today" : ""}">
+            <strong>${escapeHtml(player.fullName)}</strong>
+            <span class="ms-2">${day}</span>
+          </div>
+        `;
     })
     .join("");
 }
