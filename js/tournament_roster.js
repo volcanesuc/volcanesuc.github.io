@@ -47,7 +47,6 @@ const errorBox = document.getElementById("errorBox");
 
 const lblSearch = document.getElementById("lblSearch");
 const searchInput = document.getElementById("searchInput");
-const openAddBtn = document.getElementById("openAddBtn");
 const btnAddLabel = document.getElementById("btnAddLabel");
 
 const rosterTitle = document.getElementById("rosterTitle");
@@ -86,16 +85,9 @@ applyStrings();
 /* ==========================
    EVENTS
 ========================== */
-// ❌ Quitado: filtro/buscador del roster (searchInput)
 // searchInput?.addEventListener("input", render);
 
 playersSearch?.addEventListener("input", renderPlayers);
-
-openAddBtn?.addEventListener("click", () => {
-  addPanelVisible = !addPanelVisible;
-  if (playersList) playersList.style.display = addPanelVisible ? "" : "none";
-  if (playersSearch) playersSearch.style.display = addPanelVisible ? "" : "none";
-});
 
 document
   .querySelectorAll(".legend-filter")
@@ -283,18 +275,40 @@ function renderRosterCounters(list) {
 ========================== */
 function renderPlayers() {
   const q = (playersSearch?.value || "").trim().toLowerCase();
+
+  // ids que ya están en el roster (por docId o playerId)
   const rosterIds = new Set(roster.map(r => r.playerId || r.id));
 
-  const list = q
-    ? players.filter(p => `${p.name || ""} ${p.nickname || ""}`.toLowerCase().includes(q))
-    : players;
+  // ✅ lista base: SOLO jugadores que NO están en roster
+  let list = players.filter(p => !rosterIds.has(p.id));
 
-  if (playersList) {
-    playersList.innerHTML = list.length ? list.map(p => playerPickRow(p, rosterIds.has(p.id))).join("") : "";
+  // filtro de búsqueda del panel derecho
+  if (q) {
+    list = list.filter(p =>
+      `${p.name || ""} ${p.nickname || ""} ${p.role || ""}`
+        .toLowerCase()
+        .includes(q)
+    );
   }
 
-  if (playersEmpty) playersEmpty.classList.toggle("d-none", list.length > 0);
+  if (playersList) {
+    playersList.innerHTML = list.length
+      ? list.map(p => playerPickRow(p, false)).join("")
+      : "";
+  }
 
+  if (playersEmpty) {
+    playersEmpty.classList.toggle("d-none", list.length > 0);
+    playersEmpty.textContent = q
+      ? "No hay coincidencias."
+      : "No hay jugadores disponibles (todos ya están en el roster).";
+  }
+
+  if (playersSubtitle) {
+        playersSubtitle.textContent = `Disponibles: ${list.length}`;
+  }
+
+  // listeners para agregar
   playersList?.querySelectorAll("[data-add]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-add");
@@ -302,6 +316,7 @@ function renderPlayers() {
     });
   });
 }
+
 
 /* ==========================
    ACTIONS
@@ -479,9 +494,8 @@ function rosterRow(r) {
   `;
 }
 
-function playerPickRow(p, already) {
+function playerPickRow(p) {
   const sub = p.nickname ? `${p.nickname}` : (p.role || "");
-  const disabled = already ? "disabled" : "";
 
   return `
     <div class="player-pick">
@@ -490,15 +504,15 @@ function playerPickRow(p, already) {
         <div class="player-pick__sub">${escapeHtml(sub || "")}</div>
       </div>
 
-      <button class="btn btn-sm ${already ? "btn-outline-secondary" : "btn-primary"}"
-              ${disabled}
+      <button class="btn btn-sm btn-primary"
               data-add="${escapeHtml(p.id)}"
-              title="${already ? "Ya está en el roster" : "Agregar"}">
-        <i class="bi ${already ? "bi-check2" : "bi-plus-lg"}"></i>
+              title="Agregar">
+        <i class="bi bi-plus-lg"></i>
       </button>
     </div>
   `;
 }
+
 
 /* ==========================
    TEAM FEE UI
