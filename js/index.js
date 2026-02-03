@@ -80,6 +80,13 @@ if (eventsSection && CLUB_DATA.landing.events?.length) {
 
   const titleEl = eventsSection.querySelector("h2");
   const descEl = eventsSection.querySelector("p");
+  // Botón registro Cartaglow 2026 (deshabilitado)
+  const registerBtn = document.createElement("button");
+  registerBtn.className = "landing-btn landing-btn-disabled";
+  registerBtn.textContent = "Registro Cartaglow 2026 (Próximamente)";
+  registerBtn.disabled = true;
+  registerBtn.title = "El registro para Cartaglow 2026 abrirá próximamente";
+  eventsSection.appendChild(registerBtn);
   const eventsContainer = eventsSection.querySelector(".events");
 
   if (titleEl) {
@@ -95,11 +102,17 @@ if (eventsSection && CLUB_DATA.landing.events?.length) {
     eventsContainer.innerHTML = "";
 
     event.images.forEach(src => {
-      const img = document.createElement("img");
-      img.src = src;
-      img.alt = event.name;
-      eventsContainer.appendChild(img);
-    });
+    const link = document.createElement("a");
+    link.href = "cartaglow.html";
+    link.className = "event-link";
+
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = event.name;
+
+    link.appendChild(img);
+    eventsContainer.appendChild(link);
+  });
   }
 }
 

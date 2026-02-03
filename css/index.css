@@ -296,6 +296,35 @@ body {
   }
 }
 
+/* ==============================
+   EVENTS — CLICKABLE
+============================== */
+
+.event-link {
+  display: block;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.event-link img {
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.event-link:hover img {
+  transform: scale(1.03);
+  filter: brightness(0.95);
+}
+
+.landing-btn-disabled {
+  margin-top: 1.25rem;
+  background: #e0e0e0 !important;
+  color: #777 !important;
+  border: 2px dashed #bbb !important;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
 
 /* ======================================================
    UNIFORMS CAROUSEL
