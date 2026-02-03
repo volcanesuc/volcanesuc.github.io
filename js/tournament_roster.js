@@ -31,6 +31,9 @@ const S = TOURNAMENT_STRINGS;
 const TOURNAMENTS_COL = APP_CONFIG?.club?.tournamentsCollection || "tournaments";
 const PLAYERS_COL = APP_CONFIG?.club?.playersCollection || "club_players";
 
+// ✅ Invitados globales (reutilizables entre torneos)
+const GUESTS_COL = APP_CONFIG?.club?.guestsCollection || "guest_players";
+
 /* ==========================
    DOM
 ========================== */
@@ -65,9 +68,12 @@ const playersSubtitle = document.getElementById("playersSubtitle");
 const teamFeePill = document.getElementById("teamFeePill");
 const toggleTeamFeeBtn = document.getElementById("toggleTeamFeeBtn");
 
-// Legend filters UX
+// UX filtros (si existen en tu HTML)
 const clearLegendFiltersBtn = document.getElementById("clearLegendFilters");
 const filtersHintEl = document.getElementById("filtersHint");
+
+// Invitados UI (si existe en tu HTML)
+const addGuestBtn = document.getElementById("addGuestBtn");
 
 /* ==========================
    PARAMS / STATE
@@ -76,8 +82,9 @@ const params = new URLSearchParams(window.location.search);
 const tournamentId = (params.get("id") || "").trim();
 
 let tournament = null;
-let roster = [];     // tournaments/{id}/roster
-let players = [];    // club players
+let roster = [];      // tournaments/{id}/roster
+let players = [];     // club players (activos)
+let guests = [];      // guest_players (activos)
 
 let activeLegendFilters = new Set();
 
@@ -89,12 +96,12 @@ applyStrings();
 /* ==========================
    EVENTS
 ========================== */
-// roster search removed
-// searchInput?.addEventListener("input", render);
-
+// roster search removed (si existe en HTML lo ocultamos)
 playersSearch?.addEventListener("input", renderPlayers);
-
 toggleTeamFeeBtn?.addEventListener("click", toggleTeamFeePaid);
+
+// Crear invitado global (si el botón existe)
+addGuestBtn?.addEventListener("click", createGuestFlow);
 
 /* ==========================
    INIT
@@ -104,7 +111,7 @@ watchAuth(async () => {
   try {
     if (appVersion) appVersion.textContent = `v${APP_CONFIG.version}`;
 
-    // Asegurar que el header diga solo "Salir"
+    // Asegurar que el header diga solo "Salir" (sin version pegada)
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) logoutBtn.textContent = "Salir";
 
@@ -119,13 +126,14 @@ watchAuth(async () => {
       return;
     }
 
-    // Ocultar detalle si no lo usas en esta pantalla
-    if (detailBtn) detailBtn.classList.add("d-none");
+    // Detalle (si existe en HTML, lo dejamos funcionando)
+    if (detailBtn) {
+      detailBtn.href = `tournament_detail.html?id=${encodeURIComponent(tournamentId)}`;
+    }
 
-    // Inicializar UX de filtros (ahora que el DOM ya existe)
     initLegendFiltersUX();
 
-    await Promise.all([loadRoster(), loadPlayers()]);
+    await Promise.all([loadRoster(), loadPlayers(), loadGuests()]);
     render();
     renderPlayers();
   } catch (e) {
@@ -164,17 +172,40 @@ async function loadPlayers() {
       role: p.role,          // handler | cutter | hybrid
       number: p.number ?? null,
       gender: p.gender,
-      active: p.active !== false
+      active: p.active !== false,
+      isGuest: false
     }))
     .filter(p => p.active === true)
+    .filter(p => (p.name || "").trim().length > 0)
     .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
 
+  // ✅ No mostrar “Fuente: club_players”
   if (playersSubtitle) {
-    playersSubtitle.textContent =
-      players.length
-        ? `${players.length} jugador(es) activo(s)`
-        : `No hay jugadores activos disponibles (o rules bloqueando lectura).`;
+    playersSubtitle.textContent = players.length
+      ? `${players.length} jugador(es) activo(s)`
+      : `No hay jugadores activos disponibles.`;
   }
+}
+
+async function loadGuests() {
+  const snap = await getDocs(collection(db, GUESTS_COL));
+
+  guests = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .map(g => ({
+      id: g.id,
+      name: (g.name || "").trim(),
+      nickname: g.loanFrom ? `Préstamo: ${g.loanFrom}` : "",
+      role: g.role || "hybrid",
+      number: g.number ?? null,
+      gender: g.gender ?? null,
+      active: g.active !== false,
+      loanFrom: g.loanFrom || "",
+      isGuest: true
+    }))
+    .filter(g => g.active === true)
+    .filter(g => (g.name || "").trim().length > 0)
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
 }
 
 /* ==========================
@@ -188,9 +219,8 @@ function render() {
 
   renderTeamFee();
 
+  // filtros de leyenda
   let list = [...roster];
-
-  // aplicar filtros de leyenda
   if (activeLegendFilters.size > 0) {
     list = list.filter(matchesLegendFilters);
   }
@@ -235,8 +265,10 @@ function renderRosterCounters(list) {
   const handlers = list.filter(r => isHandler(r.role)).length;
   const cutters = list.filter(r => isCutter(r.role)).length;
 
+  const guestsCount = list.filter(r => !!r.isGuest).length;
+
   const text = total
-    ? `Total: ${total} · M: ${m} · F: ${f} · Handlers: ${handlers} · Cutters: ${cutters}`
+    ? `Total: ${total} · Invitados: ${guestsCount} · M: ${m} · F: ${f} · Handlers: ${handlers} · Cutters: ${cutters}`
     : (S.roster?.subtitle || "Jugadores convocados");
 
   if (rosterSubtitle) rosterSubtitle.textContent = text;
@@ -244,29 +276,33 @@ function renderRosterCounters(list) {
 }
 
 /* ==========================
-   RENDER: PLAYERS PICKER
+   RENDER: RIGHT PANEL (PICKER)
+   - mezcla jugadores activos + invitados activos
+   - quita los ya agregados al roster
 ========================== */
 function renderPlayers() {
   const q = (playersSearch?.value || "").trim().toLowerCase();
 
-  // ids que ya están en el roster (por docId o playerId)
+  // ids ya en roster
   const rosterIds = new Set(roster.map(r => r.playerId || r.id));
 
-  // SOLO jugadores que NO están en roster
-  let list = players.filter(p => !rosterIds.has(p.id));
+  // pool: jugadores + invitados
+  let pool = [...players, ...guests];
 
+  // quitar ya agregados
+  let list = pool.filter(p => !rosterIds.has(p.id));
+
+  // buscar
   if (q) {
     list = list.filter(p =>
-      `${p.name || ""} ${p.nickname || ""} ${p.role || ""}`
+      `${p.name || ""} ${p.nickname || ""} ${p.role || ""} ${p.loanFrom || ""}`
         .toLowerCase()
         .includes(q)
     );
   }
 
   if (playersList) {
-    playersList.innerHTML = list.length
-      ? list.map(p => playerPickRow(p)).join("")
-      : "";
+    playersList.innerHTML = list.length ? list.map(playerPickRow).join("") : "";
   }
 
   if (playersEmpty) {
@@ -276,10 +312,14 @@ function renderPlayers() {
       : "No hay jugadores disponibles (todos ya están en el roster).";
   }
 
+  // subtitle panel derecho
   if (playersSubtitle) {
-    playersSubtitle.textContent = `Disponibles: ${list.length}`;
+    const gCount = list.filter(x => x.isGuest).length;
+    const pCount = list.length - gCount;
+    playersSubtitle.textContent = `Disponibles: ${list.length} · Club: ${pCount} · Invitados: ${gCount}`;
   }
 
+  // listeners para agregar
   playersList?.querySelectorAll("[data-add]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-add");
@@ -291,20 +331,26 @@ function renderPlayers() {
 /* ==========================
    ACTIONS
 ========================== */
-async function addToRoster(playerId) {
-  const p = players.find(x => x.id === playerId);
-  if (!p) return;
+async function addToRoster(itemId) {
+  // puede venir de players o guests
+  const p = players.find(x => x.id === itemId);
+  const g = guests.find(x => x.id === itemId);
+  const item = p || g;
+  if (!item) return;
 
   showLoader();
   try {
-    const ref = doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerId);
+    const ref = doc(db, TOURNAMENTS_COL, tournamentId, "roster", item.id);
 
     await setDoc(ref, {
-      playerId,
-      name: p.name,
-      number: p.number ?? null,
-      role: p.role,
-      gender: p.gender,
+      playerId: item.id,
+      isGuest: !!item.isGuest,
+      guestId: item.isGuest ? item.id : null,
+      loanFrom: item.isGuest ? (item.loanFrom || "") : "",
+      name: item.name,
+      number: item.number ?? null,
+      role: item.role || "hybrid",
+      gender: item.gender ?? null,
       status: "convocado",
       playerFeePaid: false,
       createdAt: serverTimestamp()
@@ -417,6 +463,43 @@ function nextStatus(s) {
 }
 
 /* ==========================
+   CREATE GUEST (GLOBAL)
+========================== */
+async function createGuestFlow() {
+  // MVP con prompts (luego lo cambiamos a modal bonito si quieres)
+  const name = prompt("Nombre del invitado:");
+  if (!name || !name.trim()) return;
+
+  const gender = (prompt("Género (M/F) (opcional):") || "").trim();
+  const role = (prompt("Rol (handler/cutter/hybrid) (opcional):") || "hybrid").trim();
+  const loanFrom = (prompt("¿Préstamo de qué club? (opcional):") || "").trim();
+  const numberRaw = (prompt("Número (opcional):") || "").trim();
+  const number = numberRaw ? Number(numberRaw) : null;
+
+  showLoader();
+  try {
+    const newRef = doc(collection(db, GUESTS_COL));
+    await setDoc(newRef, {
+      name: name.trim(),
+      gender: gender || null,
+      role: role || "hybrid",
+      loanFrom: loanFrom || "",
+      number: Number.isFinite(number) ? number : null,
+      active: true,
+      createdAt: serverTimestamp()
+    });
+
+    await loadGuests();
+    renderPlayers();
+  } catch (e) {
+    console.error(e);
+    alert("Error creando invitado.");
+  } finally {
+    hideLoader();
+  }
+}
+
+/* ==========================
    UI BUILDERS
 ========================== */
 function rosterRow(r) {
@@ -428,6 +511,10 @@ function rosterRow(r) {
   const paid = !!r.playerFeePaid;
   const paidClass = paid ? "pill pill--good" : "pill pill--warn";
   const paidLabel = paid ? "Fee pagado" : "Fee pendiente";
+
+  const guestBadge = r.isGuest
+    ? `<span class="pill">${escapeHtml(r.loanFrom ? `Invitado · ${r.loanFrom}` : "Invitado")}</span>`
+    : "";
 
   return `
     <div class="roster-row">
@@ -458,18 +545,26 @@ function rosterRow(r) {
       <div class="roster-row__badges">
         <span class="${statusClass}">${escapeHtml(status)}</span>
         <span class="${paidClass}">${escapeHtml(paidLabel)}</span>
+        ${guestBadge}
       </div>
     </div>
   `;
 }
 
 function playerPickRow(p) {
-  const sub = p.nickname ? `${p.nickname}` : (p.role || "");
+  const sub = p.isGuest
+    ? (p.loanFrom ? `Invitado · ${p.loanFrom}` : "Invitado")
+    : (p.role || "");
+
+  const leftTag = p.isGuest ? `<span class="pill">Invitado</span>` : "";
 
   return `
     <div class="player-pick">
       <div>
-        <div class="player-pick__name">${escapeHtml(p.name || "—")}</div>
+        <div class="player-pick__name">
+          ${escapeHtml(p.name || "—")}
+          ${leftTag}
+        </div>
         <div class="player-pick__sub">${escapeHtml(sub || "")}</div>
       </div>
 
@@ -512,7 +607,7 @@ function applyStrings() {
   rosterTitle && (rosterTitle.textContent = S.roster?.title || "Roster del torneo");
   rosterSubtitle && (rosterSubtitle.textContent = S.roster?.subtitle || "Jugadores convocados");
 
-  // quitar UI de buscar roster si existe en el HTML
+  // ocultar buscar roster si existe
   if (lblSearch) lblSearch.classList.add("d-none");
   if (searchInput) searchInput.classList.add("d-none");
 
@@ -521,27 +616,29 @@ function applyStrings() {
 }
 
 /* ==========================
-   FILTER UX (syncLegendUI)
+   FILTER UX (legend)
 ========================== */
 function initLegendFiltersUX() {
-  // Marca como botones "toggle" y aplica handlers
   const btns = document.querySelectorAll(".legend-filter");
+  if (!btns.length) return;
 
   btns.forEach(btn => {
-    btn.setAttribute("aria-pressed", "false");
+    // tanto span como button
+    btn.style.cursor = "pointer";
+    btn.setAttribute?.("aria-pressed", "false");
 
     btn.addEventListener("click", () => {
-      const key = btn.dataset.filter;
+      const key = btn.dataset?.filter;
       if (!key) return;
 
       if (activeLegendFilters.has(key)) {
         activeLegendFilters.delete(key);
-        btn.classList.remove("is-active");
-        btn.setAttribute("aria-pressed", "false");
+        btn.classList.remove("is-active", "legend-filter--active");
+        btn.setAttribute?.("aria-pressed", "false");
       } else {
         activeLegendFilters.add(key);
-        btn.classList.add("is-active");
-        btn.setAttribute("aria-pressed", "true");
+        btn.classList.add("is-active", "legend-filter--active");
+        btn.setAttribute?.("aria-pressed", "true");
       }
 
       syncLegendUI();
@@ -551,12 +648,10 @@ function initLegendFiltersUX() {
 
   clearLegendFiltersBtn?.addEventListener("click", () => {
     activeLegendFilters.clear();
-
     btns.forEach(btn => {
-      btn.classList.remove("is-active");
-      btn.setAttribute("aria-pressed", "false");
+      btn.classList.remove("is-active", "legend-filter--active");
+      btn.setAttribute?.("aria-pressed", "false");
     });
-
     syncLegendUI();
     render();
   });
@@ -565,12 +660,10 @@ function initLegendFiltersUX() {
 }
 
 function syncLegendUI() {
-  // Mostrar botón "Limpiar" solo cuando hay filtros activos
   if (clearLegendFiltersBtn) {
     clearLegendFiltersBtn.classList.toggle("d-none", activeLegendFilters.size === 0);
   }
 
-  // Hint: mostrar qué filtros están activos (más claro UX)
   if (!filtersHintEl) return;
 
   if (activeLegendFilters.size === 0) {
@@ -587,12 +680,7 @@ function syncLegendUI() {
     else labels.push(f);
   }
 
-  filtersHintEl.innerHTML = `Mostrando: <strong>${labels.join(" + ")}</strong> · <a href="#" id="filtersClearLink">Limpiar</a>`;
-  // link inline para limpiar rápido
-  document.getElementById("filtersClearLink")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    clearLegendFiltersBtn?.click();
-  });
+  filtersHintEl.innerHTML = `Mostrando: <strong>${labels.join(" + ")}</strong>`;
 }
 
 /* ==========================
@@ -645,7 +733,7 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-// ---- counters helpers ----
+// counters helpers
 function isMale(g) {
   return g === "M" || g === "m" || g === "male";
 }

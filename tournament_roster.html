@@ -38,7 +38,6 @@
 
       <div class="d-flex align-items-center gap-2">
         <div class="small text-muted" id="appVersion">v—</div>
-        <!-- Quitamos botones duplicados aquí; el header ya maneja salir/volver -->
       </div>
     </div>
 
@@ -72,7 +71,7 @@
     <!-- Errors -->
     <div class="alert alert-warning d-none" id="errorBox"></div>
 
-    <!-- Controls (dejado mínimo, no rompe layout) -->
+    <!-- Controls -->
     <section class="roster-controls mb-3">
       <div class="text-muted small d-flex align-items-center gap-2">
         <i class="bi bi-people"></i>
@@ -80,7 +79,7 @@
       </div>
     </section>
 
-    <!-- Layout: 2 columnas como antes -->
+    <!-- Layout: 2 columnas -->
     <section class="row g-3">
       <!-- Roster list -->
       <div class="col-12 col-xl-7">
@@ -91,62 +90,61 @@
               <div class="panel__sub text-muted" id="rosterSubtitle">—</div>
             </div>
 
-            <!-- Quick legend (Filtros) -->
+            <!-- Filtros -->
             <div class="roster-filters">
-                <div class="roster-filters__top">
-                    <div class="roster-filters__label">
-                    <i class="bi bi-funnel"></i>
-                    Filtrar roster
-                    <span class="text-muted small ms-2 d-none d-md-inline">
-                        (clic para activar / desactivar)
-                    </span>
-                    </div>
-
-                    <button class="btn btn-sm btn-outline-secondary d-none" id="clearLegendFilters" type="button">
-                    <i class="bi bi-x-circle"></i>
-                    Limpiar
-                    </button>
+              <div class="roster-filters__top">
+                <div class="roster-filters__label">
+                  <i class="bi bi-funnel"></i>
+                  Filtrar roster
+                  <span class="text-muted small ms-2 d-none d-md-inline">
+                    (clic para activar / desactivar)
+                  </span>
                 </div>
 
-                <div class="roster-filters__chips" id="rosterLegend" role="group" aria-label="Filtros del roster">
-                    <button type="button"
-                            class="pill pill--yellow legend-filter"
-                            data-filter="status:confirmado"
-                            aria-pressed="false"
-                            title="Mostrar solo confirmados">
-                    <i class="bi bi-check2-circle"></i> Confirmado
-                    </button>
+                <button class="btn btn-sm btn-outline-secondary d-none" id="clearLegendFilters" type="button">
+                  <i class="bi bi-x-circle"></i>
+                  Limpiar
+                </button>
+              </div>
 
-                    <button type="button"
-                            class="pill legend-filter"
-                            data-filter="status:convocado"
-                            aria-pressed="false"
-                            title="Mostrar solo convocados">
-                    <i class="bi bi-person-check"></i> Convocado
-                    </button>
+              <div class="roster-filters__chips" id="rosterLegend" role="group" aria-label="Filtros del roster">
+                <button type="button"
+                        class="pill pill--yellow legend-filter"
+                        data-filter="status:confirmado"
+                        aria-pressed="false"
+                        title="Mostrar solo confirmados">
+                  <i class="bi bi-check2-circle"></i> Confirmado
+                </button>
 
-                    <button type="button"
-                            class="pill pill--warn legend-filter"
-                            data-filter="fee:pendiente"
-                            aria-pressed="false"
-                            title="Mostrar solo fee pendiente">
-                    <i class="bi bi-cash-coin"></i> Fee pendiente
-                    </button>
+                <button type="button"
+                        class="pill legend-filter"
+                        data-filter="status:convocado"
+                        aria-pressed="false"
+                        title="Mostrar solo convocados">
+                  <i class="bi bi-person-check"></i> Convocado
+                </button>
 
-                    <button type="button"
-                            class="pill pill--good legend-filter"
-                            data-filter="fee:pagado"
-                            aria-pressed="false"
-                            title="Mostrar solo fee pagado">
-                    <i class="bi bi-cash-coin"></i> Fee pagado
-                    </button>
-                </div>
+                <button type="button"
+                        class="pill pill--warn legend-filter"
+                        data-filter="fee:pendiente"
+                        aria-pressed="false"
+                        title="Mostrar solo fee pendiente">
+                  <i class="bi bi-cash-coin"></i> Fee pendiente
+                </button>
 
-                <div class="roster-filters__hint" id="filtersHint">
-                    Tip: puedes combinar filtros (ej. <strong>Confirmado</strong> + <strong>Fee pendiente</strong>).
-                </div>
+                <button type="button"
+                        class="pill pill--good legend-filter"
+                        data-filter="fee:pagado"
+                        aria-pressed="false"
+                        title="Mostrar solo fee pagado">
+                  <i class="bi bi-cash-coin"></i> Fee pagado
+                </button>
+              </div>
+
+              <div class="roster-filters__hint" id="filtersHint">
+                Tip: puedes combinar filtros (ej. <strong>Confirmado</strong> + <strong>Fee pendiente</strong>).
+              </div>
             </div>
-
           </div>
 
           <div class="mt-3" id="rosterList"></div>
@@ -154,22 +152,37 @@
         </div>
       </div>
 
-      <!-- Add players panel -->
+      <!-- Players panel -->
       <div class="col-12 col-xl-5">
         <div class="panel">
           <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
             <div>
               <div class="panel__title" id="playersTitle">Jugadores</div>
-              <div class="panel__sub text-muted" id="playersSubtitle">Agregar al roster</div>
+              <div class="panel__sub text-muted" id="playersSubtitle">—</div>
             </div>
 
-            <span class="badge text-bg-light border" id="addPanelState">Panel</span>
+            <!-- ✅ Reutilizado como contador / estado -->
+            <span class="badge text-bg-light border" id="addPanelState" title="Disponibles en el panel">
+              Disponibles: —
+            </span>
+          </div>
+
+          <!-- Acciones del panel -->
+          <div class="mt-3 d-flex gap-2 flex-wrap">
+            <!-- (Opcional) si estás usando invitados globales -->
+            <button class="btn btn-sm btn-outline-primary" id="addGuestBtn" type="button">
+              <i class="bi bi-person-plus"></i>
+              Invitado / Préstamo
+            </button>
           </div>
 
           <div class="mt-3">
             <div class="input-group">
               <span class="input-group-text"><i class="bi bi-search"></i></span>
               <input class="form-control" id="playersSearch" placeholder="Buscar jugadores activos..." />
+            </div>
+            <div class="form-text">
+              Aquí solo se muestran los que <strong>no</strong> están en el roster.
             </div>
           </div>
 
