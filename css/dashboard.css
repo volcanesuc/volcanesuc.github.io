@@ -829,13 +829,14 @@
   margin: 0;
 }
 
+
 /* Cumpleaños */
 .dashboard-page #birthdaysList {
   font-size: 0.95rem;
   line-height: 1.6;
+  color: #212529;
 }
 
-/* Item bonito si usás .birthday-item en JS futuro */
 .dashboard-page .birthday-item {
   padding: 6px 8px;
   border-radius: 10px;
@@ -847,6 +848,10 @@
   background: var(--club-yellow);
   color: var(--club-green);
   font-weight: 900;
+}
+
+.dashboard-page .birthday-item span {
+  color: inherit;
 }
 
 

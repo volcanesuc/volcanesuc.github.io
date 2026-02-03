@@ -65,7 +65,7 @@ async function loadDashboard() {
 function toDateSafe(birthday) {
   if (!birthday) return null;
 
-  // Firestore Timestamp (tiene .toDate())
+  // Firestore Timestamp
   if (typeof birthday === "object" && typeof birthday.toDate === "function") {
     const d = birthday.toDate();
     return isNaN(d) ? null : d;
@@ -76,26 +76,21 @@ function toDateSafe(birthday) {
     return isNaN(birthday) ? null : birthday;
   }
 
-  // String
+  // String YYYY-MM-DD (LOCAL)
   if (typeof birthday === "string") {
-    const s = birthday.trim().replaceAll("/", "-"); // soporta "YYYY/MM/DD"
-    // intento directo
-    const d1 = new Date(s);
-    if (!isNaN(d1)) return d1;
-
-    // fallback manual "YYYY-MM-DD"
+    const s = birthday.trim().replaceAll("/", "-");
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (m) {
       const y = Number(m[1]);
       const mo = Number(m[2]) - 1;
       const da = Number(m[3]);
-      const d2 = new Date(y, mo, da);
-      return isNaN(d2) ? null : d2;
+      return new Date(y, mo, da); // 👈 FIX timezone
     }
   }
 
   return null;
 }
+
 
 function renderBirthdays(players) {
   const birthdaysList = document.getElementById("birthdaysList");
