@@ -5,6 +5,7 @@ import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
 import { TOURNAMENT_STRINGS } from "./strings.js";
+import { Player } from "./models/player.js";
 
 import {
   collection,
@@ -61,7 +62,7 @@ const playersEmpty = document.getElementById("playersEmpty");
 const playersTitle = document.getElementById("playersTitle");
 const playersSubtitle = document.getElementById("playersSubtitle");
 
-// Team fee UI (recommended in hero)
+// Team fee UI (hero)
 const teamFeePill = document.getElementById("teamFeePill");
 const toggleTeamFeeBtn = document.getElementById("toggleTeamFeeBtn");
 
@@ -72,8 +73,8 @@ const params = new URLSearchParams(window.location.search);
 const tournamentId = (params.get("id") || "").trim();
 
 let tournament = null;
-let roster = [];   // roster entries (subcollection)
-let players = [];  // club players (global)
+let roster = [];     // tournaments/{id}/roster
+let players = [];    // club_players
 let addPanelVisible = true;
 
 /* ==========================
@@ -119,7 +120,6 @@ watchAuth(async () => {
     }
 
     await Promise.all([loadRoster(), loadPlayers()]);
-
     render();
     renderPlayers();
   } catch (e) {
@@ -149,11 +149,16 @@ async function loadRoster() {
 async function loadPlayers() {
   const snap = await getDocs(collection(db, PLAYERS_COL));
 
+  // ✅ igual que roster.js (el que sí funciona)
   players = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
+    .map(d => Player.fromFirestore(d))
     .map(p => ({
-      ...p,
-      name: p.name || p.fullName || p.displayName || p.nombre || ""
+      id: p.id,
+      name: p.fullName || p.name || `${p.firstName || ""} ${p.lastName || ""}`.trim(),
+      nickname: p.nickname || "",
+      role: p.role || "",
+      number: p.number ?? null,
+      active: p.active !== false
     }))
     .filter(p => (p.name || "").trim().length > 0)
     .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
@@ -164,8 +169,9 @@ async function loadPlayers() {
     playersSubtitle.textContent =
       players.length
         ? `Fuente: ${PLAYERS_COL} · ${players.length} jugador(es)`
-        : `No hay jugadores en ${PLAYERS_COL}.`;
+        : `No hay jugadores en ${PLAYERS_COL} (o rules bloqueando lectura).`;
   }
+  console.log("firebase project:", APP_CONFIG.firebase.projectId);
 }
 
 /* ==========================
@@ -174,7 +180,6 @@ async function loadPlayers() {
 function render() {
   if (!tournament) return;
 
-  // hero
   if (tName) tName.textContent = tournament.name || "—";
   if (tMeta) tMeta.textContent = formatTournamentMeta(tournament);
 
@@ -182,21 +187,16 @@ function render() {
 
   const q = (searchInput?.value || "").trim().toLowerCase();
   const list = q
-    ? roster.filter(r =>
-        `${r.name || ""} ${r.role || ""} ${r.status || ""}`.toLowerCase().includes(q)
-      )
+    ? roster.filter(r => `${r.name || ""} ${r.role || ""} ${r.status || ""}`.toLowerCase().includes(q))
     : roster;
 
-  if (rosterList) {
-    rosterList.innerHTML = list.length ? list.map(r => rosterRow(r)).join("") : "";
-  }
+  if (rosterList) rosterList.innerHTML = list.length ? list.map(rosterRow).join("") : "";
 
   if (rosterEmpty) {
     rosterEmpty.classList.toggle("d-none", list.length > 0);
     rosterEmpty.textContent = S.roster?.empty || "No hay jugadores asignados a este torneo.";
   }
 
-  // listeners: remove / status / fee paid
   rosterList?.querySelectorAll("[data-remove]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-remove");
@@ -231,14 +231,10 @@ function renderPlayers() {
     : players;
 
   if (playersList) {
-    playersList.innerHTML = list.length
-      ? list.map(p => playerPickRow(p, rosterIds.has(p.id))).join("")
-      : "";
+    playersList.innerHTML = list.length ? list.map(p => playerPickRow(p, rosterIds.has(p.id))).join("") : "";
   }
 
-  if (playersEmpty) {
-    playersEmpty.classList.toggle("d-none", list.length > 0);
-  }
+  if (playersEmpty) playersEmpty.classList.toggle("d-none", list.length > 0);
 
   playersList?.querySelectorAll("[data-add]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
@@ -257,7 +253,6 @@ async function addToRoster(playerId) {
 
   showLoader();
   try {
-    // playerId como docId => idempotente
     const ref = doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerId);
 
     await setDoc(ref, {
@@ -266,7 +261,7 @@ async function addToRoster(playerId) {
       number: p.number ?? null,
       role: p.role || "",
       status: "convocado",
-      playerFeePaid: false, // NEW
+      playerFeePaid: false,
       createdAt: serverTimestamp()
     }, { merge: true });
 
@@ -281,13 +276,13 @@ async function addToRoster(playerId) {
   }
 }
 
-async function removeFromRoster(playerIdOrDocId) {
+async function removeFromRoster(docId) {
   const ok = confirm("¿Quitar del roster?");
   if (!ok) return;
 
   showLoader();
   try {
-    await deleteDoc(doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerIdOrDocId));
+    await deleteDoc(doc(db, TOURNAMENTS_COL, tournamentId, "roster", docId));
     await loadRoster();
     render();
     renderPlayers();
@@ -299,15 +294,15 @@ async function removeFromRoster(playerIdOrDocId) {
   }
 }
 
-async function toggleStatus(playerIdOrDocId) {
-  const r = roster.find(x => x.id === playerIdOrDocId);
+async function toggleStatus(docId) {
+  const r = roster.find(x => x.id === docId);
   if (!r) return;
 
   const next = nextStatus(r.status);
 
   showLoader();
   try {
-    await setDoc(doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerIdOrDocId), {
+    await setDoc(doc(db, TOURNAMENTS_COL, tournamentId, "roster", docId), {
       status: next,
       updatedAt: serverTimestamp()
     }, { merge: true });
@@ -323,15 +318,15 @@ async function toggleStatus(playerIdOrDocId) {
   }
 }
 
-async function togglePlayerPaid(playerIdOrDocId) {
-  const r = roster.find(x => x.id === playerIdOrDocId);
+async function togglePlayerPaid(docId) {
+  const r = roster.find(x => x.id === docId);
   if (!r) return;
 
   const next = !r.playerFeePaid;
 
   showLoader();
   try {
-    await setDoc(doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerIdOrDocId), {
+    await setDoc(doc(db, TOURNAMENTS_COL, tournamentId, "roster", docId), {
       playerFeePaid: next,
       updatedAt: serverTimestamp()
     }, { merge: true });
@@ -401,21 +396,15 @@ function rosterRow(r) {
         </div>
 
         <div class="roster-row__actions">
-          <button class="btn btn-sm btn-outline-secondary"
-                  title="Cambiar estado"
-                  data-toggle-status="${escapeHtml(r.id)}">
+          <button class="btn btn-sm btn-outline-secondary" title="Cambiar estado" data-toggle-status="${escapeHtml(r.id)}">
             <i class="bi bi-arrow-repeat"></i>
           </button>
 
-          <button class="btn btn-sm btn-outline-success"
-                  title="Toggle fee pagado"
-                  data-toggle-paid="${escapeHtml(r.id)}">
+          <button class="btn btn-sm btn-outline-success" title="Toggle fee pagado" data-toggle-paid="${escapeHtml(r.id)}">
             <i class="bi bi-cash-coin"></i>
           </button>
 
-          <button class="btn btn-sm btn-outline-danger"
-                  title="Quitar"
-                  data-remove="${escapeHtml(r.id)}">
+          <button class="btn btn-sm btn-outline-danger" title="Quitar" data-remove="${escapeHtml(r.id)}">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
@@ -454,7 +443,6 @@ function playerPickRow(p, already) {
    TEAM FEE UI
 ========================== */
 function renderTeamFee() {
-  // If you haven't added these in HTML, nothing breaks.
   if (!teamFeePill || !toggleTeamFeeBtn || !tournament) return;
 
   const amount = tournament.teamFee != null
@@ -466,7 +454,6 @@ function renderTeamFee() {
   teamFeePill.textContent = `Team fee: ${amount} · ${paid ? "Pagado" : "Pendiente"}`;
   teamFeePill.className = `pill ${paid ? "pill--good" : "pill--warn"}`;
 
-  // update button label
   toggleTeamFeeBtn.innerHTML = paid
     ? `<i class="bi bi-cash-coin"></i> Marcar pendiente`
     : `<i class="bi bi-cash-coin"></i> Marcar pagado`;
