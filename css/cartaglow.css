@@ -289,3 +289,13 @@ body { background: #fff; color:#222; }
 }
 
 .cg-footer-link:hover{ color: var(--club-yellow); }
+
+/* MEDIA 2025 video */
+.cg-video-card {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(25,71,63,.08);
+  border: 1px solid rgba(25,71,63,.12);
+  background: #fff;
+}
+.cg-video-wrap { margin-top: 10px; }

@@ -86,6 +86,19 @@ function guessColumn(headers, candidates) {
   return null;
 }
 
+function youtubeEmbedUrl(url) {
+  const u = String(url ?? "");
+  let id = "";
+
+  if (u.includes("youtu.be/")) {
+    id = u.split("youtu.be/")[1]?.split(/[?&]/)[0] || "";
+  } else if (u.includes("watch?v=")) {
+    id = u.split("watch?v=")[1]?.split("&")[0] || "";
+  }
+
+  return id ? `https://www.youtube.com/embed/${id}` : "";
+}
+
 /* =========================
    Meta
 ========================= */
@@ -179,7 +192,9 @@ if (tWrap) {
     const col = document.createElement("div");
     col.className = "col-12 col-lg-6";
 
-    const lines = (t.text || []).map(line => `<div class="mb-2">“${escapeHtml(line)}”</div>`).join("");
+    const lines = (t.text || [])
+      .map(line => `<div class="mb-2">“${escapeHtml(line)}”</div>`)
+      .join("");
 
     col.innerHTML = `
       <div class="cg-quote">
@@ -213,6 +228,46 @@ if (gallery) {
     img.alt = "Cartaglow";
     gallery.appendChild(img);
   });
+}
+
+/* =========================
+   MEDIA 2025 (Video + Galería)
+========================= */
+const mediaSection = document.getElementById("cgMedia2025Section");
+if (mediaSection) {
+  const M = D.media2025;
+
+  // si no está configurado, escondemos la sección completa
+  if (!M || (!M.finalVideo?.url && !M.gallery?.url)) {
+    mediaSection.style.display = "none";
+  } else {
+    const titleEl = document.getElementById("cgMedia2025Title");
+    const subEl = document.getElementById("cgMedia2025Subtitle");
+    const finalLink = document.getElementById("cgMedia2025FinalLink");
+    const galleryLink = document.getElementById("cgMedia2025GalleryLink");
+    const iframe = document.getElementById("cgMedia2025Iframe");
+
+    if (titleEl) titleEl.textContent = M.title ?? "Cartaglow 2025";
+    if (subEl) subEl.textContent = M.subtitle ?? "";
+
+    if (finalLink) {
+      finalLink.href = M.finalVideo?.url ?? "#";
+      finalLink.style.display = M.finalVideo?.url ? "" : "none";
+      // label custom
+      if (M.finalVideo?.label) finalLink.lastChild.textContent = ` ${M.finalVideo.label}`;
+    }
+
+    if (galleryLink) {
+      galleryLink.href = M.gallery?.url ?? "#";
+      galleryLink.style.display = M.gallery?.url ? "" : "none";
+      if (M.gallery?.label) galleryLink.lastChild.textContent = ` ${M.gallery.label}`;
+    }
+
+    if (iframe && M.finalVideo?.url) {
+      const embed = youtubeEmbedUrl(M.finalVideo.url);
+      if (embed) iframe.src = embed;
+    }
+  }
 }
 
 /* =========================
@@ -325,3 +380,8 @@ async function loadStats() {
 }
 
 loadStats();
+
+/* =========================
+   Footer
+========================= */
+$("#cgFooterText").textContent = D.footer?.text ?? "Cartaglow • Volcanes Ultimate";

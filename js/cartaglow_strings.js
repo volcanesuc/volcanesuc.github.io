@@ -94,6 +94,19 @@ export const CARTAGLOW_DATA = {
     ]
   },
 
+   media2025: {
+    title: "Cartaglow 2025",
+    subtitle: "Final + galería oficial",
+    finalVideo: {
+      label: "Ver final 2025",
+      url: "https://youtu.be/For0QM0ehww"
+    },
+    gallery: {
+      label: "Galería 2025",
+      url: "https://photos.google.com/share/AF1QipNyVx7o_oeeCpNtzfb0sy-AgwbJ6PpqRc1k_EGgxY64pKaic_9yEPAsyd6ssoncYA?pli=1&key=UXNyR2U1U1pzZWlRNjZ6TXNIcHRJUE9YMElwdDdR"
+    }
+  },
+
   stats2024: {
     title: "Stats Cartaglow 2024",
     subtitle: "Cargadas desde un CSV público",

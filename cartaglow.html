@@ -22,7 +22,7 @@
     rel="stylesheet"
   />
 
-  <!-- (Opcional) Reusar tu main.css si ya tiene variables y header styles -->
+  <!-- Reusar tu main.css -->
   <link rel="stylesheet" href="./css/main.css" />
 
   <!-- Estilos de Cartaglow -->
@@ -121,6 +121,43 @@
     </div>
   </section>
 
+  <!-- =========================
+       MEDIA 2025 (VIDEO + GALERÍA)
+  ========================== -->
+  <section class="cg-section-alt py-5" id="cgMedia2025Section">
+    <div class="container">
+      <div class="d-flex align-items-end justify-content-between gap-3 flex-wrap mb-3">
+        <div>
+          <h2 class="cg-h2" id="cgMedia2025Title">—</h2>
+          <p class="cg-muted" id="cgMedia2025Subtitle">—</p>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+          <a class="cg-btn cg-btn-outline" id="cgMedia2025FinalLink" href="#" target="_blank" rel="noopener">
+            <i class="bi bi-play-circle me-2"></i>
+            Ver final 2025
+          </a>
+
+          <a class="cg-btn cg-btn-primary" id="cgMedia2025GalleryLink" href="#" target="_blank" rel="noopener">
+            <i class="bi bi-images me-2"></i>
+            Galería 2025
+          </a>
+        </div>
+      </div>
+
+      <div class="cg-video-wrap">
+        <div class="ratio ratio-16x9 cg-video-card">
+          <iframe
+            id="cgMedia2025Iframe"
+            title="Final Cartaglow 2025"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Stats 2024 -->
   <section class="cg-section-alt py-5">
     <div class="container">
@@ -162,7 +199,7 @@
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Strings + page logic -->
+  <!-- Page logic -->
   <script type="module" src="./js/cartaglow.js"></script>
 </body>
 </html>
