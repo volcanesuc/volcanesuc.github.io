@@ -140,7 +140,7 @@ function renderTable(list) {
                 <i class="bi bi-pencil"></i>
               </button>
               <a class="btn btn-sm btn-outline-secondary ms-2"
-                 href="tournament_detail.html?id=${encodeURIComponent(t.id)}"
+                 href="tournament_roster.html?id=${encodeURIComponent(t.id)}"
                  title="Detalles">
                  <i class="bi bi-eye"></i>
               </a>
@@ -183,7 +183,7 @@ function renderCards(list) {
 
               <div class="d-flex gap-2">
                 <a class="btn btn-sm btn-outline-secondary"
-                   href="tournament_detail.html?id=${encodeURIComponent(t.id)}"
+                   href="tournament_roster.html?id=${encodeURIComponent(t.id)}"
                    title="Detalles">
                   <i class="bi bi-eye"></i>
                 </a>
