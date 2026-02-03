@@ -327,29 +327,34 @@ body {
   flex: 1 1 250px;
   max-width: 300px;
 }
-
-#uniformsCarousel .carousel-item {
-  position: relative;
-}
-
-.uniform-caption {
-  position: absolute;
-  inset: 0; /* top right bottom left = 0 */
-  display: flex;
-  flex-direction: column;
-  justify-content: center; /* centro vertical */
-  align-items: center;     /* centro horizontal */
+.uniform-card,
+.uniform-card * {
   text-align: center;
-  gap: 0.75rem;
-  pointer-events: none; /* evita bloquear swipe */
 }
 
-.uniform-caption h3 {
-  color: #fff;
+.uniform-card .uniform-title,
+.uniform-card h3,
+.uniform-card h4 {
+  margin: .75rem 0 .25rem;
   font-weight: 700;
-  text-shadow: 0 2px 10px rgba(0,0,0,.6);
 }
 
-.uniform-caption .btn {
-  pointer-events: auto; /* el botón sí clickeable */
+.uniform-card .uniform-price,
+.uniform-card p {
+  margin: 0;
+  opacity: .85;
+}
+
+.uniform-card .btn,
+.uniform-card .landing-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: .75rem;
+}
+
+/* Si el botón ocupa todo, quítalo (más bonito centrado) */
+.uniform-card .btn.w-100,
+.uniform-card .landing-btn.w-100 {
+  width: auto !important;
 }
