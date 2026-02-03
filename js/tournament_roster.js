@@ -74,7 +74,7 @@ const tournamentId = (params.get("id") || "").trim();
 
 let tournament = null;
 let roster = [];     // tournaments/{id}/roster
-let players = [];    // club_players
+let players = [];    // club players
 let addPanelVisible = true;
 
 /* ==========================
@@ -85,7 +85,9 @@ applyStrings();
 /* ==========================
    EVENTS
 ========================== */
-searchInput?.addEventListener("input", render);
+// ❌ Quitado: filtro/buscador del roster (searchInput)
+// searchInput?.addEventListener("input", render);
+
 playersSearch?.addEventListener("input", renderPlayers);
 
 openAddBtn?.addEventListener("click", () => {
@@ -102,7 +104,15 @@ toggleTeamFeeBtn?.addEventListener("click", toggleTeamFeePaid);
 watchAuth(async () => {
   showLoader();
   try {
+    // Version (arriba)
     if (appVersion) appVersion.textContent = `v${APP_CONFIG.version}`;
+
+    // ✅ Version en el botón (logout)
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      const base = (logoutBtn.textContent || "").trim() || "Salir";
+      logoutBtn.textContent = `${base} · v${APP_CONFIG.version}`;
+    }
 
     if (!tournamentId) {
       showError("Falta el parámetro del torneo. Ej: tournament_roster.html?id=XXXX");
@@ -115,8 +125,11 @@ watchAuth(async () => {
       return;
     }
 
+    // ✅ Quitar/ocultar botón de volver (detail)
     if (detailBtn) {
-      detailBtn.href = `tournament_detail.html?id=${encodeURIComponent(tournamentId)}`;
+      detailBtn.classList.add("d-none");
+      // (si prefieres eliminarlo del DOM)
+      // detailBtn.remove();
     }
 
     await Promise.all([loadRoster(), loadPlayers()]);
@@ -149,29 +162,27 @@ async function loadRoster() {
 async function loadPlayers() {
   const snap = await getDocs(collection(db, PLAYERS_COL));
 
-  // ✅ igual que roster.js (el que sí funciona)
+  //solo activos + datos para contadores (gender/role)
   players = snap.docs
-    .map(d => Player.fromFirestore(d))
-    .map(p => ({
-      id: p.id,
-      name: p.fullName || p.name || `${p.firstName || ""} ${p.lastName || ""}`.trim(),
-      nickname: p.nickname || "",
-      role: p.role || "",
-      number: p.number ?? null,
-      active: p.active !== false
-    }))
-    .filter(p => (p.name || "").trim().length > 0)
-    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
-
-  console.log("Players loaded:", players.length, `source: ${PLAYERS_COL}`);
+  .map(d => Player.fromFirestore(d))
+  .map(p => ({
+    id: p.id,
+    name: p.fullName,
+    nickname: "",
+    role: p.role,          // handler | cutter | hybrid
+    number: p.number ?? null,
+    gender: p.gender,  
+    active: p.active !== false
+  }))
+  .filter(p => p.active === true)
+  .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
 
   if (playersSubtitle) {
     playersSubtitle.textContent =
       players.length
-        ? `Fuente: ${PLAYERS_COL} · ${players.length} jugador(es)`
-        : `No hay jugadores en ${PLAYERS_COL} (o rules bloqueando lectura).`;
+        ? `${players.length} jugador(es) activo(s)`
+        : `No hay jugadores activos disponibles (o rules bloqueando lectura).`;
   }
-  console.log("firebase project:", APP_CONFIG.firebase.projectId);
 }
 
 /* ==========================
@@ -185,10 +196,8 @@ function render() {
 
   renderTeamFee();
 
-  const q = (searchInput?.value || "").trim().toLowerCase();
-  const list = q
-    ? roster.filter(r => `${r.name || ""} ${r.role || ""} ${r.status || ""}`.toLowerCase().includes(q))
-    : roster;
+  // ✅ Quitado: filtro/buscador del roster
+  const list = roster;
 
   if (rosterList) rosterList.innerHTML = list.length ? list.map(rosterRow).join("") : "";
 
@@ -196,6 +205,9 @@ function render() {
     rosterEmpty.classList.toggle("d-none", list.length > 0);
     rosterEmpty.textContent = S.roster?.empty || "No hay jugadores asignados a este torneo.";
   }
+
+  // ✅ Contadores del roster (total + M/F + handlers/cutters)
+  renderRosterCounters(list);
 
   rosterList?.querySelectorAll("[data-remove]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
@@ -217,6 +229,27 @@ function render() {
       await togglePlayerPaid(id);
     });
   });
+}
+
+function renderRosterCounters(list) {
+  // total roster (convocados/confirmados/etc)
+  const total = list.length;
+
+  // gender counts (tolerante a formatos)
+  const m = list.filter(r => isMale(r.gender)).length;
+  const f = list.filter(r => isFemale(r.gender)).length;
+
+  // role counts
+  const handlers = list.filter(r => isHandler(r.role)).length;
+  const cutters = list.filter(r => isCutter(r.role)).length;
+
+  // subtitle en el roster (y pageSubtitle si quieres también)
+  const text = total
+    ? `Total: ${total} · M: ${m} · F: ${f} · Handlers: ${handlers} · Cutters: ${cutters}`
+    : (S.roster?.subtitle || "Jugadores convocados");
+
+  if (rosterSubtitle) rosterSubtitle.textContent = text;
+  if (pageSubtitle) pageSubtitle.textContent = text;
 }
 
 /* ==========================
@@ -256,14 +289,16 @@ async function addToRoster(playerId) {
     const ref = doc(db, TOURNAMENTS_COL, tournamentId, "roster", playerId);
 
     await setDoc(ref, {
-      playerId,
-      name: p.name || "—",
-      number: p.number ?? null,
-      role: p.role || "",
-      status: "convocado",
-      playerFeePaid: false,
-      createdAt: serverTimestamp()
+        playerId,
+        name: p.name,
+        number: p.number ?? null,
+        role: p.role,        // handler / cutter / hybrid
+        gender: p.gender,    // M / F (o como lo manejes)
+        status: "convocado",
+        playerFeePaid: false,
+        createdAt: serverTimestamp()
     }, { merge: true });
+
 
     await loadRoster();
     render();
@@ -469,9 +504,11 @@ function applyStrings() {
   rosterTitle && (rosterTitle.textContent = S.roster?.title || "Roster del torneo");
   rosterSubtitle && (rosterSubtitle.textContent = S.roster?.subtitle || "Jugadores convocados");
 
-  lblSearch && (lblSearch.textContent = S.search?.label || "Buscar");
-  searchInput && (searchInput.placeholder = S.search?.placeholder || "Buscar jugador…");
+  // ✅ Quitamos UI de buscar roster
+  if (lblSearch) lblSearch.classList.add("d-none");
+  if (searchInput) searchInput.classList.add("d-none");
 
+  // (Estos se mantienen: búsqueda dentro del picker de jugadores)
   playersTitle && (playersTitle.textContent = "Jugadores");
   btnAddLabel && (btnAddLabel.textContent = "Agregar jugador");
 }
@@ -508,3 +545,25 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+// ---- counters helpers ----
+function norm(s) {
+  return String(s || "").trim().toLowerCase();
+}
+
+function isMale(g) {
+  return g === "M" || g === "m" || g === "male";
+}
+
+function isFemale(g) {
+  return g === "F" || g === "f" || g === "female";
+}
+
+function isHandler(role) {
+  return role === "handler";
+}
+
+function isCutter(role) {
+  return role === "cutter";
+}
+
