@@ -25,17 +25,16 @@ export function loadHeader(activeTab) {
     ).join("");
 
   const renderLinksMobile = () =>
-    MENU.map(
-      item => `
-        <a
-          href="${item.href}"
-          class="${activeTab === item.id ? "active" : ""}"
-          data-bs-dismiss="offcanvas"
-        >
-          ${item.label}
-        </a>
-      `
-    ).join("");
+  MENU.map(
+    item => `
+      <a
+        href="${item.href}"
+        class="${activeTab === item.id ? "active" : ""}"
+      >
+        ${item.label}
+      </a>
+    `
+  ).join("");
 
   header.innerHTML = `
     <header class="topbar">
