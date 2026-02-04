@@ -12,7 +12,6 @@ export function loadHeader(activeTab) {
   const header = document.getElementById("app-header");
   if (!header) return;
 
-  const MENU = CLUB_DATA.header.menu;
   const MENU = CLUB_DATA.header.menu || [];
   const HOME_HREF = CLUB_DATA.header.homeHref || "dashboard.html";
 
