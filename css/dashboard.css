@@ -309,6 +309,98 @@
   color: rgba(255,255,255,.85);
 }
 
+/* ======================================================
+   MOBILE: Drawer modal (SOLO modales con clase .drawer-modal)
+   Esto evita que se rompa el fullscreen de playerModal
+====================================================== 
+
+@media (max-width: 768px) {
+  .drawer-modal.modal.fade .modal-dialog {
+    transform: translateY(100%);
+    transition: transform 0.25s ease-out;
+  }
+
+  .drawer-modal.modal.show .modal-dialog {
+    transform: translateY(0);
+  }
+
+  .drawer-modal.modal.modal-fullscreen-md-down {
+    --bs-modal-margin: 0;
+  }
+
+  .drawer-modal.modal.modal-fullscreen-md-down .modal-dialog {
+    margin: 0;
+  }
+
+  .drawer-modal.modal.modal-fullscreen-md-down .modal-content {
+    border-radius: 16px 16px 0 0;
+    height: 100%;
+  }
+
+  .drawer-modal.modal.modal-fullscreen-md-down .modal-header {
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+  }
+
+  .drawer-modal.modal.modal-fullscreen-md-down .modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    border-top: 1px solid #eee;
+  }
+
+  .drawer-handle {
+    width: 40px;
+    height: 4px;
+    background: #ccc;
+    border-radius: 2px;
+    margin: 0 auto 8px;
+  }
+}*/
+
+/* Offcanvas (Bootstrap) style */
+.offcanvas {
+  background: var(--club-gray);
+  border-left: 1px solid rgba(0,0,0,0.08);
+}
+
+.offcanvas-header {
+  background: var(--club-green);
+  color: #fff;
+}
+
+.offcanvas-header .btn-close {
+  filter: invert(1);
+}
+
+.offcanvas-title {
+  font-family: "Recons";
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.offcanvas-body a {
+  display: block;
+  padding: 0.75rem 0;
+  font-weight: 700;
+  color: var(--club-green);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.offcanvas-body a:hover {
+  color: var(--club-green-dark);
+}
+
+.offcanvas-body a.active {
+  background: rgba(232,206,38,0.25);
+  border-radius: 10px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
 
 /* ==============================
    ATTENDANCE — MODERN UI

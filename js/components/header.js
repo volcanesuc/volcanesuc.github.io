@@ -9,7 +9,6 @@ import { CLUB_DATA } from "../strings.js";
 ========================================================= */
 
 export function loadHeader(activeTab) {
-  document.body.classList.add("app-shell");
   const header = document.getElementById("app-header");
   if (!header) return;
 
