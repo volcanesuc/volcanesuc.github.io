@@ -13,11 +13,9 @@ export function loadHeader(activeTab) {
   if (!header) return;
 
   const MENU = CLUB_DATA.header.menu;
-
-  // ✅ Home target (puedes cambiar a "index.html" si ese es tu home real)
   const HOME_HREF = CLUB_DATA.header.homeHref || "dashboard.html";
 
-  const renderLinks = () =>
+  const renderLinksDesktop = () =>
     MENU.map(
       item => `
         <a
@@ -29,11 +27,23 @@ export function loadHeader(activeTab) {
       `
     ).join("");
 
+  const renderLinksMobile = () =>
+    MENU.map(
+      item => `
+        <a
+          href="${item.href}"
+          class="${activeTab === item.id ? "active" : ""}"
+          data-bs-dismiss="offcanvas"
+        >
+          ${item.label}
+        </a>
+      `
+    ).join("");
+
   header.innerHTML = `
     <header class="topbar">
 
       <div class="d-flex align-items-center gap-2">
-        <!-- HAMBURGER -->
         <button
           class="hamburger"
           type="button"
@@ -45,15 +55,13 @@ export function loadHeader(activeTab) {
           ☰
         </button>
 
-        <!-- ✅ LOGO clickeable -->
         <a class="logo logo-link" href="${HOME_HREF}" title="Ir al inicio">
           ${CLUB_DATA.header.logoText}
         </a>
       </div>
 
-      <!-- DESKTOP NAV -->
       <nav class="nav-tabs">
-        ${renderLinks()}
+        ${renderLinksDesktop()}
       </nav>
 
       <button id="logoutBtn" class="logout-btn">
@@ -61,7 +69,6 @@ export function loadHeader(activeTab) {
       </button>
     </header>
 
-    <!-- OFFCANVAS MOBILE -->
     <div
       class="offcanvas offcanvas-start"
       tabindex="-1"
@@ -69,8 +76,12 @@ export function loadHeader(activeTab) {
       aria-labelledby="mobileMenuLabel"
     >
       <div class="offcanvas-header">
-        <!-- ✅ también clickeable en mobile -->
-        <a class="offcanvas-title logo-link" id="mobileMenuLabel" href="${HOME_HREF}" title="Ir al inicio">
+        <a
+          class="offcanvas-title logo-link"
+          id="mobileMenuLabel"
+          href="${HOME_HREF}"
+          title="Ir al inicio"
+        >
           ${CLUB_DATA.header.mobileTitle}
         </a>
 
@@ -78,14 +89,17 @@ export function loadHeader(activeTab) {
           type="button"
           class="btn-close"
           data-bs-dismiss="offcanvas"
-          aria-label="${CLUB_DATA.header.logout.label}"
+          aria-label="Cerrar"
         ></button>
       </div>
 
       <div class="offcanvas-body">
-        ${renderLinks()}
+        ${renderLinksMobile()}
         <hr />
-        <button class="btn btn-outline-primary w-100 mt-2" id="logoutBtnMobile">
+        <button
+          class="btn btn-outline-primary w-100 mt-2"
+          id="logoutBtnMobile"
+        >
           ${CLUB_DATA.header.logout.label}
         </button>
       </div>
@@ -100,19 +114,11 @@ export function loadHeader(activeTab) {
 ========================================================= */
 
 function bindHeaderEvents() {
-  // logout desktop
-  document.getElementById("logoutBtn")?.addEventListener("click", logout);
+  document
+    .getElementById("logoutBtn")
+    ?.addEventListener("click", logout);
 
-  // logout mobile
-  document.getElementById("logoutBtnMobile")?.addEventListener("click", logout);
-
-  // cerrar offcanvas al clickear un link
-  const offcanvasEl = document.getElementById("mobileMenu");
-
-  offcanvasEl?.querySelectorAll("a")?.forEach(link => {
-    link.addEventListener("click", () => {
-      const instance = bootstrap.Offcanvas.getInstance(offcanvasEl);
-      instance?.hide();
-    });
-  });
+  document
+    .getElementById("logoutBtnMobile")
+    ?.addEventListener("click", logout);
 }
