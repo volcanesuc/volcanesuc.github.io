@@ -95,11 +95,6 @@ let guests = [];      // guest_players (activos)
 let activeLegendFilters = new Set();
 
 /* ==========================
-   STRINGS -> UI
-========================== */
-applyStrings();
-
-/* ==========================
    EVENTS
 ========================== */
 playersSearch?.addEventListener("input", renderPlayers);
@@ -298,16 +293,3 @@ function render() {
     });
   });
 }
-
-/* ==========================
-   (tu resto queda igual)
-   - renderRosterCounters
-   - renderPlayers
-   - add/remove/toggles
-   - createGuestFlow
-   - UI builders
-   - team fee UI
-   - strings
-   - filters
-   - helpers
-========================== */
