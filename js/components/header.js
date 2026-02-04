@@ -1,44 +1,35 @@
 // header.js
-// Header global con tabs desktop + offcanvas mobile (Bootstrap)
-
 import { logout } from "../auth.js";
 import { CLUB_DATA } from "../strings.js";
-
-/* =========================================================
-   HEADER RENDER
-========================================================= */
 
 export function loadHeader(activeTab) {
   const header = document.getElementById("app-header");
   if (!header) return;
 
-  const MENU = CLUB_DATA.header.menu || [];
+  const MENU = CLUB_DATA.header.menu;
   const HOME_HREF = CLUB_DATA.header.homeHref || "dashboard.html";
 
   const renderLinksDesktop = () =>
     MENU.map(
       item => `
-        <a href="${item.href}" class="${activeTab === item.id ? "active" : ""}">
+        <a href="${item.href}" class="top-tab ${activeTab === item.id ? "active" : ""}">
           ${item.label}
         </a>
       `
     ).join("");
 
   const renderLinksMobile = () =>
-  MENU.map(
-    item => `
-      <a
-        href="${item.href}"
-        class="${activeTab === item.id ? "active" : ""}"
-      >
-        ${item.label}
-      </a>
-    `
-  ).join("");
+    MENU.map(
+      item => `
+        <a href="${item.href}" class="mobile-link ${activeTab === item.id ? "active" : ""}">
+          ${item.label}
+        </a>
+      `
+    ).join("");
 
   header.innerHTML = `
     <header class="topbar">
-      <div class="d-flex align-items-center gap-2">
+      <div class="left">
         <button
           class="hamburger"
           type="button"
@@ -46,16 +37,14 @@ export function loadHeader(activeTab) {
           data-bs-target="#mobileMenu"
           aria-controls="mobileMenu"
           aria-label="Abrir menú"
-        >
-          ☰
-        </button>
+        >☰</button>
 
         <a class="logo logo-link" href="${HOME_HREF}" title="Ir al inicio">
           ${CLUB_DATA.header.logoText}
         </a>
       </div>
 
-      <nav class="nav-tabs">
+      <nav class="top-tabs">
         ${renderLinksDesktop()}
       </nav>
 
@@ -85,13 +74,6 @@ export function loadHeader(activeTab) {
   `;
 
   bindHeaderEvents();
-
-/* =========================================================
-   EVENTS
-========================================================= */
-  // Debug: confirmar hrefs mobile
-  const mobileLinks = [...document.querySelectorAll("#mobileMenu .mobile-links a")].map(a => a.getAttribute("href"));
-  console.log("[header] mobile links:", mobileLinks);
 }
 
 function bindHeaderEvents() {

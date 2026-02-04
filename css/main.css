@@ -287,6 +287,95 @@ th.sortable.sorted-desc::after { content: " ↓"; }
   color: #fff;
 }
 
+/* =========================
+   HEADER GLOBAL (no choca con Bootstrap)
+========================= */
+
+#app-header .topbar{
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--club-green);
+  color: #fff;
+}
+
+#app-header .left{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#app-header .logo-link{
+  text-decoration: none;
+  color: inherit;
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+#app-header .hamburger{
+  border: 0;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+#app-header .logout-btn{
+  border: 0;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-weight: 800;
+}
+
+/* Desktop tabs (clase propia, NO Bootstrap) */
+#app-header .top-tabs{
+  display: none; /* mobile */
+  gap: 8px;
+  align-items: center;
+}
+
+#app-header .top-tab{
+  text-decoration: none;
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-weight: 800;
+  opacity: .92;
+}
+
+#app-header .top-tab.active{
+  background: rgba(232,206,38,0.25);
+  opacity: 1;
+}
+
+/* Desktop */
+@media (min-width: 768px){
+  #app-header .hamburger{ display: none; }
+  #app-header .top-tabs{ display: inline-flex; }
+}
+
+/* Mobile drawer links */
+#app-header .mobile-links a{
+  display: block;
+  padding: 12px 10px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 900;
+  color: var(--club-green);
+}
+
+#app-header .mobile-links a.active{
+  background: rgba(232,206,38,0.25);
+}
 
 /* =========================
    FOOTER / META
