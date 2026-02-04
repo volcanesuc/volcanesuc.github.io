@@ -200,14 +200,36 @@ function renderNextTournament(tournaments) {
   if (!t) {
     dateEl.textContent = "—";
     nameEl.textContent = "Sin torneos próximos";
+    setNextTournamentCardLink(null);
     return;
   }
 
   const range = formatTournamentRangePretty(t._ds, t._de);
 
-  dateEl.textContent = range;                
-  nameEl.textContent = t.name || "Torneo";  
+  dateEl.textContent = range;
+  nameEl.textContent = t.name || "Torneo";
+  setNextTournamentCardLink(t.id);
 }
+
+function tournamentRosterUrl(id) {
+  return `tournament_roster.html?id=${encodeURIComponent(id)}`;
+}
+
+function setNextTournamentCardLink(tournamentId) {
+  const card = document.getElementById("nextTournamentCard");
+  if (!card) return;
+
+  if (!tournamentId) {
+    card.removeAttribute("href");
+    card.style.pointerEvents = "none";
+    card.style.cursor = "default";
+    return;
+  }
+
+  card.href = tournamentRosterUrl(tournamentId);
+  card.style.cursor = "pointer";
+}
+
 
 
 /* =========================================================
