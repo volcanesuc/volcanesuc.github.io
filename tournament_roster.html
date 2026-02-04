@@ -61,9 +61,9 @@
         </div>
 
         <!-- Detalle -->
-        <a class="btn btn-outline-primary align-self-start" id="detailBtn" href="#" title="Ver detalle del torneo">
-          <i class="bi bi-eye"></i>
-          Detalle
+        <a class="btn btn-outline-primary align-self-start" id="detailBtn" href="#" title="Editar torneo">
+          <i class="bi bi-pencil"></i>
+          Editar
         </a>
       </div>
     </section>
@@ -193,6 +193,112 @@
     </section>
 
   </main>
+
+  <!-- MODAL EDITAR TORNEO (copiar igual que en tournaments.html) -->
+   <!-- MODAL FULLSCREEN -->
+  <div class="modal fade" id="tournamentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+      <div class="modal-content player-modal">
+
+        <form id="tournamentForm" class="h-100 d-flex flex-column">
+
+          <div class="modal-header player-modal__header">
+            <div>
+              <h5 class="modal-title mb-0" id="tournamentModalTitle">—</h5>
+              <small class="player-modal__subtitle" id="tournamentModalSubtitle">—</small>
+            </div>
+
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Cerrar"
+            ></button>
+          </div>
+
+          <div class="modal-body player-modal__body flex-grow-1">
+            <input type="hidden" id="tournamentId" />
+
+            <div class="row g-3">
+
+              <div class="col-12">
+                <label class="form-label" id="lblName">—</label>
+                <input id="tournamentName" class="form-control" required />
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label class="form-label" id="lblDateStart">—</label>
+                <input id="dateStart" type="date" class="form-control" required />
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label class="form-label" id="lblDateEnd">—</label>
+                <input id="dateEnd" type="date" class="form-control" />
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label" id="lblType">—</label>
+                <select id="type" class="form-select"></select>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label" id="lblAge">—</label>
+                <select id="age" class="form-select"></select>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label" id="lblVenue">—</label>
+                <select id="venue" class="form-select"></select>
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label class="form-label" id="lblLocation">—</label>
+                <input id="location" class="form-control" />
+              </div>
+
+              <div class="col-12 col-md-3">
+                <label class="form-label" id="lblTeamFee">—</label>
+                <input id="teamFee" type="number" class="form-control" min="0" />
+              </div>
+
+              <div class="col-12 col-md-3">
+                <label class="form-label" id="lblPlayerFee">—</label>
+                <input id="playerFee" type="number" class="form-control" min="0" />
+              </div>
+
+              <div class="col-12">
+                <label class="form-label" id="lblNotes">—</label>
+                <textarea id="notes" class="form-control" rows="3"></textarea>
+              </div>
+
+              <div class="col-12">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="confirmed" />
+                  <label class="form-check-label" id="lblConfirmed">—</label>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="modal-footer player-modal__footer">
+            <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal" id="btnCancel">
+              —
+            </button>
+
+            <button type="button" class="btn btn-outline-light" id="deleteTournamentBtn">
+              —
+            </button>
+
+            <button type="submit" class="btn btn-warning" id="btnSave">
+              —
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
