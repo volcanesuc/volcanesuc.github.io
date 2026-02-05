@@ -6,7 +6,7 @@ import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
 import { TOURNAMENT_STRINGS } from "./strings.js";
-
+import { Player } from "./models/player.js"; 
 import { createTournamentEditor } from "./features/tournament_editor.js";
 import { loadPartialOnce } from "./ui/loadPartial.js";
 
