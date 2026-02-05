@@ -106,7 +106,7 @@ let tournamentEditor = null;
 
 async function ensureTournamentEditor() {
   // carga el HTML del modal solo una vez
-  await loadPartialOnce("./partials/tournament_editor.html", "editTournamentModal");
+  await loadPartialOnce("./partials/tournament_editor.html", "tournamentModal");
   // crea la instancia JS solo una vez
   if (!tournamentEditor) {
     tournamentEditor = createTournamentEditor();
