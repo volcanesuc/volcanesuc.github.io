@@ -36,12 +36,12 @@ function setNextTournamentLoading() {
   if (nameEl) nameEl.textContent = "—";
 }
 
-function setNextTournamentError(msg = "No se pudo cargar") {
+function setNextTournamentError(msg) {
   const dateEl = document.getElementById("nextTournamentDate");
-  if (dateEl) dateEl.textContent = "—";
-
   const nameEl = document.getElementById("nextTournamentName");
-  if (nameEl) nameEl.textContent = msg;
+  if (dateEl) dateEl.textContent = "—";
+  if (nameEl) nameEl.textContent = msg || "No se pudo cargar";
+  setNextTournamentCardLink(null);
 }
 
 
