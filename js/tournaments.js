@@ -3,11 +3,13 @@ import { db } from "./firebase.js";
 import { watchAuth, logout } from "./auth.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import { createTournamentEditor } from "./features/tournament_editor.js";
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
 import { TOURNAMENT_STRINGS } from "./strings.js";
+
+import { createTournamentEditor } from "./features/tournament_editor.js";
+import { loadPartialOnce } from "./ui/loadPartial.js";
 
 loadHeader("tournaments");
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
@@ -32,9 +34,18 @@ if (appVersionEl) appVersionEl.textContent = `v${APP_CONFIG.version}`;
 applyStrings();
 
 /* ==========================
-   EDITOR (modal logic)
+   EDITOR (lazy modal)
 ========================== */
-const editor = createTournamentEditor();
+let editor = null;
+
+async function ensureEditor() {
+  // monta el modal desde partial (solo 1 vez)
+  await loadPartialOnce("./partials/tournament_editor.html", "modalMount");
+
+  // crea el editor (solo 1 vez)
+  if (!editor) editor = createTournamentEditor();
+  return editor;
+}
 
 /* ==========================
    DATA
@@ -134,7 +145,11 @@ function renderTable(list) {
     : `<tr><td colspan="7" class="text-muted p-3">${escapeHtml(S.page.empty)}</td></tr>`;
 
   tableEl.querySelectorAll("[data-edit]").forEach(btn => {
-    btn.addEventListener("click", () => editor.openEditById(btn.getAttribute("data-edit")));
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-edit");
+      const ed = await ensureEditor();
+      ed.openEditById(id);
+    });
   });
 }
 
@@ -186,14 +201,22 @@ function renderCards(list) {
     : `<div class="text-muted p-2">${escapeHtml(S.page.empty)}</div>`;
 
   cardsEl.querySelectorAll("[data-edit]").forEach(btn => {
-    btn.addEventListener("click", () => editor.openEditById(btn.getAttribute("data-edit")));
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-edit");
+      const ed = await ensureEditor();
+      ed.openEditById(id);
+    });
   });
 }
 
 /* ==========================
    EVENTS
 ========================== */
-addBtn?.addEventListener("click", () => editor.openNew());
+addBtn?.addEventListener("click", async () => {
+  const ed = await ensureEditor();
+  ed.openNew();
+});
+
 searchEl?.addEventListener("input", render);
 
 /* ==========================
