@@ -6,6 +6,9 @@ import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
 import { TOURNAMENT_STRINGS } from "./strings.js";
 import { Player } from "./models/player.js";
+//edit tournament imports
+import { createTournamentEditor } from "./features/tournament_editor.js";
+import { loadPartialOnce } from "./ui/loadPartial.js";
 
 import {
   collection,
@@ -75,6 +78,9 @@ const filtersHintEl = document.getElementById("filtersHint");
 // Invitados UI (si existe en tu HTML)
 const addGuestBtn = document.getElementById("addGuestBtn");
 
+// Boton de editar
+const editTournamentBtn = document.getElementById("editTournamentBtn");
+
 /* ==========================
    PARAMS / STATE
 ========================== */
@@ -94,6 +100,24 @@ let activeLegendFilters = new Set();
 applyStrings();
 
 /* ==========================
+   TOURNAMENT EDITOR (LAZY)
+========================== */
+let tournamentEditor = null;
+
+async function ensureTournamentEditor() {
+  // carga el HTML del modal solo una vez
+  await loadPartialOnce(
+    "./partials/tournament_editor.html",
+    "tournamentModal"
+  );
+
+  // crea la instancia JS solo una vez
+  if (!tournamentEditor) {
+    tournamentEditor = createTournamentEditor();
+  }
+}
+
+/* ==========================
    EVENTS
 ========================== */
 // roster search removed (si existe en HTML lo ocultamos)
@@ -102,6 +126,44 @@ toggleTeamFeeBtn?.addEventListener("click", toggleTeamFeePaid);
 
 // Crear invitado global (si el botón existe)
 addGuestBtn?.addEventListener("click", createGuestFlow);
+
+editTournamentBtn?.addEventListener("click", async (e) => {
+  e.preventDefault();
+
+  if (!tournamentId) return;
+
+  await ensureTournamentEditor();
+  tournamentEditor.openEditById(tournamentId);
+});
+
+/* ==========================
+   EVENTS: TOURNAMENT EDITOR
+========================== */
+window.addEventListener("tournament:changed", async (e) => {
+  const { id, deleted } = e.detail || {};
+
+  // si eliminaron ESTE torneo → salir
+  if (deleted && id === tournamentId) {
+    alert("Este torneo fue eliminado.");
+    window.location.href = "tournaments.html";
+    return;
+  }
+
+  // si editaron ESTE torneo → refrescar datos
+  if (id === tournamentId) {
+    showLoader();
+    try {
+      tournament = await fetchTournament(tournamentId);
+      render(); // ya existe en tu archivo
+    } catch (err) {
+      console.error(err);
+      alert("Error recargando el torneo.");
+    } finally {
+      hideLoader();
+    }
+  }
+});
+
 
 /* ==========================
    INIT
