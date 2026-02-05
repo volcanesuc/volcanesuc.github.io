@@ -130,31 +130,31 @@ export const CLUB_DATA = {
           id: "jersey-home",
           name: "Camisa Oficial",
           category: "camisa",
-          image: "img/camisas/classic.PNG"
+          image: "img/camisas/classic.png"
         },
         {
           id: "jersey-away",
           name: "Camisa Alternativa",
           category: "camisa",
-          image: "img/camisas/alternate.jpg"
+          image: "img/camisas/alternate.png"
         },
         {
           id: "vest",
           name: "Chaleco",
           category: "chaleco",
-          image: "img/camisas/vest.PNG"
+          image: "img/camisas/vest.png"
         },
         {
           id: "hoodie",
           name: "Hoodie",
           category: "abrigo",
-          image: "img/camisas/hoodie.PNG"
+          image: "img/camisas/hoodie.png"
         },
         {
           id: "shorts",
           name: "Pantaloneta",
           category: "pantaloneta",
-          image: "img/camisas/shorts.PNG"
+          image: "img/camisas/shorts.png"
         }/*,
         {
           id: "cap",
