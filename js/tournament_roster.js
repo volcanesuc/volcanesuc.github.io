@@ -6,6 +6,7 @@ import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
 import { TOURNAMENT_STRINGS } from "./strings.js";
 import { Player } from "./models/player.js";
+import { createTournamentEditor } from "./features/tournament_editor.js";
 
 import {
   collection,
@@ -74,6 +75,11 @@ const filtersHintEl = document.getElementById("filtersHint");
 
 // Invitados UI (si existe en tu HTML)
 const addGuestBtn = document.getElementById("addGuestBtn");
+
+/* ==========================
+   TOURNAMENT EDITOR
+========================== */
+const tournamentEditor = createTournamentEditor();
 
 /* ==========================
    PARAMS / STATE

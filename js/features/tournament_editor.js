@@ -15,8 +15,12 @@ import { showLoader, hideLoader } from "../ui/loader.js";
 import { TOURNAMENT_STRINGS } from "../strings.js";
 
 const S = TOURNAMENT_STRINGS;
-const TOURNAMENTS_COL = APP_CONFIG?.club?.tournamentsCollection || "tournaments";
+const TOURNAMENTS_COL =
+  APP_CONFIG?.club?.tournamentsCollection || "tournaments";
 
+/* =========================================================
+   TOURNAMENT EDITOR (MODAL)
+========================================================= */
 export function createTournamentEditor() {
   const modalEl = document.getElementById("tournamentModal");
   const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
@@ -37,6 +41,7 @@ export function createTournamentEditor() {
     playerFee: document.getElementById("playerFee"),
     notes: document.getElementById("notes"),
     confirmed: document.getElementById("confirmed"),
+
     title: document.getElementById("tournamentModalTitle"),
     subtitle: document.getElementById("tournamentModalSubtitle"),
 
@@ -58,6 +63,9 @@ export function createTournamentEditor() {
 
   applyStrings(f, deleteBtn);
 
+  /* ==========================
+     FORM HELPERS
+  ========================== */
   function clearForm() {
     f.id.value = "";
     f.name.value = "";
@@ -88,6 +96,9 @@ export function createTournamentEditor() {
     f.confirmed.checked = !!t.confirmed;
   }
 
+  /* ==========================
+     PUBLIC API
+  ========================== */
   async function openNew() {
     clearForm();
     f.title.textContent = S.actions.add;
@@ -123,6 +134,9 @@ export function createTournamentEditor() {
     }
   }
 
+  /* ==========================
+     SAVE
+  ========================== */
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     showLoader();
@@ -149,16 +163,25 @@ export function createTournamentEditor() {
       }
 
       if (f.id.value) {
-        await setDoc(doc(db, TOURNAMENTS_COL, f.id.value), payload, { merge: true });
+        await setDoc(
+          doc(db, TOURNAMENTS_COL, f.id.value),
+          payload,
+          { merge: true }
+        );
       } else {
-        await addDoc(collection(db, TOURNAMENTS_COL), { ...payload, createdAt: serverTimestamp() });
+        await addDoc(collection(db, TOURNAMENTS_COL), {
+          ...payload,
+          createdAt: serverTimestamp()
+        });
       }
 
       modal?.hide();
 
-      // Evento para que la pantalla que lo usa refresque si quiere
-      window.dispatchEvent(new CustomEvent("tournament:changed", { detail: { id: f.id.value || null } }));
-
+      window.dispatchEvent(
+        new CustomEvent("tournament:changed", {
+          detail: { id: f.id.value || null }
+        })
+      );
     } catch (err) {
       console.error(err);
       alert(S.messages?.errorSave || "Error guardando torneo.");
@@ -167,18 +190,28 @@ export function createTournamentEditor() {
     }
   });
 
+  /* ==========================
+     DELETE
+  ========================== */
   deleteBtn?.addEventListener("click", async () => {
     const id = f.id.value;
     if (!id) return;
 
-    const ok = confirm(S.actions?.confirmDelete || "¿Eliminar este torneo?");
+    const ok = confirm(
+      S.actions?.confirmDelete || "¿Eliminar este torneo?"
+    );
     if (!ok) return;
 
     showLoader();
     try {
       await deleteDoc(doc(db, TOURNAMENTS_COL, id));
       modal?.hide();
-      window.dispatchEvent(new CustomEvent("tournament:changed", { detail: { id, deleted: true } }));
+
+      window.dispatchEvent(
+        new CustomEvent("tournament:changed", {
+          detail: { id, deleted: true }
+        })
+      );
     } catch (e) {
       console.error(e);
       alert(S.messages?.errorDelete || "Error eliminando torneo.");
@@ -190,8 +223,10 @@ export function createTournamentEditor() {
   return { openNew, openEditById };
 }
 
+/* =========================================================
+   STRINGS / HELPERS
+========================================================= */
 function applyStrings(f, deleteBtn) {
-  // Si el modal existe en la página, llenamos los labels
   if (!f?.lblName) return;
 
   f.lblName.textContent = S.fields.name.label;
@@ -227,7 +262,10 @@ function applyStrings(f, deleteBtn) {
 function fillSelect(selectEl, optionsObj) {
   if (!selectEl || !optionsObj) return;
   selectEl.innerHTML = Object.entries(optionsObj)
-    .map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`)
+    .map(
+      ([value, label]) =>
+        `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`
+    )
     .join("");
 }
 
