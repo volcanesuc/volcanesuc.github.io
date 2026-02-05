@@ -106,11 +106,7 @@ let tournamentEditor = null;
 
 async function ensureTournamentEditor() {
   // carga el HTML del modal solo una vez
-  await loadPartialOnce(
-    "./partials/tournament_editor.html",
-    "tournamentModal"
-  );
-
+  await loadPartialOnce("./partials/tournament_editor.html", "editTournamentModal");
   // crea la instancia JS solo una vez
   if (!tournamentEditor) {
     tournamentEditor = createTournamentEditor();
@@ -132,8 +128,8 @@ editTournamentBtn?.addEventListener("click", async (e) => {
 
   if (!tournamentId) return;
 
-  await ensureTournamentEditor();
-  tournamentEditor.openEditById(tournamentId);
+  const editor = await ensureTournamentEditor();
+  editor?.openEditById(tournamentId);
 });
 
 /* ==========================
