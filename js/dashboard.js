@@ -220,15 +220,19 @@ function setNextTournamentCardLink(tournamentId) {
   if (!card) return;
 
   if (!tournamentId) {
-    card.removeAttribute("href");
+    card.onclick = null;
     card.style.pointerEvents = "none";
     card.style.cursor = "default";
     return;
   }
 
-  card.href = tournamentRosterUrl(tournamentId);
+  card.style.pointerEvents = "auto";
   card.style.cursor = "pointer";
+  card.onclick = () => {
+    window.location.href = tournamentRosterUrl(tournamentId);
+  };
 }
+
 
 
 
@@ -453,11 +457,10 @@ function renderAlerts(alerts) {
     .join("");
 }
 
-function capitalize(str) {
-  if (!str) return str;
-  return str.charAt(0).toUpperCase() + str.slice(1);
+function capitalize(s) {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
-
 /* =========================================================
    VERSION
 ========================================================= */
