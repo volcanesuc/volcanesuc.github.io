@@ -111,9 +111,8 @@ async function ensureTournamentEditor() {
     tournamentEditor = createTournamentEditor();
   }
 
-  return tournamentEditor; 
+  return tournamentEditor;
 }
-
 
 /* ==========================
    EVENTS
