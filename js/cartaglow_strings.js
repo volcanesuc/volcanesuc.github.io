@@ -13,7 +13,7 @@ export const CARTAGLOW_DATA = {
     editionPill: "Cartaglow • Edición 2026",
     title: "Cartaglow 2026",
     subtitle: "Torneo Hat MIXTO 7v7 — vení a jugar revuelto, relajado y con sombrero 🧢",
-    image: "img/logo-cartaglow.jpeg"
+    image: "img/cartaglow/logo-cartaglow-dark.jpeg"
   },
 
   registration: {
@@ -85,12 +85,12 @@ export const CARTAGLOW_DATA = {
     credit: "* Fotografías por Esteban Mejías",
     albumUrl: "https://estebanmejias.pixieset.com/cartaglowhat2024",
     thumbs: [
-      "img/cartaglow/cartaglow00",
-      "img/cartaglow/cartaglow0",
-      "img/cartaglow/cartaglow01",
-      "img/cartaglow/cartaglow02",
-      "img/cartaglow/cartaglow03",
-      "img/cartaglow/cartaglow06"
+      "img/cartaglow/cartaglow00.jpg",
+      "img/cartaglow/cartaglow04.jpg",
+      "img/cartaglow/cartaglow01.jpg",
+      "img/cartaglow/cartaglow02.JPG",
+      "img/cartaglow/cartaglow03.jpg",
+      "img/cartaglow/cartaglow06.jpg"
     ]
   },
 
