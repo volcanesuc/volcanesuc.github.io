@@ -16,7 +16,7 @@ import { Player } from "./models/player.js";
    INIT
 ========================================================= */
 
-loadHeader("home");
+await loadHeader("home");
 
 watchAuth(async () => {
   showLoader();

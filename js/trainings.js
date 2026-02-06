@@ -17,7 +17,7 @@ import { Training } from "./models/training.js";
    INIT
 ========================= */
 document.addEventListener("DOMContentLoaded", async () => {
-  loadHeader("trainings");
+  await loadHeader("trainings");
 
   await loadPlayers();
   await loadTrainings();

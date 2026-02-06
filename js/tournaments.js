@@ -11,7 +11,7 @@ import { TOURNAMENT_STRINGS } from "./strings.js";
 import { createTournamentEditor } from "./features/tournament_editor.js";
 import { loadPartialOnce } from "./ui/loadPartial.js";
 
-loadHeader("tournaments");
+await loadHeader("tournaments");
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
 const S = TOURNAMENT_STRINGS;

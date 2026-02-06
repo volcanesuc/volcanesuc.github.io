@@ -20,7 +20,7 @@ import { Player } from "./models/player.js";
  *************************************************/
 
 // Header del dashboard
-loadHeader("roster");
+await loadHeader("roster");
 
 // Logout
 document.getElementById("logoutBtn")?.addEventListener("click", logout);

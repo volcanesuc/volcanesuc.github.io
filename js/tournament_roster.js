@@ -23,7 +23,7 @@ import {
 /* ==========================
    HEADER / AUTH
 ========================== */
-loadHeader("tournaments");
+await loadHeader("tournaments");
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
 const S = TOURNAMENT_STRINGS;
