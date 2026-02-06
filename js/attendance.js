@@ -9,7 +9,6 @@ import { Player } from "./models/player.js";
 import { guardPage } from "./page-guard.js";
 import { loadHeader } from "./components/header.js";
 
-
 // Header
 const { cfg, redirected } = await guardPage("attendance");
 if (!redirected) {

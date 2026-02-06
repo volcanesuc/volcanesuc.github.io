@@ -2,13 +2,13 @@
   <div class="modal-dialog modal-fullscreen">
     <div class="modal-content player-modal">
 
-       <form id="tournamentForm" class="h-100 d-flex flex-column">
+      <form id="tournamentForm" class="h-100 d-flex flex-column">
         <input type="hidden" id="tournamentId" />
 
         <div class="modal-header player-modal__header">
           <div>
-             <h5 class="modal-title mb-0" id="tournamentModalTitle">—</h5>
-              <small class="player-modal__subtitle" id="tournamentModalSubtitle">—</small>
+            <h5 class="modal-title mb-0" id="tournamentModalTitle">—</h5>
+            <small class="player-modal__subtitle" id="tournamentModalSubtitle">—</small>
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
@@ -49,6 +49,19 @@
             <div class="col-md-6">
               <label id="lblLocation" class="form-label"></label>
               <input id="location" class="form-control" />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Sitio oficial del torneo</label>
+              <input 
+                id="officialUrl"
+                type="url"
+                class="form-control"
+                placeholder="https://ejemplo.com"
+              />
+              <div class="form-text">
+                Link al torneo en Ultiworld, WFDF, Instagram o web oficial
+              </div>
             </div>
 
             <div class="col-md-3">

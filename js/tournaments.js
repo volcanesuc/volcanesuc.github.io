@@ -127,6 +127,7 @@ function renderTable(list) {
     ? list
         .map(t => {
           const fees = formatFees(t.teamFee, t.playerFee);
+          const official = safeUrl(t.officialUrl);
           return `
             <tr>
               <td class="fw-bold">${escapeHtml(t.name)}</td>
@@ -147,6 +148,17 @@ function renderTable(list) {
                    title="Roster">
                    <i class="bi bi-people"></i>
                 </a>
+                ${
+                  official
+                    ? `<a class="btn btn-sm btn-outline-dark ms-2"
+                          href="${escapeHtml(official)}"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Sitio oficial">
+                          <i class="bi bi-box-arrow-up-right"></i>
+                      </a>`
+                    : ``
+                }
               </td>
             </tr>
           `;
@@ -173,6 +185,7 @@ function renderCards(list) {
           const typeLbl = S.fields.type.options?.[t.type] ?? t.type ?? "—";
           const ageLbl = S.fields.age.options?.[t.age] ?? t.age ?? "—";
           const venueLbl = S.fields.venue.options?.[t.venue] ?? t.venue ?? "—";
+          const official = safeUrl(t.officialUrl);
 
           return `
             <div class="mobile-card mb-3">
@@ -197,6 +210,18 @@ function renderCards(list) {
                      title="Roster">
                     <i class="bi bi-people"></i>
                   </a>
+
+                  ${
+                    official
+                      ? `<a class="btn btn-sm btn-outline-dark"
+                            href="${escapeHtml(official)}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Sitio oficial">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>`
+                      : ``
+                  }
 
                   <!-- Editar torneo -->
                   <button class="btn btn-sm btn-outline-primary" data-edit="${t.id}" title="Editar">
@@ -285,4 +310,12 @@ function escapeHtml(str) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function safeUrl(url) {
+  const u = String(url || "").trim();
+  if (!u) return null;
+  // si el usuario pega "www..." sin protocolo, se lo agregamos
+  if (!/^https?:\/\//i.test(u)) return `https://${u}`;
+  return u;
 }

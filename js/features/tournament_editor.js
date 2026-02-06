@@ -15,8 +15,7 @@ import { showLoader, hideLoader } from "../ui/loader.js";
 import { TOURNAMENT_STRINGS } from "../strings.js";
 
 const S = TOURNAMENT_STRINGS;
-const TOURNAMENTS_COL =
-  APP_CONFIG?.club?.tournamentsCollection || "tournaments";
+const TOURNAMENTS_COL = APP_CONFIG?.club?.tournamentsCollection || "tournaments";
 
 /* =========================================================
    TOURNAMENT EDITOR (MODAL)
@@ -37,6 +36,7 @@ export function createTournamentEditor() {
     age: document.getElementById("age"),
     venue: document.getElementById("venue"),
     location: document.getElementById("location"),
+    officialUrl: document.getElementById("officialUrl"), // ✅ NUEVO
     teamFee: document.getElementById("teamFee"),
     playerFee: document.getElementById("playerFee"),
     notes: document.getElementById("notes"),
@@ -52,6 +52,7 @@ export function createTournamentEditor() {
     lblAge: document.getElementById("lblAge"),
     lblVenue: document.getElementById("lblVenue"),
     lblLocation: document.getElementById("lblLocation"),
+    // lblOfficialUrl: opcional si lo agregás a strings/html
     lblTeamFee: document.getElementById("lblTeamFee"),
     lblPlayerFee: document.getElementById("lblPlayerFee"),
     lblNotes: document.getElementById("lblNotes"),
@@ -75,6 +76,7 @@ export function createTournamentEditor() {
     f.age.value = "open";
     f.venue.value = "outdoor";
     f.location.value = "";
+    if (f.officialUrl) f.officialUrl.value = ""; // ✅ NUEVO
     f.teamFee.value = "";
     f.playerFee.value = "";
     f.notes.value = "";
@@ -90,6 +92,7 @@ export function createTournamentEditor() {
     f.age.value = t.age || "open";
     f.venue.value = t.venue || "outdoor";
     f.location.value = t.location || "";
+    if (f.officialUrl) f.officialUrl.value = t.officialUrl || ""; // ✅ NUEVO
     f.teamFee.value = t.teamFee ?? "";
     f.playerFee.value = t.playerFee ?? "";
     f.notes.value = t.notes || "";
@@ -150,6 +153,7 @@ export function createTournamentEditor() {
         age: f.age.value,
         venue: f.venue.value,
         location: (f.location.value || "").trim(),
+        officialUrl: normalizeUrl(f.officialUrl?.value), // ✅ NUEVO
         teamFee: toNumberOrNull(f.teamFee.value),
         playerFee: toNumberOrNull(f.playerFee.value),
         notes: (f.notes.value || "").trim(),
@@ -163,11 +167,9 @@ export function createTournamentEditor() {
       }
 
       if (f.id.value) {
-        await setDoc(
-          doc(db, TOURNAMENTS_COL, f.id.value),
-          payload,
-          { merge: true }
-        );
+        await setDoc(doc(db, TOURNAMENTS_COL, f.id.value), payload, {
+          merge: true
+        });
       } else {
         await addDoc(collection(db, TOURNAMENTS_COL), {
           ...payload,
@@ -197,9 +199,7 @@ export function createTournamentEditor() {
     const id = f.id.value;
     if (!id) return;
 
-    const ok = confirm(
-      S.actions?.confirmDelete || "¿Eliminar este torneo?"
-    );
+    const ok = confirm(S.actions?.confirmDelete || "¿Eliminar este torneo?");
     if (!ok) return;
 
     showLoader();
@@ -242,6 +242,13 @@ function applyStrings(f, deleteBtn) {
   f.lblLocation.textContent = `${S.fields.location.label} (opcional)`;
   f.location.placeholder = S.fields.location.placeholder || "";
 
+  // ✅ Opcional: si querés strings para el label del sitio oficial
+  // Si no, el label fijo del HTML se queda tal cual.
+  if (S.fields?.officialUrl?.label && f.officialUrl) {
+    const lbl = document.querySelector('label[for="officialUrl"]');
+    if (lbl) lbl.textContent = S.fields.officialUrl.label;
+  }
+
   f.lblTeamFee.textContent = S.fields.teamFee.label;
   f.lblPlayerFee.textContent = S.fields.playerFee.label;
 
@@ -273,6 +280,14 @@ function toNumberOrNull(v) {
   if (v === "" || v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+// ✅ NUEVO: normaliza url para guardar consistente
+function normalizeUrl(v) {
+  const u = String(v || "").trim();
+  if (!u) return "";
+  if (!/^https?:\/\//i.test(u)) return `https://${u}`;
+  return u;
 }
 
 function escapeHtml(str) {
