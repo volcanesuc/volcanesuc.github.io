@@ -10,13 +10,17 @@ export async function loadHeader(activeTab, cfgOverride) {
   const MENU = CLUB_DATA.header.menu;
   const HOME_HREF = CLUB_DATA.header.homeHref || "dashboard.html";
 
-  // load config y filtra
-  const cfg = cfgOverride ?? (await loadHeaderTabsConfig());
-  try {
-    cfg = await loadHeaderTabsConfig();
-  } catch {
-    cfg = { enabledTabs: {} }; // fallback por si falla
+  // ✅ usa cfgOverride si viene; si no, intenta remote config; si falla, fallback
+  let cfg = cfgOverride;
+  if (!cfg) {
+    try {
+      cfg = await loadHeaderTabsConfig();
+    } catch (e) {
+      console.warn("Remote config failed, fallback local", e);
+      cfg = { enabledTabs: {} };
+    }
   }
+
   const VISIBLE_MENU = filterMenuByConfig(MENU, cfg);
 
   const renderLinksDesktop = () =>
