@@ -7,7 +7,7 @@ import { showLoader, hideLoader } from "./ui/loader.js";
 import { Player } from "./models/player.js";
 
 import { guardPage } from "./page-guard.js";
-import { loadHeader } from "./js/components/header.js";
+import { loadHeader } from "./components/header.js";
 
 await guardPage("attendance");
 await loadHeader("attendance");

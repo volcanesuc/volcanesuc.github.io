@@ -1,24 +1,10 @@
 // js/config/page-config.js
+export const HOME_HREF = "dashboard.html";
 
 export const PAGE_CONFIG = {
-  dashboard: {
-    id: "home",
-    file: "dashboard.html"
-  },
-  roster: {
-    id: "roster",
-    file: "roster.html"
-  },
-  trainings: {
-    id: "trainings",
-    file: "trainings.html"
-  },
-  attendance: {
-    id: "attendance",
-    file: "attendance.html"
-  },
-  tournaments: {
-    id: "tournaments",
-    file: "tournaments.html"
-  }
+  dashboard:  { tabId: "home",       href: "dashboard.html" },
+  roster:     { tabId: "roster",     href: "roster.html" },
+  trainings:  { tabId: "trainings",  href: "trainings.html" },
+  attendance: { tabId: "attendance", href: "attendance.html" },
+  tournaments:{ tabId: "tournaments",href: "tournaments.html" }
 };
