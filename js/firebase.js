@@ -7,9 +7,9 @@ import { APP_CONFIG } from "./config.js";
 function getFirebaseConfig() {
   const cfg = APP_CONFIG?.firebase;
 
-  if (!cfg?.apiKey || !cfg?.authDomain || !cfg?.projectId) {
+  if (!cfg?.apiKey || !cfg?.authDomain || !cfg?.projectId || !cfg?.appId) {
     throw new Error(
-      "Falta APP_CONFIG.firebase (apiKey, authDomain, projectId). Revisa config.js"
+      "Falta APP_CONFIG.firebase (apiKey, authDomain, projectId, appId). Revisa config.js"
     );
   }
   return cfg;
