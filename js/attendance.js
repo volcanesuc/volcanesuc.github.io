@@ -6,7 +6,7 @@ import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { Player } from "./models/player.js";
 
-import { guardPage } from "./js/page-guard.js";
+import { guardPage } from "./page-guard.js";
 import { loadHeader } from "./js/components/header.js";
 
 await guardPage("attendance");
