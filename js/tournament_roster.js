@@ -627,15 +627,26 @@ function rosterRow(r) {
 
   const total = toNumberOrZero(r.feeTotal);
   const paid = toNumberOrZero(r.paidTotal);
-  const balance = Number.isFinite(Number(r.balance)) ? Number(r.balance) : (total - paid);
+  const balance = Math.max(0, total - paid);
 
-  const feeIsPaid = !!r.feeIsPaid;
-  const paidClass = feeIsPaid ? "pill pill--good" : "pill pill--warn";
-  const paidLabel = feeIsPaid ? "Fee pagado" : "Fee pendiente";
+  // 💰 estado visual
+  let feePill = "";
+  let feeDetail = "";
 
-  const feeSummary = total > 0
-    ? `₡${total.toLocaleString("es-CR")} · pagado ₡${paid.toLocaleString("es-CR")} · saldo ₡${Math.max(0, balance).toLocaleString("es-CR")}`
-    : "Fee: —";
+  if (total <= 0) {
+    feePill = `<span class="pill">Sin fee</span>`;
+    feeDetail = "";
+  } 
+  else if (balance <= 0) {
+    // 🟢 PAGADO
+    feePill = `<span class="pill pill--good">Fee pagado</span>`;
+    feeDetail = `<span class="pill pill--good">₡${total.toLocaleString("es-CR")} cancelado</span>`;
+  } 
+  else {
+    // 🔴 DEBE
+    feePill = `<span class="pill pill--warn">Debe ₡${balance.toLocaleString("es-CR")}</span>`;
+    feeDetail = `<span class="pill">Pagado ₡${paid.toLocaleString("es-CR")} / ₡${total.toLocaleString("es-CR")}</span>`;
+  }
 
   return `
     <div class="roster-row">
@@ -666,8 +677,8 @@ function rosterRow(r) {
 
       <div class="roster-row__badges">
         <span class="${statusClass}">${escapeHtml(status)}</span>
-        <span class="${paidClass}">${escapeHtml(paidLabel)}</span>
-        <span class="pill">${escapeHtml(feeSummary)}</span>
+        ${feePill}
+        ${feeDetail}
         ${guestBadge}
       </div>
     </div>
