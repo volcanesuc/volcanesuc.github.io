@@ -9,6 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { APP_CONFIG } from "./config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
+import { guardPage } from "./js/page-guard.js";
 import { loadHeader } from "./components/header.js";
 import { Player } from "./models/player.js";
 
