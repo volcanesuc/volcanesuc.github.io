@@ -1,16 +1,26 @@
 // header.js
 import { logout } from "../auth.js";
 import { CLUB_DATA } from "../strings.js";
+import { loadHeaderTabsConfig, filterMenuByConfig } from "../remote-config.js";
 
-export function loadHeader(activeTab) {
+export async function loadHeader(activeTab) {
   const header = document.getElementById("app-header");
   if (!header) return;
 
   const MENU = CLUB_DATA.header.menu;
   const HOME_HREF = CLUB_DATA.header.homeHref || "dashboard.html";
 
+  // load config y filtra
+  let cfg = null;
+  try {
+    cfg = await loadHeaderTabsConfig();
+  } catch {
+    cfg = { enabledTabs: {} }; // fallback por si falla
+  }
+  const VISIBLE_MENU = filterMenuByConfig(MENU, cfg);
+
   const renderLinksDesktop = () =>
-    MENU.map(
+    VISIBLE_MENU.map(
       item => `
         <a href="${item.href}" class="top-tab ${activeTab === item.id ? "active" : ""}">
           ${item.label}
@@ -19,7 +29,7 @@ export function loadHeader(activeTab) {
     ).join("");
 
   const renderLinksMobile = () =>
-    MENU.map(
+    VISIBLE_MENU.map(
       item => `
         <a href="${item.href}" class="mobile-link ${activeTab === item.id ? "active" : ""}">
           ${item.label}
