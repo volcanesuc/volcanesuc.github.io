@@ -7,13 +7,11 @@ const PARAM_NAME = "header_tabs_config";
 export async function loadHeaderTabsConfig() {
   const rc = getRemoteConfig(app);
 
-  // En dev podés dejarlo bajo. En prod subilo (ej 1h = 3600000)
   rc.settings = {
     fetchTimeoutMillis: 10000,
-    minimumFetchIntervalMillis: 0,
+    minimumFetchIntervalMillis: 0, // dev. en prod: 3600000
   };
 
-  // Default seguro si todavía no publicaste o falla el fetch
   rc.defaultConfig = {
     [PARAM_NAME]: JSON.stringify({ version: 1, enabledTabs: {} }),
   };
@@ -31,11 +29,10 @@ export async function loadHeaderTabsConfig() {
 
 export function filterMenuByConfig(menu, cfg) {
   const enabledTabs = cfg?.enabledTabs || {};
-  // Si no está definido en config, lo dejamos visible (default = true)
+  // si una key no existe en config => se muestra (default true)
   return menu.filter(item => enabledTabs[item.id] !== false);
 }
 
-export function isPageEnabled(pageId, cfg) {
-  const enabled = cfg?.enabledTabs?.[pageId];
-  return enabled !== false; // default true
+export function isTabEnabled(tabId, cfg) {
+  return cfg?.enabledTabs?.[tabId] !== false; // default true
 }
