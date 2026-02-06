@@ -6,9 +6,13 @@ import { showLoader, hideLoader } from "./ui/loader.js";
 import { loadHeader } from "./components/header.js";
 import { TOURNAMENT_STRINGS } from "./strings.js";
 import { Player } from "./models/player.js";
-//edit tournament imports
+
+// edit tournament imports
 import { createTournamentEditor } from "./features/tournament_editor.js";
 import { loadPartialOnce } from "./ui/loadPartial.js";
+
+// ✅ reusable payments modal (extraído)
+import { createPaymentModal, sumPayments } from "./features/payment_modal.js";
 
 import {
   collection,
@@ -106,27 +110,32 @@ let tournamentEditor = null;
 
 async function ensureTournamentEditor() {
   await loadPartialOnce("./partials/tournament_editor.html", "modalMount");
-
-  if (!tournamentEditor) {
-    tournamentEditor = createTournamentEditor();
-  }
-
+  if (!tournamentEditor) tournamentEditor = createTournamentEditor();
   return tournamentEditor;
+}
+
+/* ==========================
+   PAYMENT MODAL (LAZY, REUSABLE)
+========================== */
+let payModal = null;
+
+async function ensurePayModal() {
+  // debes crear este partial: ./partials/payment_modal.html
+  await loadPartialOnce("./partials/payment_modal.html", "modalMount");
+  if (!payModal) payModal = createPaymentModal();
+  return payModal;
 }
 
 /* ==========================
    EVENTS
 ========================== */
-// roster search removed (si existe en HTML lo ocultamos)
 playersSearch?.addEventListener("input", renderPlayers);
 toggleTeamFeeBtn?.addEventListener("click", toggleTeamFeePaid);
 
-// Crear invitado global (si el botón existe)
 addGuestBtn?.addEventListener("click", createGuestFlow);
 
 editTournamentBtn?.addEventListener("click", async (e) => {
   e.preventDefault();
-
   if (!tournamentId) return;
 
   const editor = await ensureTournamentEditor();
@@ -139,19 +148,19 @@ editTournamentBtn?.addEventListener("click", async (e) => {
 window.addEventListener("tournament:changed", async (e) => {
   const { id, deleted } = e.detail || {};
 
-  // si eliminaron ESTE torneo → salir
   if (deleted && id === tournamentId) {
     alert("Este torneo fue eliminado.");
     window.location.href = "tournaments.html";
     return;
   }
 
-  // si editaron ESTE torneo → refrescar datos
   if (id === tournamentId) {
     showLoader();
     try {
       tournament = await fetchTournament(tournamentId);
-      render(); // ya existe en tu archivo
+      await loadRoster();
+      render();
+      renderPlayers();
     } catch (err) {
       console.error(err);
       alert("Error recargando el torneo.");
@@ -161,7 +170,6 @@ window.addEventListener("tournament:changed", async (e) => {
   }
 });
 
-
 /* ==========================
    INIT
 ========================== */
@@ -170,7 +178,6 @@ watchAuth(async () => {
   try {
     if (appVersion) appVersion.textContent = `v${APP_CONFIG.version}`;
 
-    // Asegurar que el header diga solo "Salir" (sin version pegada)
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) logoutBtn.textContent = "Salir";
 
@@ -185,7 +192,6 @@ watchAuth(async () => {
       return;
     }
 
-    // Detalle (si existe en HTML, lo dejamos funcionando)
     if (detailBtn) {
       detailBtn.href = `tournament_detail.html?id=${encodeURIComponent(tournamentId)}`;
     }
@@ -194,7 +200,7 @@ watchAuth(async () => {
 
     await loadPlayers();
     await loadGuests();
-    await loadRoster();  // roster último (ya puedo enriquecer)
+    await loadRoster();
     render();
     renderPlayers();
   } catch (e) {
@@ -216,40 +222,48 @@ async function fetchTournament(id) {
 
 async function loadRoster() {
   const snap = await getDocs(collection(db, TOURNAMENTS_COL, tournamentId, "roster"));
-
   const raw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
   const playersById = new Map(players.map(p => [p.id, p]));
   const guestsById = new Map(guests.map(g => [g.id, g]));
 
+  const defaultFeeTotal = toNumberOrZero(tournament?.playerFee);
+
   roster = raw
     .map(r => {
-      // ✅ id de referencia para buscar en players/guests
       const refId = (r.playerId || r.guestId || r.id || "").trim();
 
-      // ✅ escoger fuente según isGuest (pero si isGuest no existe, intenta ambas)
       const fromGuest = r.isGuest ? guestsById.get(refId) : null;
       const fromPlayer = !r.isGuest ? playersById.get(refId) : null;
-
-      // fallback si isGuest está mal o no existe:
       const source = fromPlayer || fromGuest || playersById.get(refId) || guestsById.get(refId);
+
+      const payments = Array.isArray(r.payments) ? r.payments : [];
+      const feeTotal = Number.isFinite(Number(r.feeTotal)) ? Number(r.feeTotal) : defaultFeeTotal;
+      const paidTotal = sumPayments(payments);
+      const balance = feeTotal - paidTotal;
+      const feeIsPaid = feeTotal > 0 ? balance <= 0 : false;
 
       return {
         ...r,
 
-        // ✅ relleno para contadores y UI (no escribe DB)
+        // ✅ relleno UI
         name: r.name ?? source?.name ?? "—",
         number: r.number ?? source?.number ?? null,
         role: r.role ?? source?.role ?? null,
         gender: r.gender ?? source?.gender ?? null,
 
-        // si el doc no trae playerId, lo normalizamos en memoria
-        playerId: r.playerId || refId || null
+        playerId: r.playerId || refId || null,
+
+        // ✅ pagos parciales (en memoria)
+        payments,
+        feeTotal,
+        paidTotal,
+        balance,
+        feeIsPaid
       };
     })
     .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
 
-  // DEBUG útil: ver cuántos quedaron sin género
   console.log(
     "Roster loaded:",
     roster.length,
@@ -267,7 +281,7 @@ async function loadPlayers() {
       id: p.id,
       name: p.fullName,
       nickname: "",
-      role: p.role,          // handler | cutter | hybrid
+      role: p.role,
       number: p.number ?? null,
       gender: p.gender,
       active: p.active !== false,
@@ -277,7 +291,6 @@ async function loadPlayers() {
     .filter(p => (p.name || "").trim().length > 0)
     .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"));
 
-  // ✅ No mostrar “Fuente: club_players”
   if (playersSubtitle) {
     playersSubtitle.textContent = players.length
       ? `${players.length} jugador(es) activo(s)`
@@ -317,7 +330,6 @@ function render() {
 
   renderTeamFee();
 
-  // filtros de leyenda
   let list = [...roster];
   if (activeLegendFilters.size > 0) {
     list = list.filter(matchesLegendFilters);
@@ -346,10 +358,30 @@ function render() {
     });
   });
 
-  rosterList?.querySelectorAll("[data-toggle-paid]")?.forEach(btn => {
+  // ✅ nuevo: abonar (usa componente extraído)
+  rosterList?.querySelectorAll("[data-pay]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-toggle-paid");
-      await togglePlayerPaid(id);
+      const id = btn.getAttribute("data-pay");
+      const r = roster.find(x => x.id === id);
+      if (!r) return;
+
+      const modal = await ensurePayModal();
+
+      // sugerencia = saldo si debe, si no vacío
+      const suggested = r.balance > 0 ? Math.ceil(r.balance) : "";
+
+      modal.open({
+        collectionPath: `${TOURNAMENTS_COL}/${tournamentId}/roster`,
+        docId: r.id,
+        title: "Agregar abono",
+        subtitle: r.name || "—",
+        suggestedAmount: suggested,
+        onSaved: async () => {
+          await loadRoster();
+          render();
+          renderPlayers();
+        }
+      });
     });
   });
 }
@@ -365,13 +397,16 @@ function renderRosterCounters(visibleList) {
 
   const guestsCount = roster.filter(r => r.isGuest).length;
 
+  const paidCount = roster.filter(r => r.feeIsPaid).length;
+  const pendingCount = roster.filter(r => !r.feeIsPaid).length;
+
   const visibleText =
     visibleList.length !== roster.length
       ? ` · Mostrando: ${visibleList.length}`
       : "";
 
   const text = total
-    ? `Total: ${total}${visibleText} · Invitados: ${guestsCount} · M: ${m} · F: ${f} · Handlers: ${handlers} · Cutters: ${cutters}`
+    ? `Total: ${total}${visibleText} · Invitados: ${guestsCount} · Fee pagado: ${paidCount} · Fee pendiente: ${pendingCount} · M: ${m} · F: ${f} · Handlers: ${handlers} · Cutters: ${cutters}`
     : "Jugadores convocados";
 
   if (rosterSubtitle) rosterSubtitle.textContent = text;
@@ -380,22 +415,15 @@ function renderRosterCounters(visibleList) {
 
 /* ==========================
    RENDER: RIGHT PANEL (PICKER)
-   - mezcla jugadores activos + invitados activos
-   - quita los ya agregados al roster
 ========================== */
 function renderPlayers() {
   const q = (playersSearch?.value || "").trim().toLowerCase();
 
-  // ids ya en roster
   const rosterIds = new Set(roster.map(r => r.playerId || r.id));
 
-  // pool: jugadores + invitados
   let pool = [...players, ...guests];
-
-  // quitar ya agregados
   let list = pool.filter(p => !rosterIds.has(p.id));
 
-  // buscar
   if (q) {
     list = list.filter(p =>
       `${p.name || ""} ${p.nickname || ""} ${p.role || ""} ${p.loanFrom || ""}`
@@ -415,18 +443,15 @@ function renderPlayers() {
       : "No hay jugadores disponibles (todos ya están en el roster).";
   }
 
-  // subtitle panel derecho
   if (playersSubtitle) {
     const gCount = list.filter(x => x.isGuest).length;
     const pCount = list.length - gCount;
     playersSubtitle.textContent = `Disponibles: ${list.length} · Club: ${pCount} · Invitados: ${gCount}`;
   }
 
-  // ✅ contador (sin optional chaining en el LHS)
   const addPanelState = document.getElementById("addPanelState");
   if (addPanelState) addPanelState.textContent = `Disponibles: ${list.length}`;
 
-  // listeners para agregar
   playersList?.querySelectorAll("[data-add]")?.forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-add");
@@ -435,12 +460,10 @@ function renderPlayers() {
   });
 }
 
-
 /* ==========================
    ACTIONS
 ========================== */
 async function addToRoster(itemId) {
-  // puede venir de players o guests
   const p = players.find(x => x.id === itemId);
   const g = guests.find(x => x.id === itemId);
   const item = p || g;
@@ -449,6 +472,9 @@ async function addToRoster(itemId) {
   showLoader();
   try {
     const ref = doc(db, TOURNAMENTS_COL, tournamentId, "roster", item.id);
+
+    // ✅ feeTotal por defecto = playerFee del torneo
+    const feeTotal = toNumberOrZero(tournament?.playerFee);
 
     await setDoc(ref, {
       playerId: item.id,
@@ -460,7 +486,11 @@ async function addToRoster(itemId) {
       role: item.role || "hybrid",
       gender: item.gender ?? null,
       status: "convocado",
-      playerFeePaid: false,
+
+      // ✅ pagos parciales
+      feeTotal,
+      payments: [],
+
       createdAt: serverTimestamp()
     }, { merge: true });
 
@@ -517,30 +547,6 @@ async function toggleStatus(docId) {
   }
 }
 
-async function togglePlayerPaid(docId) {
-  const r = roster.find(x => x.id === docId);
-  if (!r) return;
-
-  const next = !r.playerFeePaid;
-
-  showLoader();
-  try {
-    await setDoc(doc(db, TOURNAMENTS_COL, tournamentId, "roster", docId), {
-      playerFeePaid: next,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-
-    await loadRoster();
-    render();
-    renderPlayers();
-  } catch (e) {
-    console.error(e);
-    alert("Error actualizando pago del jugador.");
-  } finally {
-    hideLoader();
-  }
-}
-
 async function toggleTeamFeePaid() {
   if (!tournament) return;
 
@@ -574,7 +580,6 @@ function nextStatus(s) {
    CREATE GUEST (GLOBAL)
 ========================== */
 async function createGuestFlow() {
-  // MVP con prompts (luego lo cambiamos a modal bonito si quieres)
   const name = prompt("Nombre del invitado:");
   if (!name || !name.trim()) return;
 
@@ -616,13 +621,21 @@ function rosterRow(r) {
   const status = prettyStatus(r.status);
   const statusClass = status === "Confirmado" ? "pill pill--yellow" : "pill";
 
-  const paid = !!r.playerFeePaid;
-  const paidClass = paid ? "pill pill--good" : "pill pill--warn";
-  const paidLabel = paid ? "Fee pagado" : "Fee pendiente";
-
   const guestBadge = r.isGuest
     ? `<span class="pill">${escapeHtml(r.loanFrom ? `Invitado · ${r.loanFrom}` : "Invitado")}</span>`
     : "";
+
+  const total = toNumberOrZero(r.feeTotal);
+  const paid = toNumberOrZero(r.paidTotal);
+  const balance = Number.isFinite(Number(r.balance)) ? Number(r.balance) : (total - paid);
+
+  const feeIsPaid = !!r.feeIsPaid;
+  const paidClass = feeIsPaid ? "pill pill--good" : "pill pill--warn";
+  const paidLabel = feeIsPaid ? "Fee pagado" : "Fee pendiente";
+
+  const feeSummary = total > 0
+    ? `₡${total.toLocaleString("es-CR")} · pagado ₡${paid.toLocaleString("es-CR")} · saldo ₡${Math.max(0, balance).toLocaleString("es-CR")}`
+    : "Fee: —";
 
   return `
     <div class="roster-row">
@@ -640,7 +653,8 @@ function rosterRow(r) {
             <i class="bi bi-arrow-repeat"></i>
           </button>
 
-          <button class="btn btn-sm btn-outline-success" title="Toggle fee pagado" data-toggle-paid="${escapeHtml(r.id)}">
+          <!-- ✅ abonos -->
+          <button class="btn btn-sm btn-outline-success" title="Agregar abono" data-pay="${escapeHtml(r.id)}">
             <i class="bi bi-cash-coin"></i>
           </button>
 
@@ -653,6 +667,7 @@ function rosterRow(r) {
       <div class="roster-row__badges">
         <span class="${statusClass}">${escapeHtml(status)}</span>
         <span class="${paidClass}">${escapeHtml(paidLabel)}</span>
+        <span class="pill">${escapeHtml(feeSummary)}</span>
         ${guestBadge}
       </div>
     </div>
@@ -715,7 +730,6 @@ function applyStrings() {
   rosterTitle && (rosterTitle.textContent = S.roster?.title || "Roster del torneo");
   rosterSubtitle && (rosterSubtitle.textContent = S.roster?.subtitle || "Jugadores convocados");
 
-  // ocultar buscar roster si existe
   if (lblSearch) lblSearch.classList.add("d-none");
   if (searchInput) searchInput.classList.add("d-none");
 
@@ -731,7 +745,6 @@ function initLegendFiltersUX() {
   if (!btns.length) return;
 
   btns.forEach(btn => {
-    // tanto span como button
     btn.style.cursor = "pointer";
     btn.setAttribute?.("aria-pressed", "false");
 
@@ -818,7 +831,8 @@ function matchesLegendFilters(r) {
     }
 
     if (type === "fee") {
-      const paid = !!r.playerFeePaid;
+      // ✅ ahora el filtro se basa en saldo, no en boolean
+      const paid = !!r.feeIsPaid;
       if (value === "pagado" && !paid) return false;
       if (value === "pendiente" && paid) return false;
     }
@@ -839,6 +853,11 @@ function escapeHtml(str) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function toNumberOrZero(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
 }
 
 // counters helpers
