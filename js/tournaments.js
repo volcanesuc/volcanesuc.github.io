@@ -12,8 +12,15 @@ import { TOURNAMENT_STRINGS } from "./strings.js";
 import { createTournamentEditor } from "./features/tournament_editor.js";
 import { loadPartialOnce } from "./ui/loadPartial.js";
 
-await guardPage("tournaments");
-await loadHeader("tournaments");
+/*************************************************
+ * INIT
+ *************************************************/
+
+// Header
+const { cfg, redirected } = await guardPage("tournaments");
+if (!redirected) {
+  await loadHeader("tournaments", cfg);
+}
 
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 

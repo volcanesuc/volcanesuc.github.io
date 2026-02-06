@@ -18,8 +18,11 @@ import { Training } from "./models/training.js";
    INIT
 ========================= */
 document.addEventListener("DOMContentLoaded", async () => {
-  await guardPage("trainings");
-  await loadHeader("trainings");
+  // Header
+  const { cfg, redirected } = await guardPage("trainings");
+  if (!redirected) {
+    await loadHeader("trainings", cfg);
+  }
 
   await loadPlayers();
   await loadTrainings();

@@ -22,8 +22,11 @@ import { Player } from "./models/player.js";
  *************************************************/
 
 // Header del dashboard
-await guardPage("roster");
-await loadHeader("roster");
+const { cfg, redirected } = await guardPage("roster");
+if (!redirected) {
+  await loadHeader("roster", cfg);
+}
+
 
 // Logout
 document.getElementById("logoutBtn")?.addEventListener("click", logout);

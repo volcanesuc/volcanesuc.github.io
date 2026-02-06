@@ -9,8 +9,12 @@ import { Player } from "./models/player.js";
 import { guardPage } from "./page-guard.js";
 import { loadHeader } from "./components/header.js";
 
-await guardPage("attendance");
-await loadHeader("attendance");
+
+// Header
+const { cfg, redirected } = await guardPage("attendance");
+if (!redirected) {
+  await loadHeader("attendance", cfg);
+}
 
 /* ==========================
    COLLECTIONS (CONFIG)
