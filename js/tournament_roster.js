@@ -640,12 +640,12 @@ function rosterRow(r) {
   else if (balance <= 0) {
     // 🟢 PAGADO
     feePill = `<span class="pill pill--good">Fee pagado</span>`;
-    feeDetail = `<span class="pill pill--good">₡${total.toLocaleString("es-CR")} cancelado</span>`;
+    feeDetail = "";
   } 
   else {
     // 🔴 DEBE
-    feePill = `<span class="pill pill--warn">Debe ₡${balance.toLocaleString("es-CR")}</span>`;
-    feeDetail = `<span class="pill">Pagado ₡${paid.toLocaleString("es-CR")} / ₡${total.toLocaleString("es-CR")}</span>`;
+    feePill = `<span class="pill">Pagado ₡${paid.toLocaleString("es-CR")} | Debe ₡${balance.toLocaleString("es-CR")}</span>`;
+    feeDetail = "";
   }
 
   return `
