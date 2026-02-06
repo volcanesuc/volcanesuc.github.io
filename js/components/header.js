@@ -3,7 +3,7 @@ import { logout } from "../auth.js";
 import { CLUB_DATA } from "../strings.js";
 import { loadHeaderTabsConfig, filterMenuByConfig } from "../remote-config.js";
 
-export async function loadHeader(activeTab) {
+export async function loadHeader(activeTab, cfgOverride) {
   const header = document.getElementById("app-header");
   if (!header) return;
 
@@ -11,7 +11,7 @@ export async function loadHeader(activeTab) {
   const HOME_HREF = CLUB_DATA.header.homeHref || "dashboard.html";
 
   // load config y filtra
-  let cfg = null;
+  const cfg = cfgOverride ?? (await loadHeaderTabsConfig());
   try {
     cfg = await loadHeaderTabsConfig();
   } catch {

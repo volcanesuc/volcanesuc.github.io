@@ -16,8 +16,9 @@ import { Player } from "./models/player.js";
 /* =========================================================
    INIT
 ========================================================= */
-await guardPage("home");
-await loadHeader("home");
+const { cfg, redirected } = await guardPage("dashboard");
+if (!redirected) await loadHeader("home", cfg);
+
 
 watchAuth(async () => {
   showLoader();
