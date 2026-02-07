@@ -79,6 +79,13 @@ const toggleTeamFeeBtn = document.getElementById("toggleTeamFeeBtn");
 const clearLegendFiltersBtn = document.getElementById("clearLegendFilters");
 const filtersHintEl = document.getElementById("filtersHint");
 
+// Stats badges (panel roster)
+const statTotal = document.getElementById("statTotal");
+const statF = document.getElementById("statF");
+const statM = document.getElementById("statM");
+const statHandlers = document.getElementById("statHandlers");
+const statCutters = document.getElementById("statCutters");
+
 // Invitados UI (si existe en tu HTML)
 const addGuestBtn = document.getElementById("addGuestBtn");
 
@@ -387,31 +394,41 @@ function render() {
 }
 
 function renderRosterCounters(visibleList) {
-  const total = roster.length;
+  // Puedes decidir si contar sobre roster completo o sobre lo visible (filtrado)
+  const base = roster;         // stats globales
+  // const base = visibleList; // <- descomenta si quieres stats por filtros
 
-  const m = roster.filter(r => isMale(r.gender)).length;
-  const f = roster.filter(r => isFemale(r.gender)).length;
+  const total = base.length;
 
-  const handlers = roster.filter(r => isHandler(r.role)).length;
-  const cutters = roster.filter(r => isCutter(r.role)).length;
+  const m = base.filter(r => isMale(r.gender)).length;
+  const f = base.filter(r => isFemale(r.gender)).length;
 
-  const guestsCount = roster.filter(r => r.isGuest).length;
+  const handlers = base.filter(r => isHandler(r.role)).length;
+  const cutters = base.filter(r => isCutter(r.role)).length;
 
-  const paidCount = roster.filter(r => r.feeIsPaid).length;
-  const pendingCount = roster.filter(r => !r.feeIsPaid).length;
+  const guestsCount = base.filter(r => r.isGuest).length;
 
-  const visibleText =
-    visibleList.length !== roster.length
-      ? ` · Mostrando: ${visibleList.length}`
-      : "";
+  const paidCount = base.filter(r => r.feeIsPaid).length;
+  const pendingCount = base.filter(r => !r.feeIsPaid).length;
 
-  const text = total
-    ? `Total: ${total}${visibleText} · Invitados: ${guestsCount} · Fee pagado: ${paidCount} · Fee pendiente: ${pendingCount} · M: ${m} · F: ${f} · Handlers: ${handlers} · Cutters: ${cutters}`
-    : "Jugadores convocados";
+  // ✅ pintar en badges (abajo)
+  if (statTotal) statTotal.textContent = String(total);
+  if (statF) statF.textContent = String(f);
+  if (statM) statM.textContent = String(m);
+  if (statHandlers) statHandlers.textContent = String(handlers);
+  if (statCutters) statCutters.textContent = String(cutters);
 
-  if (rosterSubtitle) rosterSubtitle.textContent = text;
-  if (pageSubtitle) pageSubtitle.textContent = text;
+  // ✅ si quieres sumar badges extra (opcional):
+  // podrías agregar en HTML otros badges con IDs statPaid/statPending/statGuests
+
+  // ✅ arriba ya no mostramos el mega texto
+  if (pageSubtitle) pageSubtitle.textContent = "";
+
+  // (opcional) si quieres un hint de “Mostrando: X” sin ensuciar arriba
+  // puedes meter un badge extra en HTML o usar filtersHintEl (ya existe en tu JS).
+  // Ej: si tienes filtersHintEl en HTML, aquí lo puedes actualizar.
 }
+
 
 /* ==========================
    RENDER: RIGHT PANEL (PICKER)
