@@ -126,65 +126,116 @@
             </div>
 
             <!-- Filtros -->
-            <div class="roster-filters">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="fw-semibold">
-                  <i class="bi bi-funnel"></i>
-                  Filtros
+            <div class="dropdown">
+              <button
+                class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+                data-bs-auto-close="outside"
+                aria-expanded="false"
+                id="filtersDropdownBtn"
+              >
+                <i class="bi bi-funnel"></i>
+                Filtros
+                <span class="ms-1 badge text-bg-light border" id="filtersCount" style="display:none;">0</span>
+              </button>
+
+              <div class="dropdown-menu p-3" style="min-width: 260px;">
+                <div class="fw-semibold mb-2">Mostrar</div>
+
+                <!-- Status -->
+                <div class="mb-2">
+                  <div class="text-muted small mb-1">Estado</div>
+
+                  <div class="form-check">
+                    <input class="form-check-input roster-filter-check" type="checkbox" id="f_status_confirmado" data-filter="status:confirmado">
+                    <label class="form-check-label" for="f_status_confirmado">Confirmado</label>
+                  </div>
+
+                  <div class="form-check">
+                    <input class="form-check-input roster-filter-check" type="checkbox" id="f_status_convocado" data-filter="status:convocado">
+                    <label class="form-check-label" for="f_status_convocado">Convocado</label>
+                  </div>
+
+                  <div class="form-check">
+                    <input class="form-check-input roster-filter-check" type="checkbox" id="f_status_tentative" data-filter="status:tentative">
+                    <label class="form-check-label" for="f_status_tentative">Por confirmar</label>
+                  </div>
                 </div>
 
-                <button
-                  class="btn btn-sm btn-outline-secondary d-none"
-                  id="clearLegendFilters"
-                  type="button"
-                >
-                  Limpiar
-                </button>
+                <hr class="my-2">
+
+                <!-- Fee -->
+                <div class="mb-2">
+                  <div class="text-muted small mb-1">Fee</div>
+
+                  <div class="form-check">
+                    <input class="form-check-input roster-filter-check" type="checkbox" id="f_fee_pendiente" data-filter="fee:pendiente">
+                    <label class="form-check-label" for="f_fee_pendiente">Pendiente</label>
+                  </div>
+
+                  <div class="form-check">
+                    <input class="form-check-input roster-filter-check" type="checkbox" id="f_fee_pagado" data-filter="fee:pagado">
+                    <label class="form-check-label" for="f_fee_pagado">Pagado</label>
+                  </div>
+                </div>
+
+                <hr class="my-2">
+
+                <!-- Rol -->
+                <div class="mb-2">
+                  <div class="text-muted small mb-1">Rol</div>
+
+                  <div class="form-check">
+                    <input class="form-check-input roster-filter-check" type="checkbox" id="f_role_handler" data-filter="role:handler">
+                    <label class="form-check-label" for="f_role_handler">Handlers</label>
+                  </div>
+
+                  <div class="form-check">
+                    <input class="form-check-input roster-filter-check" type="checkbox" id="f_role_cutter" data-filter="role:cutter">
+                    <label class="form-check-label" for="f_role_cutter">Cutters</label>
+                  </div>
+                </div>
+
+                <hr class="my-2">
+
+                <!-- Género -->
+                <div class="mb-2">
+                  <div class="text-muted small mb-1">Género</div>
+
+                  <div class="form-check">
+                    <input class="form-check-input roster-filter-check" type="checkbox" id="f_gender_f" data-filter="gender:f">
+                    <label class="form-check-label" for="f_gender_f">Femenino</label>
+                  </div>
+
+                  <div class="form-check">
+                    <input class="form-check-input roster-filter-check" type="checkbox" id="f_gender_m" data-filter="gender:m">
+                    <label class="form-check-label" for="f_gender_m">Masculino</label>
+                  </div>
+                </div>
+
+                <hr class="my-2">
+
+                <!-- Invitados -->
+                <div class="mb-2">
+                  <div class="form-check">
+                    <input class="form-check-input roster-filter-check" type="checkbox" id="f_guest_true" data-filter="guest:true">
+                    <label class="form-check-label" for="f_guest_true">Solo invitados</label>
+                  </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-3">
+                  <button class="btn btn-sm btn-outline-secondary w-100" id="clearLegendFilters" type="button">
+                    Limpiar
+                  </button>
+                </div>
+
+                <div class="small text-muted mt-2" id="filtersHint">
+                  Tip: puedes combinar filtros.
+                </div>
               </div>
+            </div>
 
-              <div
-                class="roster-filters__chips d-flex gap-2 flex-wrap"
-                id="rosterLegend"
-                role="group"
-                aria-label="Filtros del roster"
-              >
-                <button
-                  type="button"
-                  class="pill pill--yellow legend-filter"
-                  data-filter="status:confirmado"
-                  aria-pressed="false"
-                >
-                  <i class="bi bi-check2-circle"></i> Confirmado
-                </button>
-
-                <button
-                  type="button"
-                  class="pill legend-filter"
-                  data-filter="status:convocado"
-                  aria-pressed="false"
-                >
-                  <i class="bi bi-person-check"></i> Convocado
-                </button>
-
-                <button
-                  type="button"
-                  class="pill pill--warn legend-filter"
-                  data-filter="fee:pendiente"
-                  aria-pressed="false"
-                >
-                  <i class="bi bi-cash-coin"></i> Fee pendiente
-                </button>
-
-                <button
-                  type="button"
-                  class="pill pill--good legend-filter"
-                  data-filter="fee:pagado"
-                  aria-pressed="false"
-                >
-                  <i class="bi bi-cash-coin"></i> Fee pagado
-                </button>
-                
-              </div>
             </div>
           </div>
 

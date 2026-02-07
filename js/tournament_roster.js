@@ -411,22 +411,16 @@ function renderRosterCounters(visibleList) {
   const paidCount = base.filter(r => r.feeIsPaid).length;
   const pendingCount = base.filter(r => !r.feeIsPaid).length;
 
-  // ✅ pintar en badges (abajo)
+  // pintar en badges (abajo)
   if (statTotal) statTotal.textContent = String(total);
   if (statF) statF.textContent = String(f);
   if (statM) statM.textContent = String(m);
   if (statHandlers) statHandlers.textContent = String(handlers);
   if (statCutters) statCutters.textContent = String(cutters);
 
-  // ✅ si quieres sumar badges extra (opcional):
-  // podrías agregar en HTML otros badges con IDs statPaid/statPending/statGuests
-
-  // ✅ arriba ya no mostramos el mega texto
+  // arriba ya no mostramos el mega texto
   if (pageSubtitle) pageSubtitle.textContent = "";
 
-  // (opcional) si quieres un hint de “Mostrando: X” sin ensuciar arriba
-  // puedes meter un badge extra en HTML o usar filtersHintEl (ya existe en tu JS).
-  // Ej: si tienes filtersHintEl en HTML, aquí lo puedes actualizar.
 }
 
 
@@ -769,44 +763,53 @@ function applyStrings() {
    FILTER UX (legend)
 ========================== */
 function initLegendFiltersUX() {
-  const btns = document.querySelectorAll(".legend-filter");
-  if (!btns.length) return;
+  const checks = document.querySelectorAll(".roster-filter-check");
+  const countEl = document.getElementById("filtersCount");
 
-  btns.forEach(btn => {
-    btn.style.cursor = "pointer";
-    btn.setAttribute?.("aria-pressed", "false");
-
-    btn.addEventListener("click", () => {
-      const key = btn.dataset?.filter;
+  function refreshUI() {
+    // Sync checks con activeLegendFilters
+    checks.forEach(chk => {
+      const key = chk.dataset?.filter;
       if (!key) return;
-
-      if (activeLegendFilters.has(key)) {
-        activeLegendFilters.delete(key);
-        btn.classList.remove("is-active", "legend-filter--active");
-        btn.setAttribute?.("aria-pressed", "false");
-      } else {
-        activeLegendFilters.add(key);
-        btn.classList.add("is-active", "legend-filter--active");
-        btn.setAttribute?.("aria-pressed", "true");
-      }
-
-      syncLegendUI();
-      render();
+      chk.checked = activeLegendFilters.has(key);
     });
-  });
 
-  clearLegendFiltersBtn?.addEventListener("click", () => {
-    activeLegendFilters.clear();
-    btns.forEach(btn => {
-      btn.classList.remove("is-active", "legend-filter--active");
-      btn.setAttribute?.("aria-pressed", "false");
-    });
+    // Count badge
+    const n = activeLegendFilters.size;
+    if (countEl) {
+      countEl.textContent = String(n);
+      countEl.style.display = n > 0 ? "" : "none";
+    }
+
+    // Hint
     syncLegendUI();
+  }
+
+  if (checks.length) {
+    checks.forEach(chk => {
+      chk.addEventListener("change", () => {
+        const key = chk.dataset?.filter;
+        if (!key) return;
+
+        if (chk.checked) activeLegendFilters.add(key);
+        else activeLegendFilters.delete(key);
+
+        refreshUI();
+        render();
+      });
+    });
+  }
+
+  // Limpiar
+  document.getElementById("clearLegendFilters")?.addEventListener("click", () => {
+    activeLegendFilters.clear();
+    refreshUI();
     render();
   });
 
-  syncLegendUI();
+  refreshUI();
 }
+
 
 function syncLegendUI() {
   if (clearLegendFiltersBtn) {
@@ -859,14 +862,28 @@ function matchesLegendFilters(r) {
     }
 
     if (type === "fee") {
-      // ✅ ahora el filtro se basa en saldo, no en boolean
       const paid = !!r.feeIsPaid;
       if (value === "pagado" && !paid) return false;
       if (value === "pendiente" && paid) return false;
     }
+
+    if (type === "role") {
+      if ((r.role || "").toLowerCase() !== value) return false;
+    }
+
+    if (type === "gender") {
+      if (value === "m" && !isMale(r.gender)) return false;
+      if (value === "f" && !isFemale(r.gender)) return false;
+    }
+
+    if (type === "guest") {
+      const want = value === "true";
+      if (!!r.isGuest !== want) return false;
+    }
   }
   return true;
 }
+
 
 function showError(msg) {
   if (!errorBox) return;
