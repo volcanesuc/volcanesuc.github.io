@@ -51,7 +51,9 @@ const pageSubtitle = document.getElementById("pageSubtitle");
 
 const tName = document.getElementById("tName");
 const tMeta = document.getElementById("tMeta");
+const tDates = document.getElementById("tDates");
 const detailBtn = document.getElementById("detailBtn");
+const tOfficialLink = document.getElementById("tOfficialLink");
 
 const errorBox = document.getElementById("errorBox");
 
@@ -334,6 +336,23 @@ function render() {
 
   if (tName) tName.textContent = tournament.name || "—";
   if (tMeta) tMeta.textContent = formatTournamentMeta(tournament);
+  if (tDates) {
+    const start = tournament?.dateStart || "—";
+    const end = tournament?.dateEnd || "";
+    tDates.textContent = end ? `${start} → ${end}` : start;
+  }
+
+  //Mostrar link del evento
+  if (tOfficialLink) {
+    const url = normalizeUrl(tournament?.officialUrl || tournament?.url || "");
+    if (url) {
+      tOfficialLink.href = url;
+      tOfficialLink.classList.remove("d-none");
+    } else {
+      tOfficialLink.classList.add("d-none");
+      tOfficialLink.href = "#";
+    }
+  }
 
   renderTeamFee();
 
@@ -922,4 +941,11 @@ function isHandler(role) {
 
 function isCutter(role) {
   return role === "cutter";
+}
+
+function normalizeUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
 }
