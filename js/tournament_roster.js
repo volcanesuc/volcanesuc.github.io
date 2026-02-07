@@ -866,10 +866,8 @@ function prettyStatus(s) {
 }
 
 function formatTournamentMeta(t) {
-  const start = t.dateStart || "—";
-  const end = t.dateEnd || "";
-  const where = t.location || "—";
-  return end ? `${start} → ${end} · ${where}` : `${start} · ${where}`;
+  const where = (t.location || "").trim();
+  return where ? `📍 ${where}` : "📍 —";
 }
 
 function matchesLegendFilters(r) {
