@@ -130,12 +130,6 @@ function renderPlans(){
       const tags = (p.tags || []).map(normalizeText).join(" ");
       return name.includes(qText) || tags.includes(qText);
     });
-
-    allPlans.sort((a,b) => {
-    const si = (a.sortIndex ?? 0) - (b.sortIndex ?? 0);
-    if (si !== 0) return si;
-    return (a.name || "").localeCompare(b.name || "", "es");
-  });
     
   }
   list.sort((a,b) => (a.name || "").localeCompare(b.name || "", "es"));
