@@ -281,6 +281,7 @@ btnNew.addEventListener("click", () => {
   setInstallments([
     { n:1, dueMonthDay:"02-15", amount:"" }
   ]);
+  toggleInstallmentsUI();
   planModal.show();
 });
 
@@ -317,6 +318,15 @@ installmentsTbody.addEventListener("click", (e) => {
 
 btnSavePlan.addEventListener("click", savePlan);
 btnArchivePlan.addEventListener("click", archivePlan);
+
+const installmentsSection = document.getElementById("installmentsSection");
+
+function toggleInstallmentsUI(){
+  const show = planAllowPartial.checked;
+  installmentsSection.style.display = show ? "block" : "none";
+}
+
+planAllowPartial.addEventListener("change", toggleInstallmentsUI);
 
 /* -------------------------
    CRUD
