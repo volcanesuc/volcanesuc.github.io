@@ -178,7 +178,7 @@ function clearModal(){
   planCurrency.value = "CRC";
   planTotal.value = "";
   planAllowCustomAmount.checked = false;
-  planAllowPartial.checked = true;
+  planAllowPartial.checked = false;   // default OFF
   planRequiresValidation.checked = true;
   planActive.checked = true;
   planSortIndex.value = "10";
@@ -187,7 +187,7 @@ function clearModal(){
 
   installmentsTbody.innerHTML = "";
   btnArchivePlan.style.display = "none";
-  planAllowPartial.checked = false;   // default OFF
+
   installmentsTbody.innerHTML = "";
   toggleInstallmentsUI();
 }
@@ -317,7 +317,7 @@ const installmentsSection = document.getElementById("installmentsSection");
 
 function toggleInstallmentsUI(){
   const show = planAllowPartial.checked;
-  installmentsSection.style.display = show ? "block" : "none";
+  installmentsSection.classList.toggle("d-none", !show);
 }
 
 planAllowPartial.addEventListener("change", () => {
