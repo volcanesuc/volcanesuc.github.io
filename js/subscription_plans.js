@@ -94,7 +94,7 @@ async function loadPlans(){
   showLoader?.("Cargando planes…");
 
   // Escalable: podés paginar después. Por ahora traemos y filtramos.
-  const q = query(collection(db, COL), orderBy("sortIndex", "asc"), orderBy("name", "asc"));
+  const q = query(collection(db, COL), orderBy("sortIndex", "asc"));
   const snap = await getDocs(q);
 
   allPlans = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -130,6 +130,13 @@ function renderPlans(){
       const tags = (p.tags || []).map(normalizeText).join(" ");
       return name.includes(qText) || tags.includes(qText);
     });
+
+    allPlans.sort((a,b) => {
+    const si = (a.sortIndex ?? 0) - (b.sortIndex ?? 0);
+    if (si !== 0) return si;
+    return (a.name || "").localeCompare(b.name || "", "es");
+  });
+    
   }
 
   if (!list.length){
@@ -366,15 +373,8 @@ async function savePlan(){
     archived: false,
     sortIndex: Number(planSortIndex.value || 10),
 
-    tags: planTags.value
-      .split(",")
-      .map(s => s.trim())
-      .filter(Boolean),
-
-    benefits: planBenefits.value
-      .split("\n")
-      .map(s => s.trim())
-      .filter(Boolean),
+    tags: planTags.value.split(",").map(s => s.trim()).filter(Boolean),
+    benefits: planBenefits.value.split("\n").map(s => s.trim()).filter(Boolean),
 
     installmentsTemplate: planAllowPartial.checked ? readInstallmentsFromUI() : []
   };
@@ -382,30 +382,43 @@ async function savePlan(){
   const err = validatePlanPayload(payload);
   if (err) return alert(err);
 
-  // si no permite custom amount y totalAmount null, calculá desde cuotas
   if (!payload.allowCustomAmount && (payload.totalAmount === null || payload.totalAmount === undefined)){
     payload.totalAmount = (payload.installmentsTemplate || []).reduce((sum, x)=> sum + (Number(x.amount)||0), 0);
   }
 
   showLoader?.("Guardando…");
 
-  if (!id){
-    await addDoc(collection(db, COL), {
-      ...payload,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-  } else {
-    await setDoc(doc(db, COL, id), {
-      ...payload,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-  }
+  try {
+    if (!id){
+      await addDoc(collection(db, COL), {
+        ...payload,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      await setDoc(doc(db, COL, id), {
+        ...payload,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
 
-  await loadPlans();
-  hideLoader?.();
-  planModal.hide();
+    // Si el refresh falla, igual cerramos modal y quitamos loader
+    try {
+      await loadPlans();
+    } catch (e) {
+      console.warn("Guardó, pero falló refresh:", e);
+    }
+
+    planModal.hide();
+    alert("✅ Plan guardado");
+  } catch (e) {
+    console.error(e);
+    alert("❌ Error guardando el plan: " + (e?.message || e));
+  } finally {
+    hideLoader?.();
+  }
 }
+
 
 async function archivePlan(){
   const id = planIdEl.value;
