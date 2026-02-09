@@ -95,7 +95,7 @@
 
   <!-- MODAL: Crear / Editar -->
   <div class="modal fade" id="planModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-sm-down">
       <div class="modal-content">
 
         <div class="modal-header">
@@ -159,7 +159,7 @@
               </div>
             </div>
 
-            <div class="col-12 col-md-3">
+            <div class="col-12 col-md-3 d-none">
               <label class="form-label">Orden</label>
               <input id="planSortIndex" type="number" class="form-control" placeholder="10" />
             </div>
@@ -179,6 +179,7 @@
 
           <!-- Cuotas -->
           <div id="installmentsSection" class="mt-3" style="display:none;"></div>
+            <hr class="my-3"/>
             <div class="d-flex align-items-center justify-content-between">
                 <h6 class="mb-0">Plantilla de cuotas (tractos)</h6>
                 <button class="btn btn-sm btn-outline-primary" id="btnAddInstallment">

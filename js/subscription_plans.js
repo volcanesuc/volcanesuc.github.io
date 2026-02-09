@@ -94,7 +94,7 @@ async function loadPlans(){
   showLoader?.("Cargando planes…");
 
   // Escalable: podés paginar después. Por ahora traemos y filtramos.
-  const q = query(collection(db, COL), orderBy("sortIndex", "asc"));
+  const q = query(collection(db, COL));
   const snap = await getDocs(q);
 
   allPlans = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -138,6 +138,7 @@ function renderPlans(){
   });
     
   }
+  list.sort((a,b) => (a.name || "").localeCompare(b.name || "", "es"));
 
   if (!list.length){
     tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No hay planes con esos filtros.</td></tr>`;
@@ -192,6 +193,9 @@ function clearModal(){
 
   installmentsTbody.innerHTML = "";
   btnArchivePlan.style.display = "none";
+  planAllowPartial.checked = false;   // default OFF
+  installmentsTbody.innerHTML = "";
+  toggleInstallmentsUI();
 }
 
 function setInstallments(rows){
@@ -278,10 +282,6 @@ function validatePlanPayload(p){
 btnRefresh.addEventListener("click", loadPlans);
 btnNew.addEventListener("click", () => {
   clearModal();
-  setInstallments([
-    { n:1, dueMonthDay:"02-15", amount:"" }
-  ]);
-  toggleInstallmentsUI();
   planModal.show();
 });
 
@@ -326,7 +326,12 @@ function toggleInstallmentsUI(){
   installmentsSection.style.display = show ? "block" : "none";
 }
 
-planAllowPartial.addEventListener("change", toggleInstallmentsUI);
+planAllowPartial.addEventListener("change", () => {
+  toggleInstallmentsUI();
+  if (planAllowPartial.checked && installmentsTbody.children.length === 0) {
+    setInstallments([{ n: 1, dueMonthDay: "02-15", amount: "" }]);
+  }
+});
 
 /* -------------------------
    CRUD
@@ -355,9 +360,10 @@ async function openEdit(id){
   planTotal.value = (p.totalAmount ?? "");
   planAllowCustomAmount.checked = !!p.allowCustomAmount;
   planAllowPartial.checked = !!p.allowPartial;
+  toggleInstallmentsUI();
   planRequiresValidation.checked = !!p.requiresValidation;
   planActive.checked = !!p.active;
-  planSortIndex.value = String(p.sortIndex ?? 10);
+  planSortIndex.value = "10";
   planTags.value = (p.tags || []).join(", ");
   planBenefits.value = (p.benefits || []).join("\n");
 
