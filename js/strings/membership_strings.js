@@ -1,6 +1,8 @@
 // js/strings/membership_strings.js
 
 export const STR = {
+    title: "Membresías",
+    subtitle: "Listado por temporada/plan/estado + acceso a detalle y link de pago.",
 
   /* =========================
      Loader

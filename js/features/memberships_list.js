@@ -221,22 +221,125 @@ function renderShell(container) {
   `;
 }
 
+function renderShellWithoutHeader(container) {
+  container.innerHTML = `
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
+      <div id="countLabel" class="text-muted small">${STR.count(0)}</div>
+      <div class="d-flex gap-2">
+        <button id="btnRefresh" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-clockwise me-1"></i> ${STR.actions.refresh}
+        </button>
+      </div>
+    </div>
+
+    <div class="row g-2">
+      <div class="col-12 col-md-4">
+        <input id="searchInput" class="form-control" placeholder="${STR.filters.searchPh}" />
+      </div>
+      <div class="col-6 col-md-2">
+        <select id="seasonFilter" class="form-select">
+          <option value="all">${STR.filters.allSeasons}</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <select id="planFilter" class="form-select">
+          <option value="all">${STR.filters.allPlans}</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <select id="statusFilter" class="form-select">
+          <option value="all">${STR.filters.allStatus}</option>
+          <option value="pending">${STR.status.pending}</option>
+          <option value="partial">${STR.status.partial}</option>
+          <option value="paid">${STR.status.paid}</option>
+          <option value="validated">${STR.status.validated}</option>
+          <option value="rejected">${STR.status.rejected}</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <select id="actionFilter" class="form-select">
+          <option value="all">${STR.filters.allActions}</option>
+          <option value="needs_action">${STR.filters.needsAction}</option>
+          <option value="ok">${STR.filters.ok}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row g-2 mt-3">
+      <div class="col-6 col-md-3">
+        <div class="kpi-box">
+          <div class="text-muted small">${STR.kpi.pending}</div>
+          <div class="fs-4 fw-bold" id="kpiPending">0</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-box">
+          <div class="text-muted small">${STR.kpi.partial}</div>
+          <div class="fs-4 fw-bold" id="kpiPartial">0</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-box">
+          <div class="text-muted small">${STR.kpi.paid}</div>
+          <div class="fs-4 fw-bold" id="kpiPaid">0</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-box">
+          <div class="text-muted small">${STR.kpi.validated}</div>
+          <div class="fs-4 fw-bold" id="kpiValidated">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive mt-3">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>${STR.table.associate}</th>
+            <th>${STR.table.plan}</th>
+            <th>${STR.table.season}</th>
+            <th>${STR.table.amount}</th>
+            <th>${STR.table.status}</th>
+            <th class="text-end">${STR.table.actions}</th>
+          </tr>
+        </thead>
+        <tbody id="membershipsTbody">
+          <tr><td colspan="6" class="text-muted">${STR.table.loadingRow}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+
+
 /* =========================
    Public API: mount(container, cfg)
    - Útil para association tabs
    - NO llama loadHeader aquí (eso lo hace association.js)
 ========================= */
 export async function mount(container, cfg) {
-  // evitá re-montar sobre el mismo container sin necesidad
   mounted = false;
 
-  renderShell(container);
+  // Si el container viene de association tab, normalmente es un div vacío (data-mount).
+  // Ahí sí podemos renderizar shell completo sin duplicar títulos del panel,
+  // PERO vos tenés un placeholder arriba en el panel.
+  //
+  // Solución: si estás en association.html, renderizamos un shell "sin header"
+  // (solo filtros+kpis+tabla) o render completo y vos quitás el placeholder.
+  const inAssociation = window.location.pathname.endsWith("/association.html");
+
+  if (inAssociation) {
+    renderShellWithoutHeader(container);   // 👈 nuevo
+  } else {
+    renderShell(container);               // standalone
+  }
+
   cacheDom(container);
 
-  // logout (si existe en el header global)
   $.logoutBtn?.addEventListener("click", logout);
 
-  // listeners (sobre el contenido actual)
   $.btnRefresh?.addEventListener("click", refreshAll);
   $.searchInput?.addEventListener("input", render);
   $.seasonFilter?.addEventListener("change", render);
@@ -256,18 +359,15 @@ export async function mount(container, cfg) {
       window.location.href = `membership_detail.html?mid=${encodeURIComponent(mid)}`;
       return;
     }
-
     if (action === "copyPayLink") {
       await copyToClipboard(payUrl(mid, code));
       return;
     }
-
     if (action === "openPayLink") {
       window.open(payUrl(mid, code), "_blank", "noopener,noreferrer");
     }
   });
 
-  // Auth gate: solo carga data si hay user
   watchAuth(async (user) => {
     if (!user) return;
     await refreshAll();
@@ -275,6 +375,7 @@ export async function mount(container, cfg) {
 
   mounted = true;
 }
+
 
 /* =========================
    Load
