@@ -1,12 +1,13 @@
+// js/features/memberships_list.js
 import { db } from "../firebase.js";
 import { watchAuth, logout } from "../auth.js";
-import { loadHeader } from "../components/header.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
+import { STR } from "../strings/membership_strings.js";
 
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-loadHeader("admin");
-document.getElementById("logoutBtn")?.addEventListener("click", logout);
+import {
+  collection,
+  getDocs,
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================
    Collections
@@ -15,28 +16,14 @@ const COL_MEMBERSHIPS = "memberships";
 const COL_PLANS = "subscription_plans";
 
 /* =========================
-   DOM
-========================= */
-const tbody = document.getElementById("membershipsTbody");
-const countLabel = document.getElementById("countLabel");
-
-const searchInput = document.getElementById("searchInput");
-const seasonFilter = document.getElementById("seasonFilter");
-const planFilter = document.getElementById("planFilter");
-const statusFilter = document.getElementById("statusFilter");
-const actionFilter = document.getElementById("actionFilter");
-const btnRefresh = document.getElementById("btnRefresh");
-
-const kpiPending = document.getElementById("kpiPending");
-const kpiPartial = document.getElementById("kpiPartial");
-const kpiPaid = document.getElementById("kpiPaid");
-const kpiValidated = document.getElementById("kpiValidated");
-
-/* =========================
-   State
+   State (module-scoped)
 ========================= */
 let allMemberships = [];
 let allPlans = [];
+
+// guard contra dobles mounts / listeners
+let mounted = false;
+let $ = {};
 
 /* =========================
    Helpers
@@ -46,13 +33,13 @@ function norm(s) {
 }
 
 function fmtMoney(n, cur = "CRC") {
-  if (n === null || n === undefined || n === "") return "—";
+  if (n === null || n === undefined || n === "") return STR.common.dash;
   const v = Number(n);
-  if (Number.isNaN(v)) return "—";
+  if (Number.isNaN(v)) return STR.common.dash;
   return new Intl.NumberFormat("es-CR", {
     style: "currency",
     currency: cur,
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   }).format(v);
 }
 
@@ -62,24 +49,30 @@ function badge(text, cls = "") {
 
 function statusBadgeHtml(st) {
   const s = (st || "pending").toLowerCase();
-  if (s === "validated") return badge("Validado", "green");
-  if (s === "paid") return badge("Pagado", "yellow");
-  if (s === "partial") return badge("Parcial", "yellow");
-  if (s === "rejected") return badge("Rechazado", "red");
-  return badge("Pendiente", "gray");
+  if (s === "validated") return badge(STR.status.validated, "green");
+  if (s === "paid") return badge(STR.status.paid, "yellow");
+  if (s === "partial") return badge(STR.status.partial, "yellow");
+  if (s === "rejected") return badge(STR.status.rejected, "red");
+  return badge(STR.status.pending, "gray");
 }
 
 function payUrl(mid, code) {
-  const base = `${window.location.origin}${window.location.pathname.replace(/\/[^/]+$/, "/")}`;
-  return `${base}membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code || "")}`;
+  // mantiene la lógica original: construye base desde el path actual
+  const base = `${window.location.origin}${window.location.pathname.replace(
+    /\/[^/]+$/,
+    "/"
+  )}`;
+  return `${base}membership_pay.html?mid=${encodeURIComponent(
+    mid
+  )}&code=${encodeURIComponent(code || "")}`;
 }
 
 async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
-    alert("✅ Link copiado");
+    alert(STR.toast.linkCopied);
   } catch {
-    prompt("Copiá el link:", text);
+    prompt(STR.toast.copyPrompt, text);
   }
 }
 
@@ -94,63 +87,211 @@ function renderKpis() {
     else if (st === "validated") counts.validated++;
   }
 
-  if (kpiPending) kpiPending.textContent = counts.pending;
-  if (kpiPartial) kpiPartial.textContent = counts.partial;
-  if (kpiPaid) kpiPaid.textContent = counts.paid;
-  if (kpiValidated) kpiValidated.textContent = counts.validated;
+  if ($.kpiPending) $.kpiPending.textContent = counts.pending;
+  if ($.kpiPartial) $.kpiPartial.textContent = counts.partial;
+  if ($.kpiPaid) $.kpiPaid.textContent = counts.paid;
+  if ($.kpiValidated) $.kpiValidated.textContent = counts.validated;
+}
+
+function cacheDom(container) {
+  // si estás montando dentro de association tabs, el container es el mount
+  // si lo abrís standalone, container puede ser document.body o un wrapper
+  const root = container || document;
+
+  $.root = root;
+  $.logoutBtn = document.getElementById("logoutBtn"); // puede vivir en header global
+  $.tbody = root.querySelector("#membershipsTbody");
+  $.countLabel = root.querySelector("#countLabel");
+
+  $.searchInput = root.querySelector("#searchInput");
+  $.seasonFilter = root.querySelector("#seasonFilter");
+  $.planFilter = root.querySelector("#planFilter");
+  $.statusFilter = root.querySelector("#statusFilter");
+  $.actionFilter = root.querySelector("#actionFilter");
+  $.btnRefresh = root.querySelector("#btnRefresh");
+
+  $.kpiPending = root.querySelector("#kpiPending");
+  $.kpiPartial = root.querySelector("#kpiPartial");
+  $.kpiPaid = root.querySelector("#kpiPaid");
+  $.kpiValidated = root.querySelector("#kpiValidated");
 }
 
 /* =========================
-   Boot
+   HTML shell (for mount)
+   - Si ya tenés un HTML existente, podés quitar esto
+   - pero así queda auto-contenido para tabs
 ========================= */
-watchAuth(async (user) => {
-  if (!user) return;
-  await refreshAll();
-});
+function renderShell(container) {
+  container.innerHTML = `
+    <section class="card">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+          <h2 class="h5 mb-1">${STR.title}</h2>
+          <div class="text-muted small">${STR.subtitle}</div>
+        </div>
+        <div class="d-flex gap-2">
+          <button id="btnRefresh" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-clockwise me-1"></i> ${STR.actions.refresh}
+          </button>
+        </div>
+      </div>
 
-btnRefresh?.addEventListener("click", refreshAll);
-searchInput?.addEventListener("input", render);
-seasonFilter?.addEventListener("change", render);
-planFilter?.addEventListener("change", render);
-statusFilter?.addEventListener("change", render);
-actionFilter?.addEventListener("change", render);
+      <div class="row g-2 mt-3">
+        <div class="col-12 col-md-4">
+          <input id="searchInput" class="form-control" placeholder="${STR.filters.searchPh}" />
+        </div>
+        <div class="col-6 col-md-2">
+          <select id="seasonFilter" class="form-select">
+            <option value="all">${STR.filters.allSeasons}</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <select id="planFilter" class="form-select">
+            <option value="all">${STR.filters.allPlans}</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <select id="statusFilter" class="form-select">
+            <option value="all">${STR.filters.allStatus}</option>
+            <option value="pending">${STR.status.pending}</option>
+            <option value="partial">${STR.status.partial}</option>
+            <option value="paid">${STR.status.paid}</option>
+            <option value="validated">${STR.status.validated}</option>
+            <option value="rejected">${STR.status.rejected}</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <select id="actionFilter" class="form-select">
+            <option value="all">${STR.filters.allActions}</option>
+            <option value="needs_action">${STR.filters.needsAction}</option>
+            <option value="ok">${STR.filters.ok}</option>
+          </select>
+        </div>
+      </div>
 
-tbody?.addEventListener("click", async (e) => {
-  const btn = e.target.closest("button[data-action]");
-  if (!btn) return;
+      <div class="row g-2 mt-3">
+        <div class="col-6 col-md-3">
+          <div class="kpi-box">
+            <div class="text-muted small">${STR.kpi.pending}</div>
+            <div class="fs-4 fw-bold" id="kpiPending">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="kpi-box">
+            <div class="text-muted small">${STR.kpi.partial}</div>
+            <div class="fs-4 fw-bold" id="kpiPartial">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="kpi-box">
+            <div class="text-muted small">${STR.kpi.paid}</div>
+            <div class="fs-4 fw-bold" id="kpiPaid">0</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="kpi-box">
+            <div class="text-muted small">${STR.kpi.validated}</div>
+            <div class="fs-4 fw-bold" id="kpiValidated">0</div>
+          </div>
+        </div>
+      </div>
 
-  const action = btn.dataset.action;
-  const mid = btn.dataset.mid;
-  const code = btn.dataset.code || "";
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <div id="countLabel" class="text-muted small">${STR.count(0)}</div>
+      </div>
 
-  if (action === "detail") {
-    window.location.href = `membership_detail.html?mid=${encodeURIComponent(mid)}`;
-    return;
-  }
+      <div class="table-responsive mt-2">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>${STR.table.associate}</th>
+              <th>${STR.table.plan}</th>
+              <th>${STR.table.season}</th>
+              <th>${STR.table.amount}</th>
+              <th>${STR.table.status}</th>
+              <th class="text-end">${STR.table.actions}</th>
+            </tr>
+          </thead>
+          <tbody id="membershipsTbody">
+            <tr><td colspan="6" class="text-muted">${STR.table.loadingRow}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
 
-  if (action === "copyPayLink") {
-    await copyToClipboard(payUrl(mid, code));
-    return;
-  }
+/* =========================
+   Public API: mount(container, cfg)
+   - Útil para association tabs
+   - NO llama loadHeader aquí (eso lo hace association.js)
+========================= */
+export async function mount(container, cfg) {
+  // evitá re-montar sobre el mismo container sin necesidad
+  mounted = false;
 
-  if (action === "openPayLink") {
-    window.open(payUrl(mid, code), "_blank", "noopener,noreferrer");
-  }
-});
+  renderShell(container);
+  cacheDom(container);
+
+  // logout (si existe en el header global)
+  $.logoutBtn?.addEventListener("click", logout);
+
+  // listeners (sobre el contenido actual)
+  $.btnRefresh?.addEventListener("click", refreshAll);
+  $.searchInput?.addEventListener("input", render);
+  $.seasonFilter?.addEventListener("change", render);
+  $.planFilter?.addEventListener("change", render);
+  $.statusFilter?.addEventListener("change", render);
+  $.actionFilter?.addEventListener("change", render);
+
+  $.tbody?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+
+    const action = btn.dataset.action;
+    const mid = btn.dataset.mid;
+    const code = btn.dataset.code || "";
+
+    if (action === "detail") {
+      window.location.href = `membership_detail.html?mid=${encodeURIComponent(mid)}`;
+      return;
+    }
+
+    if (action === "copyPayLink") {
+      await copyToClipboard(payUrl(mid, code));
+      return;
+    }
+
+    if (action === "openPayLink") {
+      window.open(payUrl(mid, code), "_blank", "noopener,noreferrer");
+    }
+  });
+
+  // Auth gate: solo carga data si hay user
+  watchAuth(async (user) => {
+    if (!user) return;
+    await refreshAll();
+  });
+
+  mounted = true;
+}
 
 /* =========================
    Load
 ========================= */
 async function refreshAll() {
-  showLoader?.("Cargando membresías…");
+  showLoader?.(STR.loader.loadingMemberships);
   try {
     await Promise.all([loadPlans(), loadMemberships()]);
+    fillSeasonFilter(); // opcional, basado en data
     fillPlanFilter();
     renderKpis();
     render();
   } catch (e) {
     console.error(e);
-    tbody.innerHTML = `<tr><td colspan="6" class="text-danger">Error cargando datos.</td></tr>`;
+    if ($.tbody) {
+      $.tbody.innerHTML = `<tr><td colspan="6" class="text-danger">${STR.errors.loadData}</td></tr>`;
+    }
   } finally {
     hideLoader?.();
   }
@@ -176,27 +317,48 @@ async function loadMemberships() {
 }
 
 function fillPlanFilter() {
-  const curr = planFilter.value || "all";
+  if (!$.planFilter) return;
+  const curr = $.planFilter.value || "all";
 
-  const opts = [`<option value="all">Todos</option>`].concat(
-    allPlans.map((p) => `<option value="${p.id}">${p.name || "—"}</option>`)
+  const opts = [`<option value="all">${STR.filters.allPlans}</option>`].concat(
+    allPlans.map((p) => `<option value="${p.id}">${p.name || STR.common.dash}</option>`)
   );
 
-  planFilter.innerHTML = opts.join("");
+  $.planFilter.innerHTML = opts.join("");
 
-  const exists = [...planFilter.options].some((o) => o.value === curr);
-  planFilter.value = exists ? curr : "all";
+  const exists = [...$.planFilter.options].some((o) => o.value === curr);
+  $.planFilter.value = exists ? curr : "all";
+}
+
+function fillSeasonFilter() {
+  if (!$.seasonFilter) return;
+
+  const curr = $.seasonFilter.value || "all";
+  const seasons = Array.from(
+    new Set(allMemberships.map((m) => m.season).filter(Boolean))
+  ).sort((a, b) => String(b).localeCompare(String(a), "es"));
+
+  const opts = [`<option value="all">${STR.filters.allSeasons}</option>`].concat(
+    seasons.map((s) => `<option value="${s}">${s}</option>`)
+  );
+
+  $.seasonFilter.innerHTML = opts.join("");
+
+  const exists = [...$.seasonFilter.options].some((o) => o.value === curr);
+  $.seasonFilter.value = exists ? curr : "all";
 }
 
 /* =========================
    Render
 ========================= */
 function render() {
-  const qText = norm(searchInput.value);
-  const seasonVal = seasonFilter.value || "all";
-  const planVal = planFilter.value || "all";
-  const statusVal = statusFilter.value || "all";
-  const actionVal = actionFilter?.value || "all";
+  if (!$.tbody || !$.countLabel) return;
+
+  const qText = norm($.searchInput?.value);
+  const seasonVal = $.seasonFilter?.value || "all";
+  const planVal = $.planFilter?.value || "all";
+  const statusVal = $.statusFilter?.value || "all";
+  const actionVal = $.actionFilter?.value || "all";
 
   let list = [...allMemberships];
 
@@ -239,66 +401,91 @@ function render() {
         a.fullName,
         a.email,
         a.phone,
-        p.name
-      ].map(norm).join(" ");
+        p.name,
+      ]
+        .map(norm)
+        .join(" ");
       return blob.includes(qText);
     });
   }
 
-  countLabel.textContent = `${list.length} membresía(s)`;
+  $.countLabel.textContent = STR.count(list.length);
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No hay resultados con esos filtros.</td></tr>`;
+    $.tbody.innerHTML = `<tr><td colspan="6" class="text-muted">${STR.table.noResults}</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = list.map((m) => {
-    const a = m.associateSnapshot || {};
-    const p = m.planSnapshot || {};
-    const cur = m.currency || p.currency || "CRC";
+  $.tbody.innerHTML = list
+    .map((m) => {
+      const a = m.associateSnapshot || {};
+      const p = m.planSnapshot || {};
+      const cur = m.currency || p.currency || "CRC";
 
-    const associateCell = `
-      <div class="fw-bold tight">${a.fullName || "—"}</div>
-      <div class="small text-muted tight">
-        ${[a.email || null, a.phone || null].filter(Boolean).join(" • ") || "—"}
-      </div>
-      <div class="small text-muted mono tight">ID: ${m.id}</div>
-    `;
+      const associateCell = `
+        <div class="fw-bold tight">${a.fullName || STR.common.dash}</div>
+        <div class="small text-muted tight">
+          ${[a.email || null, a.phone || null].filter(Boolean).join(" • ") || STR.common.dash}
+        </div>
+        <div class="small text-muted mono tight">${STR.table.idPrefix} ${m.id}</div>
+      `;
 
-    const planCell = `
-      <div class="fw-bold tight">${p.name || "—"}</div>
-      <div class="small text-muted tight">
-        ${(p.allowPartial ? "Cuotas" : "Pago único")} • ${p.requiresValidation ? "Validación" : "Sin validación"}
-      </div>
-    `;
+      const planCell = `
+        <div class="fw-bold tight">${p.name || STR.common.dash}</div>
+        <div class="small text-muted tight">
+          ${(p.allowPartial ? STR.plan.installments : STR.plan.singlePay)} • ${
+        p.requiresValidation ? STR.plan.validation : STR.plan.noValidation
+      }
+        </div>
+      `;
 
-    const amountTxt = p.allowCustomAmount
-      ? "Editable"
-      : fmtMoney(m.totalAmount ?? p.totalAmount, cur);
+      const amountTxt = p.allowCustomAmount
+        ? STR.amount.editable
+        : fmtMoney(m.totalAmount ?? p.totalAmount, cur);
 
-    const actions = `
-      <div class="btn-group btn-group-sm" role="group">
-        <button class="btn btn-outline-primary" data-action="detail" data-mid="${m.id}">
-          <i class="bi bi-eye me-1"></i> Detalle
-        </button>
-        <button class="btn btn-outline-dark" data-action="copyPayLink" data-mid="${m.id}" data-code="${m.payCode || ""}">
-          <i class="bi bi-clipboard me-1"></i> Link
-        </button>
-        <button class="btn btn-outline-secondary" data-action="openPayLink" data-mid="${m.id}" data-code="${m.payCode || ""}">
-          <i class="bi bi-box-arrow-up-right"></i>
-        </button>
-      </div>
-    `;
+      const actions = `
+        <div class="btn-group btn-group-sm" role="group">
+          <button class="btn btn-outline-primary" data-action="detail" data-mid="${m.id}">
+            <i class="bi bi-eye me-1"></i> ${STR.actions.detail}
+          </button>
+          <button class="btn btn-outline-dark" data-action="copyPayLink" data-mid="${m.id}" data-code="${
+        m.payCode || ""
+      }">
+            <i class="bi bi-clipboard me-1"></i> ${STR.actions.link}
+          </button>
+          <button class="btn btn-outline-secondary" data-action="openPayLink" data-mid="${m.id}" data-code="${
+        m.payCode || ""
+      }">
+            <i class="bi bi-box-arrow-up-right"></i>
+          </button>
+        </div>
+      `;
 
-    return `
-      <tr>
-        <td>${associateCell}</td>
-        <td>${planCell}</td>
-        <td><span class="mono">${m.season || "—"}</span></td>
-        <td style="white-space:nowrap;">${amountTxt}</td>
-        <td>${statusBadgeHtml(m.status)}</td>
-        <td class="text-end">${actions}</td>
-      </tr>
-    `;
-  }).join("");
+      return `
+        <tr>
+          <td>${associateCell}</td>
+          <td>${planCell}</td>
+          <td><span class="mono">${m.season || STR.common.dash}</span></td>
+          <td style="white-space:nowrap;">${amountTxt}</td>
+          <td>${statusBadgeHtml(m.status)}</td>
+          <td class="text-end">${actions}</td>
+        </tr>
+      `;
+    })
+    .join("");
 }
+
+/* =========================
+   ejecución standalone
+   - Si abren memberships_list.html directamente
+========================= */
+async function autoMountIfStandalone() {
+  const marker = document.querySelector('[data-page="memberships_list"]');
+  if (!marker) return;
+
+  const container = document.getElementById("page-content") || document.body;
+
+  await mount(container);
+}
+
+autoMountIfStandalone();
