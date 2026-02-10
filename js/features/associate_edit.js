@@ -108,20 +108,19 @@ btnSave.addEventListener("click", async () => {
     const payload = buildPayload();
 
     if (!aid){
-      // create
-      const docRef = await addDoc(collection(db, COL), {
+      await addDoc(collection(db, COL), {
         ...payload,
         createdAt: serverTimestamp()
       });
 
       alert("✅ Asociado creado");
-      window.location.href = `associate_edit.html?aid=${docRef.id}`;
+      window.location.href = "associates.html";
       return;
     }
 
-    // update
     await updateDoc(doc(db, COL, aid), payload);
     alert("✅ Guardado");
+    window.location.href = "associates.html";
   } catch (e) {
     console.error(e);
     alert("❌ Error guardando: " + (e?.message || e));
