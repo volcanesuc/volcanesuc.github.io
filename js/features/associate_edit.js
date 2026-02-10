@@ -1,7 +1,7 @@
-import { db } from "./firebase.js";
-import { watchAuth, logout } from "./auth.js";
-import { loadHeader } from "./components/header.js";
-import { showLoader, hideLoader } from "./ui/loader.js";
+import { db } from "../firebase.js";
+import { watchAuth, logout } from "../auth.js";
+import { loadHeader } from "../components/header.js";
+import { showLoader, hideLoader } from "../ui/loader.js";
 
 import {
   doc,
