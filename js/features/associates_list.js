@@ -62,7 +62,7 @@ function renderShellForTab(container) {
         <div class="text-muted small">Listado de asociados con filtros y acceso a edición.</div>
       </div>
       <div class="d-flex gap-2">
-        <a class="btn btn-primary btn-sm" href="associate_new.html">
+        <a class="btn btn-primary btn-sm" href="associate_edit.html">
           <i class="bi bi-plus-circle me-1"></i> Nuevo
         </a>
         <button id="btnRefresh" class="btn btn-outline-secondary btn-sm" type="button">
