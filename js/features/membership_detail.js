@@ -386,19 +386,20 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
   showLoader?.(label);
 
   try {
-    // Update submission
+    // 1) Update submission
     await updateDoc(doc(db, COL_SUBMISSIONS, sub.id), {
       status: newStatus,
       adminNote: adminNote ?? null,
       updatedAt: serverTimestamp()
     });
 
-    // If linked installment, update installment too
+    // 2) If linked installment, update installment too
     if (sub.installmentId) {
       const newInstStatus =
         newStatus === "validated" ? "validated" :
         newStatus === "paid" ? "paid" :
-        newStatus === "rejected" ? "pending" : "pending";
+        // si se rechaza, devolvemos a pendiente para que pueda reenviar
+        "pending";
 
       await updateDoc(doc(db, COL_INSTALLMENTS, sub.installmentId), {
         status: newInstStatus,
@@ -406,13 +407,40 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
       });
     }
 
-    // Reload + reconcile
+    // 3) Auto-enable/disable pay link
+    //    - paid/validated => bloquear
+    //    - rejected => habilitar (para que pueda reenviar)
+    if (newStatus === "paid" || newStatus === "validated") {
+      await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+        payLinkEnabled: false,
+        payLinkDisabledReason: "Pago registrado por admin.",
+        updatedAt: serverTimestamp()
+      });
+      // mantenemos state local consistente sin reload extra
+      membership.payLinkEnabled = false;
+      membership.payLinkDisabledReason = "Pago registrado por admin.";
+    } else if (newStatus === "rejected") {
+      await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+        payLinkEnabled: true,
+        payLinkDisabledReason: null,
+        updatedAt: serverTimestamp()
+      });
+      membership.payLinkEnabled = true;
+      membership.payLinkDisabledReason = null;
+    }
+
+    // 4) Reload + reconcile status
     await loadInstallments();
     await loadSubmissions();
     await reconcileMembershipStatus();
 
+    // 5) Reload membership (opcional)
+    // Si querés 100% exactitud desde server, descomentá:
+    // await loadMembership();
+
     render();
     alert("✅ Actualizado");
+
   } catch (e) {
     console.error(e);
     alert("❌ Error actualizando: " + (e?.message || e));
@@ -420,6 +448,7 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
     hideLoader?.();
   }
 }
+
 
 /* =========================
    Pay link controls (ADMIN)

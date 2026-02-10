@@ -865,6 +865,12 @@
   border:1px solid rgba(0,0,0,.06);
 }
 
+.disabled-overlay{
+  position:relative;
+  opacity:.55;
+  pointer-events:none;
+  filter:grayscale(0.3);
+}
 
 /* ======================================================
    RESPONSIVE (HOME + attendance)

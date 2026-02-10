@@ -5,6 +5,8 @@ import {
   getDoc,
   getDocs,
   addDoc,
+  setDoc,
+  updateDoc,
   collection,
   query,
   where,
@@ -40,6 +42,9 @@ const assocName = document.getElementById("assocName");
 const assocContact = document.getElementById("assocContact");
 const planName = document.getElementById("planName");
 const planMeta = document.getElementById("planMeta");
+
+const payDisabledCard = document.getElementById("payDisabledCard");
+const payDisabledMsg = document.getElementById("payDisabledMsg");
 
 const payForm = document.getElementById("payForm");
 const installmentSelect = document.getElementById("installmentSelect");
@@ -80,16 +85,18 @@ let installments = [];
    Helpers
 ========================= */
 function showAlert(msg, type = "warning"){
+  if (!alertBox) return alert(msg);
   alertBox.className = `alert alert-${type}`;
   alertBox.textContent = msg;
   alertBox.classList.remove("d-none");
 }
 
 function hideAlert(){
-  alertBox.classList.add("d-none");
+  alertBox?.classList.add("d-none");
 }
 
 function disableForm(disabled = true){
+  if (!payForm) return;
   if (disabled) payForm.classList.add("disabled-overlay");
   else payForm.classList.remove("disabled-overlay");
 }
@@ -104,17 +111,17 @@ function fmtMoney(n, cur="CRC"){
 function safe(s){ return (s || "").toString().trim(); }
 
 function setProgress(pct, text){
-  progressWrap.classList.remove("d-none");
-  progressText.classList.remove("d-none");
-  progressBar.style.width = `${pct}%`;
-  progressText.textContent = text || "";
+  progressWrap?.classList.remove("d-none");
+  progressText?.classList.remove("d-none");
+  if (progressBar) progressBar.style.width = `${pct}%`;
+  if (progressText) progressText.textContent = text || "";
 }
 
 function clearProgress(){
-  progressWrap.classList.add("d-none");
-  progressText.classList.add("d-none");
-  progressBar.style.width = "0%";
-  progressText.textContent = "";
+  progressWrap?.classList.add("d-none");
+  progressText?.classList.add("d-none");
+  if (progressBar) progressBar.style.width = "0%";
+  if (progressText) progressText.textContent = "";
 }
 
 function inferCurrency(){
@@ -125,20 +132,32 @@ function getInstallmentById(id){
   return installments.find(x => x.id === id) || null;
 }
 
+function setPayDisabledUI(msg){
+  // show card + hide form
+  payForm?.classList.add("d-none");
+  payDisabledCard?.classList.remove("d-none");
+  if (payDisabledMsg) payDisabledMsg.textContent = msg || "";
+
+  btnSubmit && (btnSubmit.disabled = true);
+  disableForm(true);
+
+  if (pagePill) pagePill.textContent = "En revisión";
+}
+
 /* =========================
    Boot
 ========================= */
 (async function boot(){
-  midText.textContent = mid || "—";
+  if (midText) midText.textContent = mid || "—";
 
   if (!mid || !code){
-    pagePill.textContent = "Link inválido";
+    if (pagePill) pagePill.textContent = "Link inválido";
     disableForm(true);
     showAlert("Link inválido. Asegurate de abrir el enlace completo (mid y code).", "danger");
     return;
   }
 
-  pagePill.textContent = "Cargando…";
+  if (pagePill) pagePill.textContent = "Cargando…";
   disableForm(true);
 
   // Anonymous auth (sin login)
@@ -146,30 +165,37 @@ function getInstallmentById(id){
     const auth = getAuth();
     await signInAnonymously(auth);
   }catch(e){
-    // Si no tenés auth habilitado, igual podés continuar si reglas lo permiten.
     console.warn("Anonymous auth no disponible:", e);
   }
 
   try{
     await loadMembership();
     await loadInstallments();
+
+    // Gate: si está bloqueado, mostramos card y salimos sin inicializar submit
+    if (membership?.payLinkEnabled === false){
+      fillSummaryOnly(); // llena asociado/plan arriba
+      const reason =
+        membership?.payLinkDisabledReason ||
+        "Este link está deshabilitado mientras el admin revisa el comprobante.";
+      setPayDisabledUI(reason);
+      showAlert(reason, "warning");
+      return;
+    }
+
     fillUI();
     disableForm(false);
-    pagePill.textContent = "Listo";
+    if (pagePill) pagePill.textContent = "Listo";
+
   }catch(e){
     console.error(e);
-    pagePill.textContent = "No disponible";
+    if (pagePill) pagePill.textContent = "No disponible";
     disableForm(true);
 
-    if (String(e?.message || e).includes("pay_link_disabled")){
-        showAlert(
-        membership?.payLinkDisabledReason || "Este link está deshabilitado mientras el admin revisa el comprobante.",
-        "warning"
-        );
-    } else if (String(e?.message || e).includes("invalid_code")){
-        showAlert("Código inválido.", "danger");
+    if (String(e?.message || e).includes("invalid_code")){
+      showAlert("Código inválido.", "danger");
     } else {
-        showAlert("No se pudo cargar la membresía. Revisá el link o contactá al club.", "danger");
+      showAlert("No se pudo cargar la membresía. Revisá el link o contactá al club.", "danger");
     }
   }
 })();
@@ -187,10 +213,6 @@ async function loadMembership(){
   if ((membership.payCode || "") !== code){
     throw new Error("invalid_code");
   }
-
-  if (membership.payLinkEnabled === false){
-    throw new Error("pay_link_disabled");
-  }
 }
 
 async function loadInstallments(){
@@ -205,26 +227,32 @@ async function loadInstallments(){
 /* =========================
    UI fill
 ========================= */
-function fillUI(){
+function fillSummaryOnly(){
   hideAlert();
 
-  const a = membership.associateSnapshot || {};
-  const p = membership.planSnapshot || {};
+  const a = membership?.associateSnapshot || {};
+  const p = membership?.planSnapshot || {};
   const cur = inferCurrency();
 
-  assocName.textContent = a.fullName || "—";
-  assocContact.textContent = [a.email || null, a.phone || null].filter(Boolean).join(" • ") || "—";
+  assocName && (assocName.textContent = a.fullName || "—");
+  assocContact && (assocContact.textContent = [a.email || null, a.phone || null].filter(Boolean).join(" • ") || "—");
 
-  planName.textContent = p.name || "—";
+  planName && (planName.textContent = p.name || "—");
   const totalTxt = p.allowCustomAmount ? "Monto editable" : fmtMoney(membership.totalAmount ?? p.totalAmount, cur);
-  planMeta.textContent = `${totalTxt} • ${p.allowPartial ? "Permite cuotas" : "Pago único"} • ${p.requiresValidation ? "Validación admin" : "Sin validación"}`;
+  planMeta && (planMeta.textContent = `${totalTxt} • ${p.allowPartial ? "Permite cuotas" : "Pago único"} • ${p.requiresValidation ? "Validación admin" : "Sin validación"}`);
+}
+
+function fillUI(){
+  fillSummaryOnly();
 
   // defaults
-  payerName.value = a.fullName || "";
-  email.value = a.email || "";
-  phone.value = a.phone || "";
+  const a = membership.associateSnapshot || {};
+  payerName && (payerName.value = a.fullName || "");
+  email && (email.value = a.email || "");
+  phone && (phone.value = a.phone || "");
 
   // installments select
+  const cur = inferCurrency();
   const pending = installments.filter(x => (x.status || "pending") !== "validated");
   const options = pending.map(x => {
     const due = x.dueDate || (x.dueMonthDay ? `${membership.season}-${x.dueMonthDay}` : "—");
@@ -241,23 +269,25 @@ function fillUI(){
     : "No hay cuotas pendientes (o este plan es pago único). Podés enviar pago general si aplica.";
 
   // amount hint
+  const p = membership.planSnapshot || {};
   amountHint.textContent = p.allowCustomAmount
     ? "Este plan permite monto editable. Escribí el monto que pagaste."
     : "Escribí el monto exacto del pago (si es una cuota, suele ser el monto de la cuota).";
 
   // si selecciona cuota, sugerimos monto
-  installmentSelect.addEventListener("change", () => {
+  // (evitar duplicar listener si fillUI corre más de una vez)
+  installmentSelect.onchange = () => {
     const iid = installmentSelect.value || "";
     if (!iid) return;
     const it = getInstallmentById(iid);
     if (it && it.amount !== undefined && it.amount !== null && amount.value === ""){
       amount.value = String(it.amount);
     }
-  });
+  };
 
-  // reset
-  btnReset.addEventListener("click", () => {
-    // mantenemos nombre/email/phone precargados
+  // reset (guard: si está bloqueado, no hace nada)
+  btnReset.onclick = () => {
+    if (membership?.payLinkEnabled === false) return;
     installmentSelect.value = "";
     amount.value = "";
     method.value = "sinpe";
@@ -265,10 +295,10 @@ function fillUI(){
     note.value = "";
     clearProgress();
     hideAlert();
-  });
+  };
 
-  // submit
-  payForm.addEventListener("submit", onSubmit);
+  // submit (evitar duplicar listener)
+  payForm.onsubmit = onSubmit;
 }
 
 /* =========================
@@ -277,6 +307,16 @@ function fillUI(){
 async function onSubmit(e){
   e.preventDefault();
   hideAlert();
+
+  // gate extra (por si cambió en backend mientras la página está abierta)
+  if (membership?.payLinkEnabled === false){
+    const reason =
+      membership?.payLinkDisabledReason ||
+      "Este link está deshabilitado mientras el admin revisa el comprobante.";
+    setPayDisabledUI(reason);
+    showAlert(reason, "warning");
+    return;
+  }
 
   const cur = inferCurrency();
   const p = membership.planSnapshot || {};
@@ -296,7 +336,7 @@ async function onSubmit(e){
   const okType = f.type.startsWith("image/") || f.type === "application/pdf";
   if (!okType) return showAlert("Tipo de archivo no permitido. Usá imagen o PDF.", "warning");
 
-  // tamaño (opcional)
+  // tamaño
   const MAX_MB = 10;
   if (f.size > MAX_MB * 1024 * 1024){
     return showAlert(`Archivo muy grande. Máximo ${MAX_MB}MB.`, "warning");
@@ -374,17 +414,28 @@ async function onSubmit(e){
       updatedAt: serverTimestamp()
     }, { merge: true });
 
-    // 4) (Opcional / best-effort) Bloquear link mientras revisa admin
-    // ⚠️ Esto solo funcionará si tus Firestore rules permiten este update desde el pay page.
-    // Si no, igual no rompe el flujo.
+    // 4) (best-effort) Bloquear link mientras revisa admin
+    // ⚠️ Si Firestore rules no permiten, lo ignoramos.
     try{
-      await updateDoc(doc(db, "memberships", mid), {
+      await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
         payLinkEnabled: false,
         payLinkDisabledReason: "Comprobante enviado. En revisión por el admin.",
         updatedAt: serverTimestamp()
       });
+
+      // actualizar estado local + UI sin recargar
+      membership.payLinkEnabled = false;
+      membership.payLinkDisabledReason = "Comprobante enviado. En revisión por el admin.";
+
+      setProgress(100, "✅ Enviado");
+      showAlert("✅ Comprobante enviado. Un admin lo revisará pronto.", "success");
+
+      // mostrar card y ocultar form
+      setPayDisabledUI(membership.payLinkDisabledReason);
+
+      return; // salimos; ya no dejamos seguir
+
     }catch (e){
-      // no lo tratamos como error fatal
       console.warn("No se pudo bloquear el link automáticamente (rules).", e?.code || e);
     }
 
@@ -429,8 +480,13 @@ async function onSubmit(e){
     }
 
   } finally {
-    btnSubmit.disabled = false;
-    disableForm(false);
+    // si quedó bloqueado, mantenemos disabled
+    if (membership?.payLinkEnabled === false){
+      btnSubmit.disabled = true;
+      disableForm(true);
+    } else {
+      btnSubmit.disabled = false;
+      disableForm(false);
+    }
   }
 }
-
