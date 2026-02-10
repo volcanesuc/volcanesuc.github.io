@@ -158,9 +158,19 @@ function getInstallmentById(id){
     pagePill.textContent = "Listo";
   }catch(e){
     console.error(e);
-    pagePill.textContent = "Error";
+    pagePill.textContent = "No disponible";
     disableForm(true);
-    showAlert("No se pudo cargar la membresía. Revisá el link o contactá al club.", "danger");
+
+    if (String(e?.message || e).includes("pay_link_disabled")){
+        showAlert(
+        membership?.payLinkDisabledReason || "Este link está deshabilitado mientras el admin revisa el comprobante.",
+        "warning"
+        );
+    } else if (String(e?.message || e).includes("invalid_code")){
+        showAlert("Código inválido.", "danger");
+    } else {
+        showAlert("No se pudo cargar la membresía. Revisá el link o contactá al club.", "danger");
+    }
   }
 })();
 
@@ -176,6 +186,10 @@ async function loadMembership(){
   // Validar code
   if ((membership.payCode || "") !== code){
     throw new Error("invalid_code");
+  }
+
+  if (membership.payLinkEnabled === false){
+    throw new Error("pay_link_disabled");
   }
 }
 
@@ -282,14 +296,24 @@ async function onSubmit(e){
   const okType = f.type.startsWith("image/") || f.type === "application/pdf";
   if (!okType) return showAlert("Tipo de archivo no permitido. Usá imagen o PDF.", "warning");
 
+  // tamaño (opcional)
+  const MAX_MB = 10;
+  if (f.size > MAX_MB * 1024 * 1024){
+    return showAlert(`Archivo muy grande. Máximo ${MAX_MB}MB.`, "warning");
+  }
+
   btnSubmit.disabled = true;
   disableForm(true);
   clearProgress();
   setProgress(5, "Preparando subida…");
 
+  let sid = null;
+  let path = null;
+
   try{
-    // Crear submissionId primero (para usarlo en path)
+    // 1) Crear submission primero (para usar sid en storage path)
     const iid = installmentSelect.value || null;
+
     const submissionDoc = await addDoc(collection(db, COL_SUBMISSIONS), {
       membershipId: mid,
       installmentId: iid,
@@ -309,7 +333,6 @@ async function onSubmit(e){
       status: "pending",
       adminNote: null,
 
-      // file fields se completan luego
       fileUrl: null,
       filePath: null,
       fileType: f.type || null,
@@ -318,39 +341,52 @@ async function onSubmit(e){
       updatedAt: serverTimestamp()
     });
 
-    const sid = submissionDoc.id;
+    sid = submissionDoc.id;
 
-    // Upload file to Storage
+    // 2) Subir a Storage
     const storage = getStorage();
     const safeName = (f.name || "comprobante").replace(/[^\w.\-()]+/g, "_");
-    const path = `membership_submissions/${mid}/${sid}/${Date.now()}_${safeName}`;
+    path = `membership_submissions/${mid}/${sid}/${Date.now()}_${safeName}`;
     const fileRef = sRef(storage, path);
 
     const task = uploadBytesResumable(fileRef, f, { contentType: f.type || undefined });
 
     await new Promise((resolve, reject) => {
-      task.on("state_changed",
+      task.on(
+        "state_changed",
         (snap) => {
           const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-          setProgress(Math.max(10, pct), `Subiendo… ${pct}%`);
+          setProgress(Math.max(10, Math.min(90, pct)), `Subiendo… ${pct}%`);
         },
         (err) => reject(err),
         () => resolve()
       );
     });
 
-    setProgress(95, "Finalizando…");
+    setProgress(92, "Finalizando…");
 
     const url = await getDownloadURL(fileRef);
 
-    // Guardar file info en el submission (update via setDoc merge para no importar updateDoc extra)
-    // (usamos setDoc merge)
-    const { setDoc, doc: fDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-    await setDoc(fDoc(db, COL_SUBMISSIONS, sid), {
+    // 3) Guardar fileUrl + filePath en submission
+    await setDoc(doc(db, COL_SUBMISSIONS, sid), {
       fileUrl: url,
       filePath: path,
       updatedAt: serverTimestamp()
     }, { merge: true });
+
+    // 4) (Opcional / best-effort) Bloquear link mientras revisa admin
+    // ⚠️ Esto solo funcionará si tus Firestore rules permiten este update desde el pay page.
+    // Si no, igual no rompe el flujo.
+    try{
+      await updateDoc(doc(db, "memberships", mid), {
+        payLinkEnabled: false,
+        payLinkDisabledReason: "Comprobante enviado. En revisión por el admin.",
+        updatedAt: serverTimestamp()
+      });
+    }catch (e){
+      // no lo tratamos como error fatal
+      console.warn("No se pudo bloquear el link automáticamente (rules).", e?.code || e);
+    }
 
     setProgress(100, "✅ Enviado");
     showAlert("✅ Comprobante enviado. Un admin lo revisará pronto.", "success");
@@ -363,10 +399,38 @@ async function onSubmit(e){
 
   } catch (err){
     console.error(err);
-    showAlert("❌ Ocurrió un error subiendo el comprobante. Intentá de nuevo o contactá al club.", "danger");
+
+    const code = err?.code || "";
+    const msg =
+      code === "storage/unauthorized"
+        ? "❌ No tenés permiso para subir el archivo. (Revisá Storage Rules y Auth anónimo)."
+      : code === "storage/retry-limit-exceeded"
+        ? "❌ Falló la subida (reintentos agotados). Probá con otra red o un archivo más liviano."
+      : code === "storage/canceled"
+        ? "❌ Subida cancelada."
+      : code === "storage/invalid-checksum"
+        ? "❌ El archivo se corrompió al subir. Intentá otra vez."
+      : "❌ Ocurrió un error subiendo el comprobante. Intentá de nuevo o contactá al club.";
+
+    showAlert(msg, "danger");
     clearProgress();
+
+    // (opcional) marcar submission como error si ya existe sid
+    if (sid){
+      try{
+        await setDoc(doc(db, COL_SUBMISSIONS, sid), {
+          status: "error",
+          adminNote: `Upload error: ${code || (err?.message || "unknown")}`,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      }catch (e){
+        console.warn("No se pudo marcar submission como error:", e);
+      }
+    }
+
   } finally {
     btnSubmit.disabled = false;
     disableForm(false);
   }
 }
+
