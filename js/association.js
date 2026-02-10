@@ -2,12 +2,12 @@
 import { guardPage } from "./page-guard.js";
 import { loadHeader } from "./components/header.js";
 
-const TABS = ["memberships", "payments", "plans"];
+const TABS = ["associates", "memberships", "payments", "plans"];
 
 function getTabFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  const tab = (params.get("tab") || "memberships").toLowerCase();
-  return TABS.includes(tab) ? tab : "memberships";
+  const tab = (params.get("tab") || "associates").toLowerCase(); // default = associates
+  return TABS.includes(tab) ? tab : "associates";
 }
 
 function setTabInUrl(tab) {
@@ -45,6 +45,13 @@ async function mountTab(tab, cfg) {
   mount.innerHTML = `<div class="py-3">Cargando...</div>`;
 
   try {
+    if (tab === "associates") {
+      const mod = await import("./features/associates_list.js?v=1");
+      if (!mod.mount) throw new Error("associates_list.js no exporta mount()");
+      await mod.mount(mount, cfg);
+      return;
+    }
+
     if (tab === "memberships") {
       const mod = await import("./features/memberships_list.js?v=1");
       if (!mod.mount) throw new Error("memberships_list.js no exporta mount()");
@@ -52,15 +59,18 @@ async function mountTab(tab, cfg) {
       return;
     }
 
-    // Por ahora no intentes importar payments/plans si no tienen mount()
     if (tab === "payments") {
-      mount.innerHTML = `<div class="alert alert-secondary mb-0">Pagos: en construcción.</div>`;
+      const mod = await import("./features/payments_admin.js?v=1");
+      if (!mod.mount) throw new Error("payments_admin.js no exporta mount()");
+      await mod.mount(mount, cfg);
       return;
     }
 
     if (tab === "plans") {
-      mount.innerHTML = `<div class="alert alert-secondary mb-0">Planes: en construcción.</div>`;
-      return;
+        const mod = await import("./features/plans_admin.js?v=1");
+        if (!mod.mount) throw new Error("plans_admin.js no exporta mount()");
+        await mod.mount(mount, cfg);
+        return;
     }
   } catch (err) {
     console.error(err);

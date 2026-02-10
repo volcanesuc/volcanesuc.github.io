@@ -52,6 +52,11 @@
 
         <ul class="nav nav-pills gap-2" id="associationTabs">
           <li class="nav-item">
+            <a class="nav-link" href="association.html?tab=associates" data-tab="associates">
+              Asociados
+            </a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link" href="association.html?tab=memberships" data-tab="memberships">
               Membresías
             </a>
@@ -74,32 +79,17 @@
     <!-- Content container -->
     <section id="associationContent">
 
+      <!-- ASSOCIATES -->
+      <div class="assoc-panel" data-panel="associates"></div>
+
       <!-- MEMBERSHIPS -->
       <div class="assoc-panel" data-panel="memberships"></div>
 
       <!-- PAYMENTS -->
-      <div class="assoc-panel d-none" data-panel="payments">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h3 class="h5 mb-2">Pagos</h3>
-            <p class="text-muted mb-0">
-              Aquí van los pagos pendientes/validados (SINPE con validación manual).
-            </p>
-          </div>
-        </div>
-      </div>
+      <div class="assoc-panel d-none" data-panel="payments"></div>
 
       <!-- PLANS -->
-      <div class="assoc-panel d-none" data-panel="plans">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h3 class="h5 mb-2">Planes</h3>
-            <p class="text-muted mb-0">
-              Aquí definís plan 1 pago o 2 tractos, fechas y montos.
-            </p>
-          </div>
-        </div>
-      </div>
+      <div class="assoc-panel d-none" data-panel="plans"></div>
 
     </section>
 
