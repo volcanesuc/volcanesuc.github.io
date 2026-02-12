@@ -129,7 +129,7 @@ function renderShell(container) {
         </div>
         <div class="d-flex gap-2">
           <button id="btnNewMembership" class="btn btn-primary btn-sm" type="button">
-            <i class="bi bi-plus-circle me-1"></i> ${STR.actions?.newMembership || "Nueva membresía"}
+            <i class="bi bi-plus-lg me-1"></i> ${STR.actions?.newMembership || "Nueva membresía"}
           </button>
           <button id="btnRefresh" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-clockwise me-1"></i> ${STR.actions.refresh}
