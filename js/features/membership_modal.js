@@ -6,28 +6,29 @@ import {
   collection,
   getDocs,
   addDoc,
-  addDoc as addInstallmentDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* =========================
+   Collections
+========================= */
 const COL_ASSOC = "associates";
 const COL_PLANS = "subscription_plans";
 const COL_MEMBERSHIPS = "memberships";
 const COL_INSTALLMENTS = "membership_installments";
 
-// UI
+/* =========================
+   DOM
+========================= */
 const seasonEl = document.getElementById("season");
 
 const associateSearch = document.getElementById("associateSearch");
 const associateMenu = document.getElementById("associateMenu");
 const associateSelected = document.getElementById("associateSelected");
+const btnNewAssociate = document.getElementById("btnNewAssociate");
 
 const planSelect = document.getElementById("planSelect");
 const planHint = document.getElementById("planHint");
-
-const startPolicyEl = document.getElementById("startPolicy");
-const startMonthEl = document.getElementById("startMonth");
-const startMonthHintEl = document.getElementById("startMonthHint");
 
 const btnCreate = document.getElementById("btnCreate");
 const btnClear = document.getElementById("btnClear");
@@ -45,12 +46,30 @@ const btnCopyLink = document.getElementById("btnCopyLink");
 const btnOpenLink = document.getElementById("btnOpenLink");
 const btnGoDetail = document.getElementById("btnGoDetail");
 
-// state
+const btnClose = document.getElementById("btnClose");
+const btnCancel = document.getElementById("btnCancel");
+
+/* =========================
+   State
+========================= */
 let associates = [];
 let plans = [];
 let selectedAssociate = null;
 let selectedPlan = null;
 
+/* =========================
+   postMessage helpers
+========================= */
+function post(type, detail) {
+  window.parent.postMessage({ type, detail }, window.location.origin);
+}
+function close() {
+  post("modal:close");
+}
+
+/* =========================
+   Helpers
+========================= */
 function norm(s){ return (s || "").toString().toLowerCase().trim(); }
 
 function fmtMoney(n, cur="CRC"){
@@ -60,75 +79,17 @@ function fmtMoney(n, cur="CRC"){
   return new Intl.NumberFormat("es-CR", { style:"currency", currency: cur, maximumFractionDigits: 0 }).format(v);
 }
 
-function randomCode(len = 7){
+function randomCode(len = 6){
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";
   for (let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
   return out;
 }
 
-function monthLabel(m){
-  const names = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-  return names[m-1] || `Mes ${m}`;
-}
-
-function toIso(season, month, day = 1){
-  if (!/^\d{4}$/.test(String(season))) return null;
-  const mm = String(month).padStart(2,"0");
-  const dd = String(day).padStart(2,"0");
-  return `${season}-${mm}-${dd}`;
-}
-
-/**
- * coverageEnd = (startMonth + durationMonths) - 1 month (inclusive range)
- * Ej: start=1, dur=12 => end=12
- *     start=7, dur=6  => end=12
- *     start=2, dur=1  => end=2
- */
-function calcCoverage(season, startMonth, durationMonths){
-  const s = Number(startMonth);
-  const d = Number(durationMonths);
-  if (!/^\d{4}$/.test(String(season))) return null;
-  if (!Number.isFinite(s) || s < 1 || s > 12) return null;
-  if (!Number.isFinite(d) || d < 1 || d > 24) return null; // safety
-
-  // months are 1..12 within season; if it overflows, cortamos al 12
-  const endMonth = Math.min(12, s + d - 1);
-
-  return {
-    startMonth: s,
-    endMonth,
-    coverageStart: toIso(season, s, 1),
-    coverageEnd: toIso(season, endMonth, 1)
-  };
-}
-
-function allowedStartMonths(policy){
-  const p = (policy || "any").toLowerCase();
-  if (p === "jan") return [1];
-  if (p === "jan_jul") return [1, 7];
-  // any
-  return [1,2,3,4,5,6,7,8,9,10,11,12];
-}
-
-function renderStartMonths(){
-  const policy = startPolicyEl?.value || "any";
-  const allowed = allowedStartMonths(policy);
-
-  const current = Number(startMonthEl?.value || allowed[0]);
-  const keep = allowed.includes(current) ? current : allowed[0];
-
-  startMonthEl.innerHTML = allowed
-    .map(m => `<option value="${m}">${monthLabel(m)}</option>`)
-    .join("");
-
-  startMonthEl.value = String(keep);
-
-  if (startMonthHintEl){
-    if (policy === "jan") startMonthHintEl.textContent = "Este plan/membresía contará desde enero.";
-    else if (policy === "jan_jul") startMonthHintEl.textContent = "Elegí Enero (1er semestre) o Julio (2do semestre).";
-    else startMonthHintEl.textContent = "Podés iniciar en cualquier mes.";
-  }
+function mmddToIsoDate(season, mmdd){
+  if (!season || !/^\d{4}$/.test(season)) return null;
+  if (!mmdd || !/^\d{2}-\d{2}$/.test(mmdd)) return null;
+  return `${season}-${mmdd}`;
 }
 
 function planDisplay(p){
@@ -136,15 +97,20 @@ function planDisplay(p){
   const base = p.allowCustomAmount ? "Monto editable" : fmtMoney(p.totalAmount, cur);
   const cuotas = (p.installmentsTemplate || []).length;
   const cuotasTxt = p.allowPartial ? ` • ${cuotas} cuota(s)` : "";
-  const dur = p.durationMonths ? ` • ${p.durationMonths} mes(es)` : "";
-  return `${p.name || "Plan"} — ${base}${cuotasTxt}${dur}`;
+  return `${p.name || "Plan"} — ${base}${cuotasTxt}`;
 }
 
 function setResultLink(mid, code){
-  const url = `${window.location.origin}${window.location.pathname.replace(/\/[^/]+$/, "/")}membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code)}`;
+  // Construye URL relativa al sitio actual (GitHub pages / hosting)
+  const baseDir = window.location.href.replace(/\/[^/]+$/, "/");
+  const url = `${baseDir}membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code)}`;
+
   payLinkText.textContent = url;
   btnOpenLink.href = url;
-  btnGoDetail.href = `membership_detail.html?mid=${encodeURIComponent(mid)}`;
+
+  // Detalle admin en tab nuevo
+  btnGoDetail.href = `${baseDir}membership_detail.html?mid=${encodeURIComponent(mid)}`;
+
   resultBox.style.display = "block";
 }
 
@@ -152,37 +118,12 @@ function clearResultLink(){
   resultBox.style.display = "none";
   payLinkText.textContent = "";
   btnOpenLink.removeAttribute("href");
+  btnGoDetail.href = "#";
 }
 
-// -------- Associate picker (igual que tu editor) --------
-function openMenu(items){
-  associateMenu.innerHTML = items.map(a => {
-    const email = a.email ? `<div class="text-muted small">${a.email}</div>` : "";
-    const phone = a.phone ? `<div class="text-muted small">${a.phone}</div>` : "";
-    return `
-      <div class="picklist-item" data-id="${a.id}">
-        <div class="fw-bold">${a.fullName || "—"}</div>
-        ${email || phone ? `<div>${email}${phone}</div>` : `<div class="text-muted small">—</div>`}
-      </div>
-    `;
-  }).join("") || `<div class="p-3 text-muted">No hay resultados.</div>`;
-
-  associateMenu.style.display = "block";
-}
-
-function closeMenu(){ associateMenu.style.display = "none"; }
-
-function selectAssociateById(id){
-  const a = associates.find(x => x.id === id);
-  if (!a) return;
-  selectedAssociate = a;
-  associateSearch.value = a.fullName || "";
-  associateSelected.textContent = `Seleccionado: ${a.fullName || "—"}`;
-  closeMenu();
-  renderPreview();
-}
-
-// -------- Load data --------
+/* =========================
+   Load data
+========================= */
 watchAuth(async (user) => {
   if (!user) return;
   await boot();
@@ -193,11 +134,6 @@ async function boot(){
   try{
     await Promise.all([loadAssociates(), loadPlans()]);
     wireUI();
-
-    // defaults para start policy
-    if (startPolicyEl && !startPolicyEl.value) startPolicyEl.value = "any";
-    renderStartMonths();
-
     renderPreview();
   } finally {
     hideLoader?.();
@@ -219,16 +155,61 @@ async function loadPlans(){
     .filter(p => !p.archived && p.active)
     .sort((a,b) => (a.name || "").localeCompare(b.name || "", "es"));
 
-  planSelect.innerHTML =
-    `<option value="">Seleccioná un plan…</option>` +
-    plans.map(p => `<option value="${p.id}">${planDisplay(p)}</option>`).join("");
+  planSelect.innerHTML = `<option value="">Seleccioná un plan…</option>` + plans.map(p => {
+    return `<option value="${p.id}">${planDisplay(p)}</option>`;
+  }).join("");
 }
 
-// -------- UI wiring --------
+/* =========================
+   Associate picker UI
+========================= */
+function openMenu(items){
+  associateMenu.innerHTML = items.map(a => {
+    const email = a.email ? `<div class="text-muted small">${a.email}</div>` : "";
+    const phone = a.phone ? `<div class="text-muted small">${a.phone}</div>` : "";
+    return `
+      <div class="picklist-item" data-id="${a.id}">
+        <div class="fw-bold">${a.fullName || "—"}</div>
+        ${email || phone ? `<div>${email}${phone}</div>` : `<div class="text-muted small">—</div>`}
+      </div>
+    `;
+  }).join("") || `<div class="p-3 text-muted">No hay resultados.</div>`;
+
+  associateMenu.style.display = "block";
+}
+
+function closeMenu(){
+  associateMenu.style.display = "none";
+}
+
+function selectAssociateById(id){
+  const a = associates.find(x => x.id === id);
+  if (!a) return;
+  selectedAssociate = a;
+  associateSearch.value = a.fullName || "";
+  associateSelected.textContent = `Seleccionado: ${a.fullName || "—"}`;
+  closeMenu();
+  renderPreview();
+}
+
+/* =========================
+   UI wiring
+========================= */
 function wireUI(){
+  btnClose?.addEventListener("click", close);
+  btnCancel?.addEventListener("click", close);
+
+  btnNewAssociate?.addEventListener("click", () => {
+    // le pedimos al host abrir el modal de asociado
+    post("associate:open", { mode: "create" });
+  });
+
   associateSearch.addEventListener("input", () => {
     const q = norm(associateSearch.value);
-    if (!q){ closeMenu(); return; }
+    if (!q){
+      closeMenu();
+      return;
+    }
     const matches = associates.filter(a => {
       const t = `${norm(a.fullName)} ${norm(a.email)} ${norm(a.phone)}`;
       return t.includes(q);
@@ -238,12 +219,13 @@ function wireUI(){
 
   associateSearch.addEventListener("focus", () => {
     const q = norm(associateSearch.value);
-    if (!q) return;
-    const matches = associates.filter(a => {
-      const t = `${norm(a.fullName)} ${norm(a.email)} ${norm(a.phone)}`;
-      return t.includes(q);
-    }).slice(0, 20);
-    openMenu(matches);
+    if (q){
+      const matches = associates.filter(a => {
+        const t = `${norm(a.fullName)} ${norm(a.email)} ${norm(a.phone)}`;
+        return t.includes(q);
+      }).slice(0, 20);
+      openMenu(matches);
+    }
   });
 
   document.addEventListener("click", (e) => {
@@ -260,22 +242,10 @@ function wireUI(){
   planSelect.addEventListener("change", () => {
     const pid = planSelect.value || "";
     selectedPlan = plans.find(p => p.id === pid) || null;
-
-    // opcional: si querés un default por plan:
-    // startPolicyEl.value = selectedPlan?.startPolicyDefault || startPolicyEl.value || "any";
-    renderStartMonths();
-
     renderPreview();
   });
 
   seasonEl.addEventListener("input", renderPreview);
-
-  startPolicyEl?.addEventListener("change", () => {
-    renderStartMonths();
-    renderPreview();
-  });
-
-  startMonthEl?.addEventListener("change", renderPreview);
 
   btnClear.addEventListener("click", () => {
     selectedAssociate = null;
@@ -284,10 +254,6 @@ function wireUI(){
     associateSelected.textContent = "Ninguno seleccionado";
     planSelect.value = "";
     seasonEl.value = seasonEl.value || "2026";
-
-    if (startPolicyEl) startPolicyEl.value = "any";
-    renderStartMonths();
-
     clearResultLink();
     renderPreview();
   });
@@ -304,13 +270,29 @@ function wireUI(){
   });
 
   btnCreate.addEventListener("click", createMembership);
+
+  // escuchar cuando el host crea un asociado nuevo
+  window.addEventListener("message", async (ev) => {
+    if (ev.origin !== window.location.origin) return;
+    const msg = ev.data || {};
+    if (msg.type === "associate:saved") {
+      // recargar lista y autoseleccionar si vino id
+      await loadAssociates();
+      if (msg.detail?.id) selectAssociateById(msg.detail.id);
+    }
+  });
 }
 
-// -------- Preview --------
+/* =========================
+   Preview
+========================= */
 function renderPreview(){
   if (selectedAssociate){
     previewAssociate.textContent = selectedAssociate.fullName || "—";
-    const parts = [selectedAssociate.email || null, selectedAssociate.phone || null].filter(Boolean);
+    const parts = [
+      selectedAssociate.email ? selectedAssociate.email : null,
+      selectedAssociate.phone ? selectedAssociate.phone : null
+    ].filter(Boolean);
     previewAssociateContact.textContent = parts.length ? parts.join(" • ") : "—";
   } else {
     previewAssociate.textContent = "—";
@@ -321,25 +303,25 @@ function renderPreview(){
     previewPlan.textContent = selectedPlan.name || "—";
     const cur = selectedPlan.currency || "CRC";
     const total = selectedPlan.allowCustomAmount ? "Monto editable" : fmtMoney(selectedPlan.totalAmount, cur);
-    const dur = selectedPlan.durationMonths ? `${selectedPlan.durationMonths} mes(es)` : "duración sin definir";
     const flags = [
       selectedPlan.allowPartial ? "Permite cuotas" : "Pago único",
-      selectedPlan.requiresValidation ? "Requiere validación" : "Sin validación",
-      dur
+      selectedPlan.requiresValidation ? "Requiere validación" : "Sin validación"
     ];
     previewPlanMeta.textContent = `${total} • ${flags.join(" • ")}`;
+    planHint.textContent = durationHint(selectedPlan);
   } else {
     previewPlan.textContent = "—";
     previewPlanMeta.textContent = "—";
+    planHint.textContent = "";
   }
 
+  const season = (seasonEl.value || "").trim();
   if (!selectedPlan){
     previewTotal.textContent = "—";
     previewInstallments.innerHTML = `<tr><td colspan="3" class="text-muted">—</td></tr>`;
     return;
   }
 
-  const season = (seasonEl.value || "").trim();
   const cur = selectedPlan.currency || "CRC";
   const installments = Array.isArray(selectedPlan.installmentsTemplate) ? selectedPlan.installmentsTemplate : [];
 
@@ -347,6 +329,7 @@ function renderPreview(){
   if (!selectedPlan.allowCustomAmount && (totalAmount === null || totalAmount === undefined)){
     totalAmount = installments.reduce((sum, x) => sum + (Number(x.amount)||0), 0);
   }
+
   previewTotal.textContent = selectedPlan.allowCustomAmount ? "Editable" : fmtMoney(totalAmount, cur);
 
   if (!selectedPlan.allowPartial || installments.length === 0){
@@ -357,29 +340,36 @@ function renderPreview(){
   const rows = installments
     .slice()
     .sort((a,b) => (a.n||0)-(b.n||0))
-    .map(x => `
-      <tr>
-        <td class="fw-bold">${x.n ?? "—"}</td>
-        <td>${x.dueMonthDay || "—"}</td>
-        <td>${fmtMoney(x.amount, cur)}</td>
-      </tr>
-    `).join("");
+    .map(x => {
+      const dueIso = mmddToIsoDate(season, x.dueMonthDay);
+      const dueTxt = dueIso || (x.dueMonthDay || "—");
+      return `
+        <tr>
+          <td class="fw-bold">${x.n ?? "—"}</td>
+          <td>${dueTxt}</td>
+          <td>${fmtMoney(x.amount, cur)}</td>
+        </tr>
+      `;
+    }).join("");
 
   previewInstallments.innerHTML = rows || `<tr><td colspan="3" class="text-muted">—</td></tr>`;
-
-  // hint de cobertura (opcional)
-  if (planHint){
-    const pol = startPolicyEl?.value || "any";
-    const sm = Number(startMonthEl?.value || 1);
-    const dm = Number(selectedPlan.durationMonths || 0);
-    const cov = calcCoverage(season, sm, dm);
-    planHint.textContent = cov
-      ? `Cobertura: ${monthLabel(cov.startMonth)} → ${monthLabel(cov.endMonth)} (${season}) • Policy: ${pol}`
-      : `Cobertura: —`;
-  }
 }
 
-// -------- Create membership --------
+function durationHint(p){
+  const dm = Number(p.durationMonths || 0);
+  const sp = p.startPolicy || "JAN_ONLY";
+  if (!dm) return "";
+  const dur = dm === 12 ? "12 meses" : dm === 6 ? "6 meses" : dm === 1 ? "1 mes" : `${dm} meses`;
+  const start =
+    dm === 1 ? "cualquier mes"
+    : dm === 6 ? (sp === "JAN_OR_JUL" ? "enero o julio" : "enero")
+    : "enero";
+  return `Cubre ${dur}. Inicio permitido: ${start}.`;
+}
+
+/* =========================
+   Create membership
+========================= */
 async function createMembership(){
   const season = (seasonEl.value || "").trim();
   if (!/^\d{4}$/.test(season) && season !== "all"){
@@ -387,26 +377,6 @@ async function createMembership(){
   }
   if (!selectedAssociate) return alert("Seleccioná un asociado.");
   if (!selectedPlan) return alert("Seleccioná un plan.");
-
-  const startPolicy = (startPolicyEl?.value || "any").toLowerCase();
-  const startMonth = Number(startMonthEl?.value || 1);
-
-  // validar startMonth según policy
-  const allowed = allowedStartMonths(startPolicy);
-  if (!allowed.includes(startMonth)){
-    return alert("Mes de inicio inválido para la política seleccionada.");
-  }
-
-  // validar durationMonths
-  const durationMonths = Number(selectedPlan.durationMonths || 0);
-  if (!Number.isFinite(durationMonths) || durationMonths <= 0){
-    return alert("Este plan no tiene duración configurada (durationMonths). Editá el plan y definí 1, 6, 12, etc.");
-  }
-
-  const cov = season === "all" ? null : calcCoverage(season, startMonth, durationMonths);
-  if (season !== "all" && !cov){
-    return alert("No se pudo calcular cobertura. Revisá temporada/mes/duración.");
-  }
 
   const planSnap = {
     id: selectedPlan.id,
@@ -418,7 +388,8 @@ async function createMembership(){
     requiresValidation: !!selectedPlan.requiresValidation,
     benefits: Array.isArray(selectedPlan.benefits) ? selectedPlan.benefits : [],
     tags: Array.isArray(selectedPlan.tags) ? selectedPlan.tags : [],
-    durationMonths
+    durationMonths: Number(selectedPlan.durationMonths || 0),
+    startPolicy: selectedPlan.startPolicy || "JAN_ONLY",
   };
 
   const assocSnap = {
@@ -448,13 +419,6 @@ async function createMembership(){
       planId: planSnap.id,
       planSnapshot: planSnap,
 
-      // 👇 NUEVO
-      startPolicy,
-      startMonth,
-      durationMonths,
-      coverageStart: season === "all" ? null : cov.coverageStart,
-      coverageEnd: season === "all" ? null : cov.coverageEnd,
-
       status: "pending",
       totalAmount: planSnap.allowCustomAmount ? null : (totalAmount ?? null),
       currency: planSnap.currency,
@@ -466,17 +430,20 @@ async function createMembership(){
 
     const mid = membershipDoc.id;
 
-    // cuotas (igual que antes)
     if (planSnap.allowPartial && installmentsTemplate.length){
       const sorted = installmentsTemplate.slice().sort((a,b)=> (a.n||0)-(b.n||0));
       for (const it of sorted){
-        await addInstallmentDoc(collection(db, COL_INSTALLMENTS), {
+        const dueIso = season === "all" ? null : mmddToIsoDate(season, it.dueMonthDay);
+        await addDoc(collection(db, COL_INSTALLMENTS), {
           membershipId: mid,
           season,
           planId: planSnap.id,
+
           n: Number(it.n || 0),
           dueMonthDay: it.dueMonthDay || null,
+          dueDate: dueIso,
           amount: Number(it.amount || 0),
+
           status: "pending",
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -487,10 +454,8 @@ async function createMembership(){
     alert("✅ Membresía creada");
     setResultLink(mid, payCode);
 
-    // si estás usando modal_host, avisamos al parent para refrescar lista
-    try {
-      window.parent.postMessage({ type: "membership:created", detail: { id: mid } }, window.location.origin);
-    } catch {}
+    // avisar al host para refrescar lista
+    post("membership:created", { id: mid, associateId: assocSnap.id, season });
 
   } catch (e){
     console.error(e);
