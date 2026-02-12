@@ -1,114 +1,307 @@
-<!DOCTYPE html>
+<!-- associate_edit.html -->
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Editar asociado – Dashboard</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Asociado</title>
 
-  <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    /* Ajustá a tu design system si ya tenés CSS global */
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: 88px; /* espacio para la barra inferior sticky */
+    }
+    .meta { color: #666; font-size: 12px; margin-top: 4px; }
+    .field { margin: 12px 0; }
+    label { display:block; font-weight: 600; margin-bottom: 6px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    textarea { min-height: 110px; resize: vertical; }
 
-  <!-- Estilos globales -->
-  <link rel="stylesheet" href="./css/main.css" />
-  <link rel="stylesheet" href="./css/dashboard.css" />
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 720px){ .row { grid-template-columns: 1fr; } }
 
-  <!-- Estilos de esta pantalla -->
-  <link rel="stylesheet" href="./css/associates.css" />
+    .checkline { display:flex; align-items:center; gap:10px; margin-top: 8px; }
+    .checkline input[type="checkbox"]{ width:auto; }
+
+    /* Barra de acciones abajo */
+    .form-actions{
+      position: sticky;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #fff;
+      border-top: 1px solid #eee;
+      border-radius: 14px 14px 0 0;
+      box-shadow: 0 -6px 18px rgba(0,0,0,.06);
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .spacer{ flex: 1; }
+    button{
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      background: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.primary{ background: #111; color: #fff; border-color:#111; }
+    button.danger{ background: #fff; color:#b00020; border-color:#f2c1c7; }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+
+    /* Títulos */
+    h1{ margin: 6px 0 0; font-size: 22px; }
+    .subtitle{ margin: 6px 0 0; color:#555; }
+
+    /* Header placeholder (si loadHeader inyecta contenido aquí) */
+    #headerMount{ margin-bottom: 10px; }
+  </style>
 </head>
 
-<body class="loading">
-  <div id="app-header"></div>
+<body>
+  <!-- Si tu loadHeader() inserta header en algún contenedor, dejalo -->
+  <div id="headerMount"></div>
 
-  <main class="container py-4 associate-edit-page">
-
-    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
-      <div>
-        <h1 class="page-title mb-1" id="pageTitle">Nuevo asociado</h1>
-        <p class="page-subtitle mb-0" id="pageSubtitle">Registrá datos del asociado para suscripción.</p>
-      </div>
-
-      <div class="d-flex gap-2">
-        <a class="btn btn-light" href="associates.html">
-          <i class="bi bi-arrow-left me-1"></i> Volver
-        </a>
-        <button class="btn btn-primary" id="btnSave" type="button">
-          <i class="bi bi-check2-circle me-1"></i> Guardar
-        </button>
-      </div>
+  <main class="page">
+    <div>
+      <h1 id="pageTitle">Nuevo asociado</h1>
+      <p class="subtitle" id="pageSubtitle">Completá los datos del asociado.</p>
+      <div class="meta" id="metaInfo"></div>
     </div>
 
-    <div class="card shadow-sm">
-      <div class="card-body">
+    <!-- Form -->
+    <input type="hidden" id="associateId" />
 
-        <input type="hidden" id="associateId" />
+    <div class="field">
+      <label for="fullName">Nombre completo *</label>
+      <input id="fullName" type="text" autocomplete="name" placeholder="Ej: María Pérez" />
+    </div>
 
-        <div class="row g-3">
-          <div class="col-12 col-md-6">
-            <label class="form-label">Nombre completo</label>
-            <input id="fullName" class="form-control" placeholder="Ej: Diego Rivera" />
-          </div>
+    <div class="row">
+      <div class="field">
+        <label for="type">Tipo</label>
+        <select id="type">
+          <option value="other">Otro</option>
+          <option value="employee">Empleado</option>
+          <option value="contractor">Contratista</option>
+          <option value="provider">Proveedor</option>
+        </select>
+      </div>
 
-          <div class="col-12 col-md-6">
-            <label class="form-label">Tipo</label>
-            <select id="type" class="form-select">
-              <option value="player">Jugador/a</option>
-              <option value="supporter">Supporter</option>
-              <option value="parent">Encargado/a</option>
-              <option value="other" selected>Otro</option>
-            </select>
-          </div>
-
-          <div class="col-12 col-md-6">
-            <label class="form-label">Email</label>
-            <input id="email" class="form-control" placeholder="correo@ejemplo.com" />
-          </div>
-
-          <div class="col-12 col-md-6">
-            <label class="form-label">Teléfono</label>
-            <input id="phone" class="form-control" placeholder="8888-8888" />
-          </div>
-
-          <div class="col-12 col-md-6">
-            <label class="form-label">Cédula (opcional)</label>
-            <input id="idNumber" class="form-control" placeholder="1-2345-6789" />
-          </div>
-
-          <div class="col-12 col-md-6">
-            <label class="form-label">Estado</label>
-            <div class="form-check mt-2">
-              <input class="form-check-input" type="checkbox" id="active" checked>
-              <label class="form-check-label" for="active">Activo</label>
-            </div>
-          </div>
-
-          <div class="col-12">
-            <label class="form-label">Notas (opcional)</label>
-            <textarea id="notes" class="form-control" rows="3" placeholder="Observaciones..."></textarea>
-          </div>
-
-          <div class="col-12">
-            <div class="small text-muted">
-              En el futuro podés linkear este asociado a un jugador del club (si aplica), pero no es requerido.
-            </div>
-          </div>
-        </div>
-
+      <div class="field">
+        <label for="idNumber">Cédula / ID</label>
+        <input id="idNumber" type="text" autocomplete="off" placeholder="Ej: 1-2345-6789" />
       </div>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mt-3">
-      <button class="btn btn-outline-danger" id="btnDeactivate" type="button" style="display:none;">
-        <i class="bi bi-person-x me-1"></i> Marcar como inactivo
-      </button>
+    <div class="row">
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" placeholder="correo@dominio.com" />
+      </div>
 
-      <div class="small text-muted" id="metaInfo"></div>
+      <div class="field">
+        <label for="phone">Teléfono</label>
+        <input id="phone" type="tel" autocomplete="tel" placeholder="+506 8888-8888" />
+      </div>
     </div>
 
+    <div class="field">
+      <label for="notes">Notas</label>
+      <textarea id="notes" placeholder="Observaciones, horarios, comentarios…"></textarea>
+
+      <div class="checkline">
+        <input id="active" type="checkbox" checked />
+        <label for="active" style="margin:0;font-weight:600;">Activo</label>
+      </div>
+    </div>
   </main>
 
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script type="module" src="./js/features/associate_edit.js"></script>
+  <!-- Acciones abajo (como pediste) -->
+  <div class="form-actions">
+    <button id="btnBack" type="button">Volver</button>
+    <div class="spacer"></div>
+    <button id="btnDeactivate" type="button" class="danger" style="display:none;">Desactivar</button>
+    <button id="btnSave" type="button" class="primary">Guardar</button>
+  </div>
+
+  <!-- Tu lógica -->
+  <script type="module">
+    import { db } from "../firebase.js";
+    import { watchAuth, logout } from "../auth.js";
+    import { loadHeader } from "../components/header.js";
+    import { showLoader, hideLoader } from "../ui/loader.js";
+
+    import {
+      doc,
+      getDoc,
+      updateDoc,
+      addDoc,
+      collection,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    loadHeader("admin");
+    document.getElementById("logoutBtn")?.addEventListener("click", logout);
+
+    const COL = "associates";
+
+    const pageTitle = document.getElementById("pageTitle");
+    const pageSubtitle = document.getElementById("pageSubtitle");
+    const metaInfo = document.getElementById("metaInfo");
+
+    const associateId = document.getElementById("associateId");
+
+    const fullName = document.getElementById("fullName");
+    const type = document.getElementById("type");
+    const email = document.getElementById("email");
+    const phone = document.getElementById("phone");
+    const idNumber = document.getElementById("idNumber");
+    const active = document.getElementById("active");
+    const notes = document.getElementById("notes");
+
+    const btnSave = document.getElementById("btnSave");
+    const btnDeactivate = document.getElementById("btnDeactivate");
+    const btnBack = document.getElementById("btnBack");
+
+    const params = new URLSearchParams(window.location.search);
+    const aid = params.get("aid");
+    const returnTo = params.get("returnTo"); // <- vuelve exacto al tab/origen
+
+    function clean(s){ return (s || "").toString().trim(); }
+
+    function validateEmail(v){
+      if (!v) return true;
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    }
+
+    function buildPayload(){
+      return {
+        fullName: clean(fullName.value),
+        type: type.value || "other",
+        email: clean(email.value) || null,
+        phone: clean(phone.value) || null,
+        idNumber: clean(idNumber.value) || null,
+        active: !!active.checked,
+        notes: clean(notes.value) || null,
+        updatedAt: serverTimestamp()
+      };
+    }
+
+    function goBack(){
+      if (returnTo) return window.location.replace(decodeURIComponent(returnTo));
+      if (window.history.length > 1) return window.history.back();
+      return window.location.replace("association.html?tab=associates");
+    }
+
+    btnBack.addEventListener("click", goBack);
+
+    watchAuth(async (user) => {
+      if (!user) return;
+      if (aid) await loadAssociate(aid);
+    });
+
+    async function loadAssociate(id){
+      showLoader?.("Cargando asociado…");
+
+      const ref = doc(db, COL, id);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()){
+        hideLoader?.();
+        alert("No se encontró el asociado.");
+        return goBack();
+      }
+
+      const a = snap.data();
+      associateId.value = snap.id;
+
+      pageTitle.textContent = "Editar asociado";
+      pageSubtitle.textContent = "Actualizá los datos del asociado.";
+      btnDeactivate.style.display = "inline-block";
+
+      fullName.value = a.fullName || "";
+      type.value = a.type || "other";
+      email.value = a.email || "";
+      phone.value = a.phone || "";
+      idNumber.value = a.idNumber || "";
+      active.checked = a.active !== false;
+      notes.value = a.notes || "";
+
+      metaInfo.textContent = `ID: ${snap.id}`;
+      hideLoader?.();
+    }
+
+    btnSave.addEventListener("click", async () => {
+      const name = clean(fullName.value);
+      if (!name) return alert("Falta el nombre completo.");
+
+      const mail = clean(email.value);
+      if (mail && !validateEmail(mail)) return alert("Email inválido.");
+
+      showLoader?.("Guardando…");
+      btnSave.disabled = true;
+
+      try {
+        const payload = buildPayload();
+
+        if (!aid){
+          await addDoc(collection(db, COL), {
+            ...payload,
+            createdAt: serverTimestamp()
+          });
+
+          alert("✅ Asociado creado");
+          return goBack();
+        }
+
+        await updateDoc(doc(db, COL, aid), payload);
+        alert("✅ Guardado");
+        return goBack();
+      } catch (e) {
+        console.error(e);
+        alert("❌ Error guardando: " + (e?.message || e));
+      } finally {
+        btnSave.disabled = false;
+        hideLoader?.();
+      }
+    });
+
+    btnDeactivate.addEventListener("click", async () => {
+      if (!aid) return;
+
+      if (!confirm("¿Marcar este asociado como inactivo?")) return;
+
+      showLoader?.("Actualizando…");
+      btnDeactivate.disabled = true;
+
+      try {
+        await updateDoc(doc(db, COL, aid), {
+          active: false,
+          updatedAt: serverTimestamp()
+        });
+        active.checked = false;
+        alert("✅ Marcado como inactivo");
+      } catch (e) {
+        console.error(e);
+        alert("❌ Error: " + (e?.message || e));
+      } finally {
+        btnDeactivate.disabled = false;
+        hideLoader?.();
+      }
+    });
+  </script>
 </body>
 </html>

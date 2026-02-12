@@ -6,7 +6,6 @@ import { showLoader, hideLoader } from "../ui/loader.js";
 import {
   doc,
   getDoc,
-  setDoc,
   updateDoc,
   addDoc,
   collection,
@@ -18,6 +17,9 @@ document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
 const COL = "associates";
 
+/* =========================
+   ELEMENTOS
+========================= */
 const pageTitle = document.getElementById("pageTitle");
 const pageSubtitle = document.getElementById("pageSubtitle");
 const metaInfo = document.getElementById("metaInfo");
@@ -34,15 +36,18 @@ const notes = document.getElementById("notes");
 
 const btnSave = document.getElementById("btnSave");
 const btnDeactivate = document.getElementById("btnDeactivate");
+const btnBack = document.getElementById("btnBack");
 
+/* =========================
+   PARAMS
+========================= */
 const params = new URLSearchParams(window.location.search);
 const aid = params.get("aid");
+const returnTo = params.get("returnTo");
 
-watchAuth(async (user) => {
-  if (!user) return;
-  if (aid) await loadAssociate(aid);
-});
-
+/* =========================
+   HELPERS
+========================= */
 function clean(s){ return (s || "").toString().trim(); }
 
 function validateEmail(v){
@@ -63,39 +68,79 @@ function buildPayload(){
   };
 }
 
-async function loadAssociate(id){
-  showLoader?.("Cargando asociado…");
-
-  const ref = doc(db, COL, id);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()){
-    hideLoader?.();
-    alert("No se encontró el asociado.");
-    window.location.href = "associates.html";
+/* =========================
+   NAVEGACIÓN CORRECTA BACK
+========================= */
+function goBack(){
+  // si viene returnTo → vuelve EXACTO al tab/origen
+  if (returnTo){
+    window.location.replace(decodeURIComponent(returnTo));
     return;
   }
 
-  const a = snap.data();
-  associateId.value = snap.id;
+  // si hay historial real
+  if (window.history.length > 1){
+    window.history.back();
+    return;
+  }
 
-  pageTitle.textContent = "Editar asociado";
-  pageSubtitle.textContent = "Actualizá los datos del asociado.";
-  btnDeactivate.style.display = "inline-block";
-
-  fullName.value = a.fullName || "";
-  type.value = a.type || "other";
-  email.value = a.email || "";
-  phone.value = a.phone || "";
-  idNumber.value = a.idNumber || "";
-  active.checked = a.active !== false;
-  notes.value = a.notes || "";
-
-  metaInfo.textContent = `ID: ${snap.id}`;
-  hideLoader?.();
+  // fallback
+  window.location.replace("association.html?tab=associates");
 }
 
-btnSave.addEventListener("click", async () => {
+btnBack?.addEventListener("click", goBack);
+
+/* =========================
+   AUTH + LOAD
+========================= */
+watchAuth(async (user) => {
+  if (!user) return;
+  if (aid) await loadAssociate(aid);
+});
+
+async function loadAssociate(id){
+  showLoader?.("Cargando asociado…");
+
+  try{
+    const ref = doc(db, COL, id);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()){
+      alert("No se encontró el asociado.");
+      goBack();
+      return;
+    }
+
+    const a = snap.data();
+    associateId.value = snap.id;
+
+    pageTitle.textContent = "Editar asociado";
+    pageSubtitle.textContent = "Actualizá los datos del asociado.";
+    btnDeactivate.style.display = "inline-block";
+
+    fullName.value = a.fullName || "";
+    type.value = a.type || "other";
+    email.value = a.email || "";
+    phone.value = a.phone || "";
+    idNumber.value = a.idNumber || "";
+    active.checked = a.active !== false;
+    notes.value = a.notes || "";
+
+    metaInfo.textContent = `ID: ${snap.id}`;
+
+  }catch(e){
+    console.error(e);
+    alert("Error cargando asociado");
+    goBack();
+  }finally{
+    hideLoader?.();
+  }
+}
+
+/* =========================
+   SAVE
+========================= */
+btnSave?.addEventListener("click", async () => {
   const name = clean(fullName.value);
   if (!name) return alert("Falta el nombre completo.");
 
@@ -103,10 +148,12 @@ btnSave.addEventListener("click", async () => {
   if (mail && !validateEmail(mail)) return alert("Email inválido.");
 
   showLoader?.("Guardando…");
+  btnSave.disabled = true;
 
   try {
     const payload = buildPayload();
 
+    // CREATE
     if (!aid){
       await addDoc(collection(db, COL), {
         ...payload,
@@ -114,38 +161,49 @@ btnSave.addEventListener("click", async () => {
       });
 
       alert("✅ Asociado creado");
-      window.location.href = "associates.html";
+      goBack();
       return;
     }
 
+    // UPDATE
     await updateDoc(doc(db, COL, aid), payload);
     alert("✅ Guardado");
-    window.location.href = "associates.html";
+    goBack();
+
   } catch (e) {
     console.error(e);
     alert("❌ Error guardando: " + (e?.message || e));
   } finally {
+    btnSave.disabled = false;
     hideLoader?.();
   }
 });
 
-btnDeactivate.addEventListener("click", async () => {
+/* =========================
+   DESACTIVAR
+========================= */
+btnDeactivate?.addEventListener("click", async () => {
   if (!aid) return;
 
   if (!confirm("¿Marcar este asociado como inactivo?")) return;
 
   showLoader?.("Actualizando…");
+  btnDeactivate.disabled = true;
+
   try {
     await updateDoc(doc(db, COL, aid), {
       active: false,
       updatedAt: serverTimestamp()
     });
+
     active.checked = false;
     alert("✅ Marcado como inactivo");
+
   } catch (e) {
     console.error(e);
     alert("❌ Error: " + (e?.message || e));
   } finally {
+    btnDeactivate.disabled = false;
     hideLoader?.();
   }
 });
