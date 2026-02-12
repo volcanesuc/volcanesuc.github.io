@@ -327,7 +327,7 @@ function renderModalHtml() {
                           Permitir empezar en <b>julio</b> (cubre 2º semestre si el plan es de 6 meses)
                         </label>
                         <div class="small text-muted mt-1">
-                          Si está apagado, el plan solo empieza en enero (quien llegue en julio tendría que pagar anual u otro plan).
+                          Si está apagado, el plan solo empieza en enero (al llegar a julio tendría que pagar otro plan semestral).
                         </div>
                       </div>
                     </div>
