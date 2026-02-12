@@ -67,8 +67,8 @@ async function mountTab(tab, cfg) {
     }
 
     if (tab === "plans") {
-        const mod = await import("./features/plans_admin.js?v=1");
-        if (!mod.mount) throw new Error("plans_admin.js no exporta mount()");
+        const mod = await import("./features/subscription_plans.js?v=1");
+        if (!mod.mount) throw new Error("subscription_plans.js no exporta mount()");
         await mod.mount(mount, cfg);
         return;
     }
