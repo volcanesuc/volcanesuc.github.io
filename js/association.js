@@ -95,7 +95,7 @@ if (!redirected) {
   await loadHeader("association", cfg);
   initModalHost();
 
-  // cuando el modal guarde, refrescamos el tab actual (asociados)
+  // cuando el modal guarde, refrescamos el tab actual (Miembros)
   window.addEventListener("associate:saved", async () => {
     // si estás en associates, re-monta el tab (recarga lista)
     const tab = getTabFromUrl();

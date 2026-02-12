@@ -61,8 +61,7 @@ function renderShellForTab(container) {
   container.innerHTML = `
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
       <div>
-        <h3 class="h5 mb-1">Asociados</h3>
-        <div class="text-muted small">Listado de asociados con filtros y acceso a edición.</div>
+        <div class="text-muted small">Listado de miembros con filtros y acceso a edición.</div>
       </div>
       <div class="d-flex gap-2">
         <button class="btn btn-primary btn-sm" id="btnNewAssociate" type="button">
@@ -131,7 +130,7 @@ function renderShellForTab(container) {
 
 // ---------- data ----------
 async function loadAssociates() {
-  showLoader?.("Cargando asociados…");
+  showLoader?.("Cargando Miembros…");
   try {
     const q = query(collection(db, COL), orderBy("fullName", "asc"));
     const snap = await getDocs(q);
@@ -174,7 +173,7 @@ function render() {
   $.countLabel.textContent = `${list.length} asociado(s)`;
 
   if (!list.length) {
-    $.tbody.innerHTML = `<tr><td colspan="5" class="text-muted">No hay asociados con esos filtros.</td></tr>`;
+    $.tbody.innerHTML = `<tr><td colspan="5" class="text-muted">No hay miembros con esos filtros.</td></tr>`;
     return;
   }
 
