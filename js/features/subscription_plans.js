@@ -213,6 +213,7 @@ function renderModalHtml() {
   <div class="modal fade" id="planModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content">
+
         <div class="modal-header">
           <div>
             <div class="small text-muted">Plan</div>
@@ -225,24 +226,33 @@ function renderModalHtml() {
           <input type="hidden" id="planId" />
 
           <div class="card">
-            <div class="card-header bg-white">
-              <ul class="nav nav-tabs card-header-tabs" id="planTabs" role="tablist">
+            <div class="card-header p-0 bg-white">
+              <ul class="nav nav-tabs" id="planTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                  <button class="nav-link active" id="tab-general" data-bs-toggle="tab" data-bs-target="#panel-general"
-                          type="button" role="tab" aria-controls="panel-general" aria-selected="true">
+                  <button
+                    class="nav-link active"
+                    id="tab-general"
+                    data-bs-toggle="tab"
+                    data-bs-target="#panel-general"
+                    type="button"
+                    role="tab"
+                    aria-controls="panel-general"
+                    aria-selected="true">
                     General
                   </button>
                 </li>
+
                 <li class="nav-item" role="presentation">
-                  <button class="nav-link" id="tab-installments" data-bs-toggle="tab" data-bs-target="#panel-installments"
-                          type="button" role="tab" aria-controls="panel-installments" aria-selected="false">
+                  <button
+                    class="nav-link"
+                    id="tab-installments"
+                    data-bs-toggle="tab"
+                    data-bs-target="#panel-installments"
+                    type="button"
+                    role="tab"
+                    aria-controls="panel-installments"
+                    aria-selected="false">
                     Cuotas
-                  </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                  <button class="nav-link" id="tab-text" data-bs-toggle="tab" data-bs-target="#panel-text"
-                          type="button" role="tab" aria-controls="panel-text" aria-selected="false">
-                    Texto
                   </button>
                 </li>
               </ul>
@@ -258,10 +268,12 @@ function renderModalHtml() {
                       <label class="form-label">Nombre</label>
                       <input id="planName" class="form-control" placeholder="Membresía 2026" />
                     </div>
+
                     <div class="col-6 col-md-3">
                       <label class="form-label">Temporada</label>
                       <input id="planSeason" class="form-control" placeholder="2026 / all" value="2026" />
                     </div>
+
                     <div class="col-6 col-md-2">
                       <label class="form-label">Moneda</label>
                       <select id="planCurrency" class="form-select">
@@ -276,12 +288,14 @@ function renderModalHtml() {
                       <label class="form-label">Monto total</label>
                       <input id="planTotal" class="form-control" type="number" placeholder="45000" />
                     </div>
+
                     <div class="col-6 col-md-4 d-flex align-items-end">
                       <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="planAllowCustomAmount">
                         <label class="form-check-label" for="planAllowCustomAmount">Monto editable</label>
                       </div>
                     </div>
+
                     <div class="col-6 col-md-4 d-flex align-items-end">
                       <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="planAllowPartial">
@@ -297,24 +311,39 @@ function renderModalHtml() {
                         <label class="form-check-label" for="planRequiresValidation">Requiere validación</label>
                       </div>
                     </div>
+
                     <div class="col-6 col-md-4">
                       <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="planActive" checked>
                         <label class="form-check-label" for="planActive">Activo</label>
                       </div>
                     </div>
+
                     <div class="col-12 col-md-4">
                       <label class="form-label">Tags</label>
                       <input id="planTags" class="form-control" placeholder="membresía, adulto, juvenil" />
                     </div>
                   </div>
+
+                  <div class="row g-2 mt-2">
+                    <div class="col-12">
+                      <label class="form-label">Beneficios (1 por línea)</label>
+                      <textarea id="planBenefits" class="form-control" rows="5"
+                        placeholder="Camiseta&#10;Cancha&#10;Torneos"></textarea>
+                    </div>
+                  </div>
+
                 </div>
 
                 <!-- CUOTAS -->
                 <div class="tab-pane fade" id="panel-installments" role="tabpanel" aria-labelledby="tab-installments">
+                  <div id="installmentsDisabledHint" class="alert alert-light border small d-none mb-2">
+                    Activá <b>“Permite cuotas”</b> en la pestaña General para habilitar esta sección.
+                  </div>
+
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="text-muted small">
-                      Definí cuotas solo si activaste “Permite cuotas” en General.
+                      Formato de vencimiento: <span class="mono">MM-DD</span> (ej: 02-15)
                     </div>
                     <button id="btnAddInstallment" class="btn btn-outline-secondary btn-sm" type="button">
                       <i class="bi bi-plus-lg me-1"></i> Agregar cuota
@@ -336,18 +365,7 @@ function renderModalHtml() {
                   </div>
 
                   <div class="alert alert-warning small mt-2 mb-0">
-                    Si el plan no es “Monto editable” y dejás “Monto total” vacío, lo calculamos sumando las cuotas.
-                  </div>
-                </div>
-
-                <!-- TEXTO -->
-                <div class="tab-pane fade" id="panel-text" role="tabpanel" aria-labelledby="tab-text">
-                  <label class="form-label">Beneficios (1 por línea)</label>
-                  <textarea id="planBenefits" class="form-control" rows="6"
-                    placeholder="Camiseta&#10;Cancha&#10;Torneos"></textarea>
-
-                  <div class="form-text">
-                    Esto se puede mostrar al usuario en la pantalla de pago / plan.
+                    Si NO es “Monto editable” y dejás “Monto total” vacío, se calcula sumando las cuotas.
                   </div>
                 </div>
 
@@ -374,6 +392,7 @@ function renderModalHtml() {
   </div>
   `;
 }
+
 
 function cacheDom(container) {
   const root = container || document;
@@ -409,6 +428,9 @@ function cacheDom(container) {
 
   $.installmentsTbody = root.querySelector("#installmentsTbody");
   $.btnAddInstallment = root.querySelector("#btnAddInstallment");
+
+  $.tabInstallmentsBtn = root.querySelector("#tab-installments");
+  $.installmentsDisabledHint = root.querySelector("#installmentsDisabledHint");
 
   $.btnSavePlan = root.querySelector("#btnSavePlan");
   $.btnArchivePlan = root.querySelector("#btnArchivePlan");
@@ -459,13 +481,26 @@ function readInstallmentsFromUI() {
 }
 
 function toggleInstallmentsUI() {
-  // ya no ocultamos el panel; solo aseguramos que si se desactiva cuotas,
-  // no quede data basura (opcional)
-  if (!$.planAllowPartial?.checked && $.installmentsTbody) {
-    // opcional: limpiar cuotas si desmarcan
-    // $.installmentsTbody.innerHTML = "";
+  const enabled = !!$.planAllowPartial?.checked;
+
+  // Botón/tab "Cuotas"
+  if ($.tabInstallmentsBtn) {
+    $.tabInstallmentsBtn.classList.toggle("disabled", !enabled);
+    $.tabInstallmentsBtn.setAttribute("aria-disabled", enabled ? "false" : "true");
+    $.tabInstallmentsBtn.tabIndex = enabled ? 0 : -1;
+  }
+
+  // Botón "Agregar cuota"
+  if ($.btnAddInstallment) {
+    $.btnAddInstallment.disabled = !enabled;
+  }
+
+  // Mensaje dentro del tab
+  if ($.installmentsDisabledHint) {
+    $.installmentsDisabledHint.classList.toggle("d-none", enabled);
   }
 }
+
 
 function clearModal() {
   if (!$.planIdEl) return;
@@ -486,6 +521,7 @@ function clearModal() {
 
   if ($.installmentsTbody) $.installmentsTbody.innerHTML = "";
   if ($.btnArchivePlan) $.btnArchivePlan.style.display = "none";
+  toggleInstallmentsUI();
 }
 
 function setInstallments(rows) {
@@ -747,6 +783,16 @@ function bindEvents() {
     if (btn.dataset.action === "removeInstallment") {
       btn.closest("tr")?.remove();
       renumberInstallments();
+    }
+  });
+
+  $.tabInstallmentsBtn?.addEventListener("click", (e) => {
+    if (!$.planAllowPartial?.checked) {
+      e.preventDefault();
+      e.stopPropagation();
+      // opcional: llevarlo a General
+      const generalBtn = $.root?.querySelector("#tab-general");
+      generalBtn?.click?.();
     }
   });
 
