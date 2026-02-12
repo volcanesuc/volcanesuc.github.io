@@ -12,7 +12,7 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-loadHeader("admin");
+loadHeader("association");
 document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
 const COL = "associates";

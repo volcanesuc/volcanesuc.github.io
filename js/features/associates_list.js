@@ -55,6 +55,7 @@ function cacheDom(root) {
 
 // ---------- shell ----------
 function renderShellForTab(container) {
+  const returnTo = encodeURIComponent(window.location.href);
   container.innerHTML = `
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
       <div>
@@ -62,7 +63,7 @@ function renderShellForTab(container) {
         <div class="text-muted small">Listado de asociados con filtros y acceso a edición.</div>
       </div>
       <div class="d-flex gap-2">
-        <a class="btn btn-primary btn-sm" href="associate_edit.html">
+        <a class="btn btn-primary btn-sm" href="associate_edit.html?returnTo=${returnTo}">
           <i class="bi bi-plus-circle me-1"></i> Nuevo
         </a>
         <button id="btnRefresh" class="btn btn-outline-secondary btn-sm" type="button">
@@ -145,6 +146,7 @@ function render() {
   const qText = normalize($.searchInput?.value);
   const typeVal = $.typeFilter?.value || "all";
   const statusVal = $.statusFilter?.value || "all";
+  const returnTo = encodeURIComponent(window.location.href);
 
   let list = [...all];
 
@@ -194,7 +196,7 @@ function render() {
           <td>${typeLabel(a.type)}</td>
           <td>${estado}</td>
           <td class="text-end">
-            <a class="btn btn-sm btn-outline-primary" href="associate_edit.html?aid=${encodeURIComponent(a.id)}">
+            href="associate_edit.html?aid=${encodeURIComponent(a.id)}&returnTo=${returnTo}"
               <i class="bi bi-pencil me-1"></i> Editar
             </a>
           </td>
