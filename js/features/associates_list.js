@@ -10,10 +10,12 @@ import {
   query,
   orderBy,
   where,
+  documentId,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const COL_ASSOCIATES = "associates";
 const COL_MEMBERSHIPS = "memberships";
+const COL_PLANS = "subscription_plans";
 
 // state
 let all = [];
@@ -26,11 +28,7 @@ let _cfg = {};
 function seasonStartDate(season, startPolicy) {
   const y = Number(season);
   if (!Number.isFinite(y)) return new Date(new Date().getFullYear(), 0, 1);
-
-  // Por ahora: "jan" = arranca 1 de enero
   if ((startPolicy || "jan") === "jan") return new Date(y, 0, 1);
-
-  // fallback
   return new Date(y, 0, 1);
 }
 
@@ -38,18 +36,13 @@ function addMonths(date, months) {
   const d = new Date(date);
   const day = d.getDate();
   d.setMonth(d.getMonth() + months);
-
-  // Ajuste si el mes no tiene ese día (ej: 31)
   if (d.getDate() < day) d.setDate(0);
   return d;
 }
 
 /**
  * ✅ MVP de "hasta cuándo está pagado"
- * Importante: sin installments, asumimos que "validated" cubre 1 ciclo desde el inicio del season
- * según durationMonths (ej mensual=1 => cubre enero si startPolicy=jan).
- *
- * Para hacerlo perfecto: guardar membership.paidThrough y/o usar installments.
+ * Usa planSnapshot si existe, si no usa membership._plan (traído de subscription_plans)
  */
 function computePaidUntil(membership) {
   if (!membership) return null;
@@ -57,13 +50,14 @@ function computePaidUntil(membership) {
   const status = (membership.status || "").toLowerCase();
   if (status !== "validated") return null;
 
+  const plan = membership.planSnapshot || membership._plan || null;
+
   const season = membership.season || new Date().getFullYear().toString();
-  const startPolicy = membership.planSnapshot?.startPolicy || "jan";
-  const durationMonths = Number(membership.planSnapshot?.durationMonths || 12);
+  const startPolicy = plan?.startPolicy || "jan";
+  const durationMonths = Number(plan?.durationMonths ?? 12);
 
   const start = seasonStartDate(season, startPolicy);
   const end = addMonths(start, durationMonths);
-
   return end; // exclusive
 }
 
@@ -88,21 +82,12 @@ function typeLabel(t) {
   return map[t] || "—";
 }
 
-/**
- * Asociación status key (lo que se ve y filtra)
- * up_to_date: al día para la fecha actual
- * validating: comprobante subido / en revisión
- * pending: no hay pago válido / falta
- * overdue: estaba pagado pero ya venció (ej mensual pagó enero y estamos en febrero)
- * inactive: asociado inactivo
- */
 function assocKeyFromMembership(membership, associateActive = true) {
   if (associateActive === false) return "inactive";
   if (!membership) return "pending";
 
   const paidUntil = computePaidUntil(membership);
 
-  // No hay pago validado => depende del status
   if (!paidUntil) {
     const s = (membership.status || "").toLowerCase();
     if (s === "validating" || s === "submitted") return "validating";
@@ -124,7 +109,6 @@ function assocBadge(key) {
 }
 
 function isMoroso(assocKey, associateActive) {
-  // Moroso = activo y no está al día (incluye pendiente/validando/vencido)
   return associateActive !== false && assocKey !== "up_to_date";
 }
 
@@ -140,10 +124,8 @@ function chunk(arr, size = 10) {
 function cacheDom(container) {
   $.root = container;
 
-  // header logout (global)
   $.logoutBtn = document.getElementById("logoutBtn");
 
-  // local UI dentro del panel
   $.tbody = container.querySelector("#associatesTbody");
   $.countLabel = container.querySelector("#countLabel");
 
@@ -263,6 +245,22 @@ async function loadMembershipMapForSeason(season, associateIds) {
   return map;
 }
 
+async function loadPlansMap(planIds) {
+  const ids = [...new Set((planIds || []).filter(Boolean))];
+  const map = {};
+  const groups = chunk(ids, 10);
+
+  for (const g of groups) {
+    const q = query(collection(db, COL_PLANS), where(documentId(), "in", g));
+    const snap = await getDocs(q);
+    snap.forEach((d) => {
+      map[d.id] = { id: d.id, ...d.data() };
+    });
+  }
+
+  return map;
+}
+
 async function loadAssociates() {
   showLoader?.("Cargando Miembros…");
   try {
@@ -275,9 +273,20 @@ async function loadAssociates() {
 
     const membershipMap = await loadMembershipMapForSeason(season, ids);
 
+    // 🔥 si membership no trae planSnapshot, lo resolvemos por planId
+    const planIds = Object.values(membershipMap).map((m) => m?.planId);
+    const plansMap = await loadPlansMap(planIds);
+
     all = associates.map((a) => {
       const isActive = a.active !== false;
       const membership = membershipMap[a.id] || null;
+
+      // attach plan if snapshot missing
+      if (membership && !membership.planSnapshot && membership.planId && plansMap[membership.planId]) {
+        membership._plan = plansMap[membership.planId];
+      } else if (membership) {
+        membership._plan = null;
+      }
 
       const assocKey = assocKeyFromMembership(membership, isActive);
 
@@ -285,7 +294,7 @@ async function loadAssociates() {
         ...a,
         membership,
         _season: season,
-        _assocKey: assocKey,                 // up_to_date | pending | validating | overdue | inactive
+        _assocKey: assocKey,
         _isMoroso: isMoroso(assocKey, isActive),
       };
     });
@@ -295,11 +304,9 @@ async function loadAssociates() {
     console.error("[associates_list] load error", err);
     if ($.tbody) {
       $.tbody.innerHTML = `
-        <tr>
-          <td colspan="6" class="text-danger">
-            Error cargando miembros: ${String(err?.message || err)}
-          </td>
-        </tr>
+        <tr><td colspan="6" class="text-danger">
+          Error cargando miembros: ${String(err?.message || err)}
+        </td></tr>
       `;
     }
   } finally {
@@ -320,20 +327,16 @@ function render() {
 
   let list = [...all];
 
-  // Tipo
   if (typeVal !== "all") list = list.filter((a) => (a.type || "other") === typeVal);
 
-  // Estado del perfil
   if (statusVal === "active") list = list.filter((a) => a.active !== false);
   else if (statusVal === "inactive") list = list.filter((a) => a.active === false);
 
-  // Asociación
   if (assocVal !== "all") {
     if (assocVal === "moroso") list = list.filter((a) => a._isMoroso);
     else list = list.filter((a) => a._assocKey === assocVal);
   }
 
-  // Buscar
   if (qText) {
     list = list.filter((a) => {
       const fullName = normalize(a.fullName);
@@ -353,7 +356,6 @@ function render() {
   $.tbody.innerHTML = list
     .map((a) => {
       const isActive = a.active !== false;
-
       const perfilBadge = isActive ? badge("Activo", "yellow") : badge("Inactivo", "gray");
       const asocBadge = assocBadge(a._assocKey);
 
@@ -396,14 +398,11 @@ function render() {
 export async function mount(container, cfg) {
   _cfg = cfg || {};
 
-  // Tab-only: siempre renderizamos dentro del contenedor que nos pasa association.js (mount div)
   renderShell(container);
   cacheDom(container);
 
-  // logout (si existe en header global)
   $.logoutBtn?.addEventListener("click", logout);
 
-  // listeners
   $.btnRefresh?.addEventListener("click", loadAssociates);
   $.searchInput?.addEventListener("input", render);
   $.typeFilter?.addEventListener("change", render);
