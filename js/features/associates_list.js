@@ -2,6 +2,7 @@
 import { db } from "../firebase.js";
 import { watchAuth, logout } from "../auth.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
+import { openModal } from "../ui/modal_host.js";
 
 import {
   collection,
@@ -37,7 +38,7 @@ function typeLabel(t) {
   return map[t] || "—";
 }
 
-function cacheDom(root) {
+function  cacheDom(root) {
   $.root = root;
 
   // header logout (global)
@@ -51,6 +52,7 @@ function cacheDom(root) {
   $.typeFilter = root.querySelector("#typeFilter");
   $.statusFilter = root.querySelector("#statusFilter");
   $.btnRefresh = root.querySelector("#btnRefresh");
+  $.btnNewAssociate = root.querySelector("#btnNewAssociate");
 }
 
 // ---------- shell ----------
@@ -63,9 +65,9 @@ function renderShellForTab(container) {
         <div class="text-muted small">Listado de asociados con filtros y acceso a edición.</div>
       </div>
       <div class="d-flex gap-2">
-        <a class="btn btn-primary btn-sm" href="associate_edit.html?returnTo=${returnTo}">
+        <button class="btn btn-primary btn-sm" id="btnNewAssociate" type="button">
           <i class="bi bi-plus-circle me-1"></i> Nuevo
-        </a>
+        </button>
         <button id="btnRefresh" class="btn btn-outline-secondary btn-sm" type="button">
           <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
         </button>
@@ -196,14 +198,21 @@ function render() {
           <td>${typeLabel(a.type)}</td>
           <td>${estado}</td>
           <td class="text-end">
-            href="associate_edit.html?aid=${encodeURIComponent(a.id)}&returnTo=${returnTo}"
+            <button class="btn btn-sm btn-outline-primary btnEdit" data-id="${encodeURIComponent(a.id)}" type="button">
               <i class="bi bi-pencil me-1"></i> Editar
-            </a>
+            </button>
           </td>
         </tr>
       `;
     })
     .join("");
+
+    $.root.querySelectorAll(".btnEdit").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        openModal(`associate_modal.html?aid=${encodeURIComponent(id)}`);
+      });
+    });
 }
 
 // ---------- public API ----------
@@ -227,6 +236,10 @@ export async function mount(container, cfg) {
   $.searchInput?.addEventListener("input", render);
   $.typeFilter?.addEventListener("change", render);
   $.statusFilter?.addEventListener("change", render);
+
+  $.btnNewAssociate?.addEventListener("click", () => {
+    openModal(`associate_modal.html`);
+  });
 
   watchAuth(async (user) => {
     if (!user) return;

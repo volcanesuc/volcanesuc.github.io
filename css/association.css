@@ -130,6 +130,33 @@ body.loading {
   padding-bottom: 80px;
 }
 
+/* ===== Modal host ===== */
+.mh-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 18px 12px;
+  overflow: auto;
+}
+
+.mh-shell{
+  width: min(1200px, 100%);
+}
+
+.mh-frame{
+  width: 100%;
+  height: min(85vh, 900px);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: 0 12px 30px rgba(0,0,0,.25);
+}
+
+
 /* Responsive tweaks */
 @media (max-width: 768px) {
   .page-title {

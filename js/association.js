@@ -1,6 +1,7 @@
 // js/association.js
 import { guardPage } from "./page-guard.js";
 import { loadHeader } from "./components/header.js";
+import { initModalHost } from "./ui/modal_host.js";
 
 const TABS = ["associates", "memberships", "payments", "plans"];
 
@@ -92,6 +93,14 @@ async function renderAssociation(cfg) {
 const { cfg, redirected } = await guardPage("association");
 if (!redirected) {
   await loadHeader("association", cfg);
+  initModalHost();
+
+  // cuando el modal guarde, refrescamos el tab actual (asociados)
+  window.addEventListener("associate:saved", async () => {
+    // si estás en associates, re-monta el tab (recarga lista)
+    const tab = getTabFromUrl();
+    if (tab === "associates") await renderAssociation(cfg);
+  });
 
   document.querySelectorAll("#associationTabs .nav-link").forEach((a) => {
     a.addEventListener("click", async (e) => {
