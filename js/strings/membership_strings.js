@@ -105,7 +105,8 @@ export const STR = {
   actions: {
     refresh: "Actualizar",
     detail: "Detalle",
-    link: "Link"
+    link: "Link",
+    newMembership: "Nueva membresía"
   },
 
   /* =========================

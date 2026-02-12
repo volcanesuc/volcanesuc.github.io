@@ -3,6 +3,7 @@ import { db } from "../firebase.js";
 import { watchAuth, logout } from "../auth.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
 import { STR } from "../strings/membership_strings.js";
+import { openModal } from "../ui/modal_host.js";
 
 import {
   collection,
@@ -24,6 +25,7 @@ let allPlans = [];
 // guard contra dobles mounts / listeners
 let mounted = false;
 let $ = {};
+let _msgListenerBound = false;
 
 /* =========================
    Helpers
@@ -57,7 +59,6 @@ function statusBadgeHtml(st) {
 }
 
 function payUrl(mid, code) {
-  // mantiene la lógica original: construye base desde el path actual
   const base = `${window.location.origin}${window.location.pathname.replace(
     /\/[^/]+$/,
     "/"
@@ -94,12 +95,10 @@ function renderKpis() {
 }
 
 function cacheDom(container) {
-  // si estás montando dentro de association tabs, el container es el mount
-  // si lo abrís standalone, container puede ser document.body o un wrapper
   const root = container || document;
 
   $.root = root;
-  $.logoutBtn = document.getElementById("logoutBtn"); // puede vivir en header global
+  $.logoutBtn = document.getElementById("logoutBtn");
   $.tbody = root.querySelector("#membershipsTbody");
   $.countLabel = root.querySelector("#countLabel");
 
@@ -109,6 +108,7 @@ function cacheDom(container) {
   $.statusFilter = root.querySelector("#statusFilter");
   $.actionFilter = root.querySelector("#actionFilter");
   $.btnRefresh = root.querySelector("#btnRefresh");
+  $.btnNewMembership = root.querySelector("#btnNewMembership");
 
   $.kpiPending = root.querySelector("#kpiPending");
   $.kpiPartial = root.querySelector("#kpiPartial");
@@ -117,9 +117,7 @@ function cacheDom(container) {
 }
 
 /* =========================
-   HTML shell (for mount)
-   - Si ya tenés un HTML existente, podés quitar esto
-   - pero así queda auto-contenido para tabs
+   Shell
 ========================= */
 function renderShell(container) {
   container.innerHTML = `
@@ -130,6 +128,9 @@ function renderShell(container) {
           <div class="text-muted small">${STR.subtitle}</div>
         </div>
         <div class="d-flex gap-2">
+          <button id="btnNewMembership" class="btn btn-primary btn-sm" type="button">
+            <i class="bi bi-plus-circle me-1"></i> ${STR.actions?.newMembership || "Nueva membresía"}
+          </button>
           <button id="btnRefresh" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-clockwise me-1"></i> ${STR.actions.refresh}
           </button>
@@ -226,6 +227,9 @@ function renderShellWithoutHeader(container) {
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
       <div id="countLabel" class="text-muted small">${STR.count(0)}</div>
       <div class="d-flex gap-2">
+        <button id="btnNewMembership" class="btn btn-primary btn-sm" type="button">
+          <i class="bi bi-plus-circle me-1"></i> ${STR.actions?.newMembership || "Nueva membresía"}
+        </button>
         <button id="btnRefresh" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-arrow-clockwise me-1"></i> ${STR.actions.refresh}
         </button>
@@ -312,33 +316,40 @@ function renderShellWithoutHeader(container) {
   `;
 }
 
-
-
 /* =========================
    Public API: mount(container, cfg)
-   - Útil para association tabs
-   - NO llama loadHeader aquí (eso lo hace association.js)
 ========================= */
 export async function mount(container, cfg) {
   mounted = false;
 
-  // Si el container viene de association tab, normalmente es un div vacío (data-mount).
-  // Ahí sí podemos renderizar shell completo sin duplicar títulos del panel,
-  // PERO vos tenés un placeholder arriba en el panel.
-  //
-  // Solución: si estás en association.html, renderizamos un shell "sin header"
-  // (solo filtros+kpis+tabla) o render completo y vos quitás el placeholder.
   const inAssociation = window.location.pathname.endsWith("/association.html");
 
   if (inAssociation) {
-    renderShellWithoutHeader(container);   // 👈 nuevo
+    renderShellWithoutHeader(container);
   } else {
-    renderShell(container);               // standalone
+    renderShell(container);
   }
 
   cacheDom(container);
 
   $.logoutBtn?.addEventListener("click", logout);
+
+  // abrir modal de nueva membresía
+  $.btnNewMembership?.addEventListener("click", () => {
+    openModal("membership_modal.html");
+  });
+
+  // refrescar al crear membresía desde el modal
+  if (!_msgListenerBound) {
+    _msgListenerBound = true;
+    window.addEventListener("message", (ev) => {
+      if (ev.origin !== window.location.origin) return;
+      const msg = ev.data || {};
+      if (msg.type === "membership:created") {
+        refreshAll();
+      }
+    });
+  }
 
   $.btnRefresh?.addEventListener("click", refreshAll);
   $.searchInput?.addEventListener("input", render);
@@ -377,7 +388,6 @@ export async function mount(container, cfg) {
   mounted = true;
 }
 
-
 /* =========================
    Load
 ========================= */
@@ -385,7 +395,7 @@ async function refreshAll() {
   showLoader?.(STR.loader.loadingMemberships);
   try {
     await Promise.all([loadPlans(), loadMemberships()]);
-    fillSeasonFilter(); // opcional, basado en data
+    fillSeasonFilter();
     fillPlanFilter();
     renderKpis();
     render();
@@ -464,22 +474,18 @@ function render() {
 
   let list = [...allMemberships];
 
-  // season
   if (seasonVal !== "all") {
     list = list.filter((m) => (m.season || "all") === seasonVal);
   }
 
-  // plan
   if (planVal !== "all") {
     list = list.filter((m) => (m.planId || m.planSnapshot?.id) === planVal);
   }
 
-  // status
   if (statusVal !== "all") {
     list = list.filter((m) => (m.status || "pending").toLowerCase() === statusVal);
   }
 
-  // action
   if (actionVal === "needs_action") {
     list = list.filter((m) => {
       const st = (m.status || "pending").toLowerCase();
@@ -492,7 +498,6 @@ function render() {
     });
   }
 
-  // search
   if (qText) {
     list = list.filter((m) => {
       const a = m.associateSnapshot || {};
@@ -550,14 +555,10 @@ function render() {
           <button class="btn btn-outline-primary" data-action="detail" data-mid="${m.id}">
             <i class="bi bi-eye me-1"></i> ${STR.actions.detail}
           </button>
-          <button class="btn btn-outline-dark" data-action="copyPayLink" data-mid="${m.id}" data-code="${
-        m.payCode || ""
-      }">
+          <button class="btn btn-outline-dark" data-action="copyPayLink" data-mid="${m.id}" data-code="${m.payCode || ""}">
             <i class="bi bi-clipboard me-1"></i> ${STR.actions.link}
           </button>
-          <button class="btn btn-outline-secondary" data-action="openPayLink" data-mid="${m.id}" data-code="${
-        m.payCode || ""
-      }">
+          <button class="btn btn-outline-secondary" data-action="openPayLink" data-mid="${m.id}" data-code="${m.payCode || ""}">
             <i class="bi bi-box-arrow-up-right"></i>
           </button>
         </div>
@@ -579,7 +580,6 @@ function render() {
 
 /* =========================
    ejecución standalone
-   - Si abren memberships_list.html directamente
 ========================= */
 async function autoMountIfStandalone() {
   const marker = document.querySelector('[data-page="memberships_list"]');

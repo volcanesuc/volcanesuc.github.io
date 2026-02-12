@@ -1,6 +1,5 @@
 import { db } from "../firebase.js";
-import { watchAuth, logout } from "../auth.js";
-import { loadHeader } from "../components/header.js";
+import { watchAuth } from "../auth.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
 
 import {
@@ -9,9 +8,6 @@ import {
   addDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-loadHeader("admin");
-document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
 /* =========================
    Collections
@@ -29,6 +25,7 @@ const seasonEl = document.getElementById("season");
 const associateSearch = document.getElementById("associateSearch");
 const associateMenu = document.getElementById("associateMenu");
 const associateSelected = document.getElementById("associateSelected");
+const btnNewAssociate = document.getElementById("btnNewAssociate");
 
 const planSelect = document.getElementById("planSelect");
 const planHint = document.getElementById("planHint");
@@ -49,6 +46,9 @@ const btnCopyLink = document.getElementById("btnCopyLink");
 const btnOpenLink = document.getElementById("btnOpenLink");
 const btnGoDetail = document.getElementById("btnGoDetail");
 
+const btnClose = document.getElementById("btnClose");
+const btnCancel = document.getElementById("btnCancel");
+
 /* =========================
    State
 ========================= */
@@ -56,6 +56,16 @@ let associates = [];
 let plans = [];
 let selectedAssociate = null;
 let selectedPlan = null;
+
+/* =========================
+   postMessage helpers
+========================= */
+function post(type, detail) {
+  window.parent.postMessage({ type, detail }, window.location.origin);
+}
+function close() {
+  post("modal:close");
+}
 
 /* =========================
    Helpers
@@ -70,7 +80,6 @@ function fmtMoney(n, cur="CRC"){
 }
 
 function randomCode(len = 6){
-  // no crypto needed; suficiente para un "payCode" simple
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";
   for (let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
@@ -78,7 +87,6 @@ function randomCode(len = 6){
 }
 
 function mmddToIsoDate(season, mmdd){
-  // season: "2026", mmdd: "02-15" => "2026-02-15"
   if (!season || !/^\d{4}$/.test(season)) return null;
   if (!mmdd || !/^\d{2}-\d{2}$/.test(mmdd)) return null;
   return `${season}-${mmdd}`;
@@ -93,10 +101,16 @@ function planDisplay(p){
 }
 
 function setResultLink(mid, code){
-  const url = `${window.location.origin}${window.location.pathname.replace(/\/[^/]+$/, "/")}membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code)}`;
+  // Construye URL relativa al sitio actual (GitHub pages / hosting)
+  const baseDir = window.location.href.replace(/\/[^/]+$/, "/");
+  const url = `${baseDir}membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code)}`;
+
   payLinkText.textContent = url;
   btnOpenLink.href = url;
-  btnGoDetail.href = `membership_detail.html?mid=${encodeURIComponent(mid)}`;
+
+  // Detalle admin en tab nuevo
+  btnGoDetail.href = `${baseDir}membership_detail.html?mid=${encodeURIComponent(mid)}`;
+
   resultBox.style.display = "block";
 }
 
@@ -104,6 +118,7 @@ function clearResultLink(){
   resultBox.style.display = "none";
   payLinkText.textContent = "";
   btnOpenLink.removeAttribute("href");
+  btnGoDetail.href = "#";
 }
 
 /* =========================
@@ -140,7 +155,6 @@ async function loadPlans(){
     .filter(p => !p.archived && p.active)
     .sort((a,b) => (a.name || "").localeCompare(b.name || "", "es"));
 
-  // Populate select
   planSelect.innerHTML = `<option value="">Seleccioná un plan…</option>` + plans.map(p => {
     return `<option value="${p.id}">${planDisplay(p)}</option>`;
   }).join("");
@@ -182,7 +196,14 @@ function selectAssociateById(id){
    UI wiring
 ========================= */
 function wireUI(){
-  // Associate search
+  btnClose?.addEventListener("click", close);
+  btnCancel?.addEventListener("click", close);
+
+  btnNewAssociate?.addEventListener("click", () => {
+    // le pedimos al host abrir el modal de asociado
+    post("associate:open", { mode: "create" });
+  });
+
   associateSearch.addEventListener("input", () => {
     const q = norm(associateSearch.value);
     if (!q){
@@ -218,17 +239,14 @@ function wireUI(){
     selectAssociateById(item.dataset.id);
   });
 
-  // Plan select
   planSelect.addEventListener("change", () => {
     const pid = planSelect.value || "";
     selectedPlan = plans.find(p => p.id === pid) || null;
     renderPreview();
   });
 
-  // Season changes update preview of installment due dates
   seasonEl.addEventListener("input", renderPreview);
 
-  // Buttons
   btnClear.addEventListener("click", () => {
     selectedAssociate = null;
     selectedPlan = null;
@@ -247,19 +265,28 @@ function wireUI(){
       await navigator.clipboard.writeText(txt);
       alert("✅ Link copiado");
     }catch{
-      // fallback
       prompt("Copiá el link:", txt);
     }
   });
 
   btnCreate.addEventListener("click", createMembership);
+
+  // escuchar cuando el host crea un asociado nuevo
+  window.addEventListener("message", async (ev) => {
+    if (ev.origin !== window.location.origin) return;
+    const msg = ev.data || {};
+    if (msg.type === "associate:saved") {
+      // recargar lista y autoseleccionar si vino id
+      await loadAssociates();
+      if (msg.detail?.id) selectAssociateById(msg.detail.id);
+    }
+  });
 }
 
 /* =========================
    Preview
 ========================= */
 function renderPreview(){
-  // Associate
   if (selectedAssociate){
     previewAssociate.textContent = selectedAssociate.fullName || "—";
     const parts = [
@@ -272,7 +299,6 @@ function renderPreview(){
     previewAssociateContact.textContent = "—";
   }
 
-  // Plan
   if (selectedPlan){
     previewPlan.textContent = selectedPlan.name || "—";
     const cur = selectedPlan.currency || "CRC";
@@ -282,12 +308,13 @@ function renderPreview(){
       selectedPlan.requiresValidation ? "Requiere validación" : "Sin validación"
     ];
     previewPlanMeta.textContent = `${total} • ${flags.join(" • ")}`;
+    planHint.textContent = durationHint(selectedPlan);
   } else {
     previewPlan.textContent = "—";
     previewPlanMeta.textContent = "—";
+    planHint.textContent = "";
   }
 
-  // Total + installments preview
   const season = (seasonEl.value || "").trim();
   if (!selectedPlan){
     previewTotal.textContent = "—";
@@ -328,6 +355,18 @@ function renderPreview(){
   previewInstallments.innerHTML = rows || `<tr><td colspan="3" class="text-muted">—</td></tr>`;
 }
 
+function durationHint(p){
+  const dm = Number(p.durationMonths || 0);
+  const sp = p.startPolicy || "JAN_ONLY";
+  if (!dm) return "";
+  const dur = dm === 12 ? "12 meses" : dm === 6 ? "6 meses" : dm === 1 ? "1 mes" : `${dm} meses`;
+  const start =
+    dm === 1 ? "cualquier mes"
+    : dm === 6 ? (sp === "JAN_OR_JUL" ? "enero o julio" : "enero")
+    : "enero";
+  return `Cubre ${dur}. Inicio permitido: ${start}.`;
+}
+
 /* =========================
    Create membership
 ========================= */
@@ -339,7 +378,6 @@ async function createMembership(){
   if (!selectedAssociate) return alert("Seleccioná un asociado.");
   if (!selectedPlan) return alert("Seleccioná un plan.");
 
-  // Build plan snapshot
   const planSnap = {
     id: selectedPlan.id,
     name: selectedPlan.name || "",
@@ -349,7 +387,9 @@ async function createMembership(){
     allowPartial: !!selectedPlan.allowPartial,
     requiresValidation: !!selectedPlan.requiresValidation,
     benefits: Array.isArray(selectedPlan.benefits) ? selectedPlan.benefits : [],
-    tags: Array.isArray(selectedPlan.tags) ? selectedPlan.tags : []
+    tags: Array.isArray(selectedPlan.tags) ? selectedPlan.tags : [],
+    durationMonths: Number(selectedPlan.durationMonths || 0),
+    startPolicy: selectedPlan.startPolicy || "JAN_ONLY",
   };
 
   const assocSnap = {
@@ -371,7 +411,6 @@ async function createMembership(){
   showLoader?.("Creando membresía…");
 
   try{
-    // Create membership
     const membershipDoc = await addDoc(collection(db, COL_MEMBERSHIPS), {
       associateId: assocSnap.id,
       associateSnapshot: assocSnap,
@@ -391,11 +430,8 @@ async function createMembership(){
 
     const mid = membershipDoc.id;
 
-    // Create installments if plan allows partial
     if (planSnap.allowPartial && installmentsTemplate.length){
-      // create each installment doc
       const sorted = installmentsTemplate.slice().sort((a,b)=> (a.n||0)-(b.n||0));
-
       for (const it of sorted){
         const dueIso = season === "all" ? null : mmddToIsoDate(season, it.dueMonthDay);
         await addDoc(collection(db, COL_INSTALLMENTS), {
@@ -417,6 +453,10 @@ async function createMembership(){
 
     alert("✅ Membresía creada");
     setResultLink(mid, payCode);
+
+    // avisar al host para refrescar lista
+    post("membership:created", { id: mid, associateId: assocSnap.id, season });
+
   } catch (e){
     console.error(e);
     alert("❌ Error creando membresía: " + (e?.message || e));
