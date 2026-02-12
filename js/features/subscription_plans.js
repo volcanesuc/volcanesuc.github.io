@@ -58,7 +58,7 @@ function validateMonthDay(mmdd) {
 }
 
 /**
- * startPolicy values (stable, simple):
+ * startPolicy values (persisted in Firestore):
  * - "any"      => puede iniciar cualquier mes
  * - "jan"      => solo enero
  * - "jan_jul"  => solo enero o julio
@@ -93,17 +93,10 @@ function validatePlanPayload(p) {
     return "Política de inicio inválida.";
   }
 
-  // reglas de coherencia (no forzamos, pero protegemos UX)
-  // anual típicamente enero
+  // Coherencia mínima (anual -> enero)
   if (dm === 12 && sp !== "jan") {
     return "Un plan anual debe iniciar en Enero (startPolicy = jan).";
   }
-  // semestral puede ser ene o ene/jul
-  if (dm === 6 && !(sp === "jan" || sp === "jan_jul")) {
-    return "Un plan semestral debe tener startPolicy = jan o jan_jul.";
-  }
-  // mensual típicamente any (pero si querés permitir mensual solo enero, quitá esta validación)
-  // if (dm === 1 && sp !== "any") return "Un plan mensual debe permitir iniciar en cualquier mes (startPolicy = any).";
 
   if (
     !p.allowCustomAmount &&
@@ -120,6 +113,36 @@ function validatePlanPayload(p) {
   }
 
   return null;
+}
+
+/**
+ * Default sugerido por duración (admin puede cambiarlo)
+ */
+function defaultStartPolicyForDuration(dm) {
+  if (dm === 12) return "jan";
+  if (dm === 6) return "jan_jul";
+  if (dm === 1) return "any";
+  // 2-11: default enero (más conservador)
+  return "jan";
+}
+
+function toggleStartPolicyUI() {
+  const dm = Number($.planDurationMonths?.value || 0);
+
+  // ✅ mostrar startPolicy cuando durationMonths < 12
+  const show = dm > 0 && dm < 12;
+
+  if ($.startPolicyWrap) $.startPolicyWrap.classList.toggle("d-none", !show);
+
+  // Defaults/normalización visible
+  if ($.planStartPolicy) {
+    if (!$.planStartPolicy.value) {
+      $.planStartPolicy.value = defaultStartPolicyForDuration(dm);
+    }
+
+    // anual fuerza enero (aunque esté oculto)
+    if (dm === 12) $.planStartPolicy.value = "jan";
+  }
 }
 
 /* =========================
@@ -322,15 +345,23 @@ function renderModalHtml() {
                     </div>
                   </div>
 
-                  <!-- Duración + Política de inicio (ADMIN decide aquí) -->
                   <div class="row g-2 mt-2">
                     <div class="col-12 col-md-4">
                       <label class="form-label">Duración (meses)</label>
-                      <input id="planDurationMonths" class="form-control" type="number" min="1" max="12" step="1" placeholder="12" value="12" />
+                      <input
+                        id="planDurationMonths"
+                        class="form-control"
+                        type="number"
+                        min="1"
+                        max="12"
+                        step="1"
+                        placeholder="12"
+                        value="12" />
                       <div class="small text-muted mt-1">Ej: 12=anual, 6=semestral, 1=mensual</div>
                     </div>
 
-                    <div class="col-12 col-md-8">
+                    <!-- ✅ Start policy: visible cuando durationMonths < 12 -->
+                    <div class="col-12 col-md-8 d-none" id="startPolicyWrap">
                       <label class="form-label">Política de inicio</label>
                       <select id="planStartPolicy" class="form-select">
                         <option value="any">Puede iniciar en cualquier mes</option>
@@ -338,54 +369,66 @@ function renderModalHtml() {
                         <option value="jan_jul">Solo puede iniciar en Enero o Julio</option>
                       </select>
                       <div class="small text-muted mt-1">
-                        Define desde qué mes puede empezar la cobertura.
+                        Define desde qué mes puede arrancar la cobertura del plan (para planes &lt; 12 meses).
                       </div>
                     </div>
                   </div>
 
+                  <!-- Monto -->
                   <div class="row g-2 mt-2">
                     <div class="col-12 col-md-4">
                       <label class="form-label">Monto total</label>
                       <input id="planTotal" class="form-control" type="number" placeholder="45000" />
                     </div>
+                  </div>
 
-                    <div class="col-6 col-md-4 d-flex align-items-end">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="planAllowCustomAmount">
-                        <label class="form-check-label" for="planAllowCustomAmount">Monto editable</label>
-                      </div>
-                    </div>
+                  <!-- ✅ CHECKS agrupados en card -->
+                  <div class="card border-0 bg-light mt-3">
+                    <div class="card-body py-3">
+                      <div class="fw-semibold mb-2">Opciones</div>
+                      <div class="row g-2">
 
-                    <div class="col-6 col-md-4 d-flex align-items-end">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="planAllowPartial">
-                        <label class="form-check-label" for="planAllowPartial">Permite cuotas</label>
+                        <div class="col-12 col-md-3">
+                          <label class="form-check">
+                            <input class="form-check-input" type="checkbox" id="planActive" checked>
+                            <span class="form-check-label">Activo</span>
+                          </label>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                          <label class="form-check">
+                            <input class="form-check-input" type="checkbox" id="planRequiresValidation" checked>
+                            <span class="form-check-label">Requiere validación</span>
+                          </label>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                          <label class="form-check">
+                            <input class="form-check-input" type="checkbox" id="planAllowCustomAmount">
+                            <span class="form-check-label">Monto editable</span>
+                          </label>
+                        </div>
+
+                        <div class="col-12 col-md-3">
+                          <label class="form-check">
+                            <input class="form-check-input" type="checkbox" id="planAllowPartial">
+                            <span class="form-check-label">Permite cuotas</span>
+                          </label>
+                        </div>
+
                       </div>
                     </div>
                   </div>
 
-                  <div class="row g-2 mt-2">
-                    <div class="col-6 col-md-4">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="planRequiresValidation" checked>
-                        <label class="form-check-label" for="planRequiresValidation">Requiere validación</label>
-                      </div>
-                    </div>
-
-                    <div class="col-6 col-md-4">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="planActive" checked>
-                        <label class="form-check-label" for="planActive">Activo</label>
-                      </div>
-                    </div>
-
-                    <div class="col-12 col-md-4">
+                  <!-- ✅ Tags DEBAJO del card -->
+                  <div class="row g-2 mt-3">
+                    <div class="col-12">
                       <label class="form-label">Tags</label>
                       <input id="planTags" class="form-control" placeholder="membresía, adulto, juvenil" />
                     </div>
                   </div>
 
-                  <div class="row g-2 mt-2">
+                  <div class="row g-2 mt-3">
                     <div class="col-12">
                       <label class="form-label">Beneficios (1 por línea)</label>
                       <textarea id="planBenefits" class="form-control" rows="5"
@@ -475,9 +518,9 @@ function cacheDom(container) {
   $.planSeason = root.querySelector("#planSeason");
   $.planCurrency = root.querySelector("#planCurrency");
 
-  // ✅ nuevos (plan-level)
   $.planDurationMonths = root.querySelector("#planDurationMonths");
   $.planStartPolicy = root.querySelector("#planStartPolicy");
+  $.startPolicyWrap = root.querySelector("#startPolicyWrap");
 
   $.planTotal = root.querySelector("#planTotal");
   $.planAllowCustomAmount = root.querySelector("#planAllowCustomAmount");
@@ -500,7 +543,7 @@ function cacheDom(container) {
 }
 
 /* =========================
-   Render / installments
+   Installments UI
 ========================= */
 function installmentRow(n, dueMonthDay, amount) {
   return `
@@ -558,34 +601,9 @@ function toggleInstallmentsUI() {
   }
 }
 
-/**
- * UX guard: según duración, sugerimos startPolicy default
- * (pero el admin puede cambiarlo).
- */
-function defaultStartPolicyForDuration(dm) {
-  if (dm === 12) return "jan";
-  if (dm === 6) return "jan_jul"; // default conveniente
-  if (dm === 1) return "any";
-  return "jan";
-}
-
-function normalizeStartPolicyUIForDuration() {
-  const dm = Number($.planDurationMonths?.value || 0);
-  if (!dm || !$.planStartPolicy) return;
-
-  // options siempre disponibles, pero ponemos default si el valor actual está vacío
-  if (!$.planStartPolicy.value) $.planStartPolicy.value = defaultStartPolicyForDuration(dm);
-
-  // si anual: forzar jan (para evitar inconsistencias)
-  if (dm === 12) $.planStartPolicy.value = "jan";
-  // si semestral: permitir jan o jan_jul (si estaba any, lo bajamos a jan_jul)
-  if (dm === 6 && $.planStartPolicy.value === "any") $.planStartPolicy.value = "jan_jul";
-  // si mensual: permitir cualquiera; default any
-  if (dm === 1 && !["any", "jan", "jan_jul"].includes($.planStartPolicy.value)) {
-    $.planStartPolicy.value = "any";
-  }
-}
-
+/* =========================
+   Modal helpers
+========================= */
 function clearModal() {
   if (!$.planIdEl) return;
 
@@ -596,15 +614,15 @@ function clearModal() {
   $.planSeason.value = "2026";
   $.planCurrency.value = "CRC";
 
-  // ✅ nuevos defaults
   $.planDurationMonths.value = "12";
-  $.planStartPolicy.value = "jan";
+  if ($.planStartPolicy) $.planStartPolicy.value = "jan";
 
   $.planTotal.value = "";
   $.planAllowCustomAmount.checked = false;
   $.planAllowPartial.checked = false;
   $.planRequiresValidation.checked = true;
   $.planActive.checked = true;
+
   $.planTags.value = "";
   $.planBenefits.value = "";
 
@@ -612,7 +630,7 @@ function clearModal() {
   if ($.btnArchivePlan) $.btnArchivePlan.style.display = "none";
 
   toggleInstallmentsUI();
-  normalizeStartPolicyUIForDuration();
+  toggleStartPolicyUI();
 }
 
 function setInstallments(rows) {
@@ -627,6 +645,9 @@ function setInstallments(rows) {
   renumberInstallments();
 }
 
+/* =========================
+   Render list
+========================= */
 function renderPlans() {
   if (!$.tbody) return;
 
@@ -731,10 +752,14 @@ async function openEdit(id) {
   $.planSeason.value = p.season || "all";
   $.planCurrency.value = p.currency || "CRC";
 
-  // ✅ nuevos
   $.planDurationMonths.value = String(p.durationMonths ?? 12);
-  $.planStartPolicy.value = (p.startPolicy || defaultStartPolicyForDuration(Number($.planDurationMonths.value))).toLowerCase();
-  normalizeStartPolicyUIForDuration();
+
+  // startPolicy persistido
+  const dm = Number($.planDurationMonths.value || 12);
+  const sp = (p.startPolicy || defaultStartPolicyForDuration(dm)).toLowerCase();
+  if ($.planStartPolicy) $.planStartPolicy.value = sp;
+
+  toggleStartPolicyUI();
 
   $.planTotal.value = p.totalAmount ?? "";
   $.planAllowCustomAmount.checked = !!p.allowCustomAmount;
@@ -757,14 +782,18 @@ async function savePlan() {
   const id = $.planIdEl?.value || null;
 
   const durationMonths = Number($.planDurationMonths?.value || 0);
-  const startPolicy = ($.planStartPolicy?.value || "").toLowerCase();
+
+  // startPolicy:
+  // - si <12: el admin decide
+  // - si 12: forzamos "jan"
+  const spUi = ($.planStartPolicy?.value || "").toLowerCase();
+  const startPolicy = durationMonths < 12 ? (spUi || defaultStartPolicyForDuration(durationMonths)) : "jan";
 
   const payload = {
     name: $.planName.value.trim(),
     season: $.planSeason.value.trim() || "all",
     currency: $.planCurrency.value,
 
-    // ✅ nuevos (plan-level)
     durationMonths,
     startPolicy,
 
@@ -782,19 +811,12 @@ async function savePlan() {
     installmentsTemplate: $.planAllowPartial.checked ? readInstallmentsFromUI() : [],
   };
 
-  // normaliza según duración (guard UX)
-  normalizeStartPolicyUIForDuration();
-  payload.startPolicy = ($.planStartPolicy?.value || payload.startPolicy).toLowerCase();
-
   const err = validatePlanPayload(payload);
   if (err) return alert(err);
 
   // si no es editable y no hay monto, lo calculamos por cuotas
   if (!payload.allowCustomAmount && (payload.totalAmount === null || payload.totalAmount === undefined)) {
-    payload.totalAmount = (payload.installmentsTemplate || []).reduce(
-      (sum, x) => sum + (Number(x.amount) || 0),
-      0
-    );
+    payload.totalAmount = (payload.installmentsTemplate || []).reduce((sum, x) => sum + (Number(x.amount) || 0), 0);
   }
 
   showLoader?.("Guardando…");
@@ -917,9 +939,9 @@ function bindEvents() {
     }
   });
 
-  // ✅ nuevos
+  // ✅ duration changes => mostrar/ocultar startPolicy + defaults
   $.planDurationMonths?.addEventListener("input", () => {
-    normalizeStartPolicyUIForDuration();
+    toggleStartPolicyUI();
   });
 }
 
@@ -936,7 +958,6 @@ export async function mount(container, cfg) {
   cacheDom(container);
   bindEvents();
 
-  // auth watcher: intenta evitar múltiples watchers si el tab se monta varias veces
   if (_unsubAuth) {
     try {
       _unsubAuth();
