@@ -57,15 +57,17 @@ function validateMonthDay(mmdd) {
   return /^\d{2}-\d{2}$/.test(mmdd);
 }
 
+/**
+ * startPolicy values (stable, simple):
+ * - "any"      => puede iniciar cualquier mes
+ * - "jan"      => solo enero
+ * - "jan_jul"  => solo enero o julio
+ */
 function startPolicyLabel(plan) {
-  const dm = Number(plan.durationMonths || 0);
-  const sp = plan.startPolicy || "JAN_ONLY";
-
-  if (dm <= 0) return "—";
-  if (dm === 12) return "Ene";
-  if (dm === 6) return sp === "JAN_OR_JUL" ? "Ene o Jul" : "Ene";
-  if (dm === 1) return "Cualquier mes";
-  return sp === "ANY_MONTH" ? "Cualquier mes" : "Ene";
+  const sp = (plan.startPolicy || "jan").toLowerCase();
+  if (sp === "any") return "Cualquier mes";
+  if (sp === "jan_jul") return "Ene o Jul";
+  return "Ene";
 }
 
 function durationLabel(plan) {
@@ -86,7 +88,27 @@ function validatePlanPayload(p) {
     return "Duración inválida. Usá un número entre 1 y 12.";
   }
 
-  if (!p.allowCustomAmount && (p.totalAmount === null || p.totalAmount === undefined || p.totalAmount === "")) {
+  const sp = (p.startPolicy || "").toLowerCase();
+  if (!["any", "jan", "jan_jul"].includes(sp)) {
+    return "Política de inicio inválida.";
+  }
+
+  // reglas de coherencia (no forzamos, pero protegemos UX)
+  // anual típicamente enero
+  if (dm === 12 && sp !== "jan") {
+    return "Un plan anual debe iniciar en Enero (startPolicy = jan).";
+  }
+  // semestral puede ser ene o ene/jul
+  if (dm === 6 && !(sp === "jan" || sp === "jan_jul")) {
+    return "Un plan semestral debe tener startPolicy = jan o jan_jul.";
+  }
+  // mensual típicamente any (pero si querés permitir mensual solo enero, quitá esta validación)
+  // if (dm === 1 && sp !== "any") return "Un plan mensual debe permitir iniciar en cualquier mes (startPolicy = any).";
+
+  if (
+    !p.allowCustomAmount &&
+    (p.totalAmount === null || p.totalAmount === undefined || p.totalAmount === "")
+  ) {
     return "Falta el monto total (o marcá Monto editable).";
   }
 
@@ -98,19 +120,6 @@ function validatePlanPayload(p) {
   }
 
   return null;
-}
-
-function computeStartPolicy(durationMonths, allowSecondSemesterStart) {
-  const dm = Number(durationMonths);
-
-  // mensual: cualquier mes
-  if (dm === 1) return "ANY_MONTH";
-
-  // semestral: ene o jul si admin lo permite
-  if (dm === 6) return allowSecondSemesterStart ? "JAN_OR_JUL" : "JAN_ONLY";
-
-  // anual (o cualquier otra duración que quieras tratar fijo): enero
-  return "JAN_ONLY";
 }
 
 /* =========================
@@ -292,6 +301,7 @@ function renderModalHtml() {
 
                 <!-- GENERAL -->
                 <div class="tab-pane fade show active" id="panel-general" role="tabpanel" aria-labelledby="tab-general">
+
                   <div class="row g-2">
                     <div class="col-12 col-md-7">
                       <label class="form-label">Nombre</label>
@@ -312,7 +322,7 @@ function renderModalHtml() {
                     </div>
                   </div>
 
-                  <!-- Duración + Inicio permitido -->
+                  <!-- Duración + Política de inicio (ADMIN decide aquí) -->
                   <div class="row g-2 mt-2">
                     <div class="col-12 col-md-4">
                       <label class="form-label">Duración (meses)</label>
@@ -320,15 +330,15 @@ function renderModalHtml() {
                       <div class="small text-muted mt-1">Ej: 12=anual, 6=semestral, 1=mensual</div>
                     </div>
 
-                    <div class="col-12 col-md-8 d-flex align-items-end">
-                      <div class="form-check" id="planAllowJulyWrap">
-                        <input class="form-check-input" type="checkbox" id="planAllowJulyStart">
-                        <label class="form-check-label" for="planAllowJulyStart">
-                          Permitir empezar en <b>julio</b> (cubre 2º semestre si el plan es de 6 meses)
-                        </label>
-                        <div class="small text-muted mt-1">
-                          Si está apagado, el plan solo empieza en enero (al llegar a julio tendría que pagar otro plan semestral).
-                        </div>
+                    <div class="col-12 col-md-8">
+                      <label class="form-label">Política de inicio</label>
+                      <select id="planStartPolicy" class="form-select">
+                        <option value="any">Puede iniciar en cualquier mes</option>
+                        <option value="jan">Solo puede iniciar en Enero</option>
+                        <option value="jan_jul">Solo puede iniciar en Enero o Julio</option>
+                      </select>
+                      <div class="small text-muted mt-1">
+                        Define desde qué mes puede empezar la cobertura.
                       </div>
                     </div>
                   </div>
@@ -465,10 +475,9 @@ function cacheDom(container) {
   $.planSeason = root.querySelector("#planSeason");
   $.planCurrency = root.querySelector("#planCurrency");
 
-  // ✅ nuevos
+  // ✅ nuevos (plan-level)
   $.planDurationMonths = root.querySelector("#planDurationMonths");
-  $.planAllowJulyStart = root.querySelector("#planAllowJulyStart");
-  $.planAllowJulyWrap = root.querySelector("#planAllowJulyWrap");
+  $.planStartPolicy = root.querySelector("#planStartPolicy");
 
   $.planTotal = root.querySelector("#planTotal");
   $.planAllowCustomAmount = root.querySelector("#planAllowCustomAmount");
@@ -549,25 +558,31 @@ function toggleInstallmentsUI() {
   }
 }
 
-function toggleStartPolicyUI() {
+/**
+ * UX guard: según duración, sugerimos startPolicy default
+ * (pero el admin puede cambiarlo).
+ */
+function defaultStartPolicyForDuration(dm) {
+  if (dm === 12) return "jan";
+  if (dm === 6) return "jan_jul"; // default conveniente
+  if (dm === 1) return "any";
+  return "jan";
+}
+
+function normalizeStartPolicyUIForDuration() {
   const dm = Number($.planDurationMonths?.value || 0);
+  if (!dm || !$.planStartPolicy) return;
 
-  // Mostrar el check solo cuando tiene sentido (semestral)
-  const show = dm === 6;
+  // options siempre disponibles, pero ponemos default si el valor actual está vacío
+  if (!$.planStartPolicy.value) $.planStartPolicy.value = defaultStartPolicyForDuration(dm);
 
-  if ($.planAllowJulyWrap) {
-    $.planAllowJulyWrap.classList.toggle("d-none", !show);
-  }
-
-  // Defaults útiles
-  if (dm === 12) {
-    // anual: no aplica julio
-    if ($.planAllowJulyStart) $.planAllowJulyStart.checked = false;
-  }
-
-  if (dm === 1) {
-    // mensual: "cualquier mes" (no se controla con este check)
-    if ($.planAllowJulyStart) $.planAllowJulyStart.checked = false;
+  // si anual: forzar jan (para evitar inconsistencias)
+  if (dm === 12) $.planStartPolicy.value = "jan";
+  // si semestral: permitir jan o jan_jul (si estaba any, lo bajamos a jan_jul)
+  if (dm === 6 && $.planStartPolicy.value === "any") $.planStartPolicy.value = "jan_jul";
+  // si mensual: permitir cualquiera; default any
+  if (dm === 1 && !["any", "jan", "jan_jul"].includes($.planStartPolicy.value)) {
+    $.planStartPolicy.value = "any";
   }
 }
 
@@ -583,8 +598,7 @@ function clearModal() {
 
   // ✅ nuevos defaults
   $.planDurationMonths.value = "12";
-  $.planAllowJulyStart.checked = false;
-  toggleStartPolicyUI();
+  $.planStartPolicy.value = "jan";
 
   $.planTotal.value = "";
   $.planAllowCustomAmount.checked = false;
@@ -596,7 +610,9 @@ function clearModal() {
 
   if ($.installmentsTbody) $.installmentsTbody.innerHTML = "";
   if ($.btnArchivePlan) $.btnArchivePlan.style.display = "none";
+
   toggleInstallmentsUI();
+  normalizeStartPolicyUIForDuration();
 }
 
 function setInstallments(rows) {
@@ -654,10 +670,7 @@ function renderPlans() {
       const cuotas = (p.installmentsTemplate || []).length || 0;
       const monto = p.allowCustomAmount ? "Editable" : fmtMoney(p.totalAmount, cur);
 
-      const meta = [
-        `Cubre: ${durationLabel(p)}`,
-        `Inicio: ${startPolicyLabel(p)}`
-      ].join(" · ");
+      const meta = [`Cubre: ${durationLabel(p)}`, `Inicio: ${startPolicyLabel(p)}`].join(" · ");
 
       return `
         <tr>
@@ -720,11 +733,8 @@ async function openEdit(id) {
 
   // ✅ nuevos
   $.planDurationMonths.value = String(p.durationMonths ?? 12);
-
-  const sp = p.startPolicy || computeStartPolicy(Number($.planDurationMonths.value), false);
-  // solo aplica semestral
-  $.planAllowJulyStart.checked = Number($.planDurationMonths.value) === 6 && sp === "JAN_OR_JUL";
-  toggleStartPolicyUI();
+  $.planStartPolicy.value = (p.startPolicy || defaultStartPolicyForDuration(Number($.planDurationMonths.value))).toLowerCase();
+  normalizeStartPolicyUIForDuration();
 
   $.planTotal.value = p.totalAmount ?? "";
   $.planAllowCustomAmount.checked = !!p.allowCustomAmount;
@@ -747,16 +757,16 @@ async function savePlan() {
   const id = $.planIdEl?.value || null;
 
   const durationMonths = Number($.planDurationMonths?.value || 0);
-  const allowJuly = !!$.planAllowJulyStart?.checked;
+  const startPolicy = ($.planStartPolicy?.value || "").toLowerCase();
 
   const payload = {
     name: $.planName.value.trim(),
     season: $.planSeason.value.trim() || "all",
     currency: $.planCurrency.value,
 
-    // ✅ nuevos
+    // ✅ nuevos (plan-level)
     durationMonths,
-    startPolicy: computeStartPolicy(durationMonths, allowJuly),
+    startPolicy,
 
     totalAmount: $.planTotal.value === "" ? null : Number($.planTotal.value),
     allowCustomAmount: !!$.planAllowCustomAmount.checked,
@@ -772,12 +782,19 @@ async function savePlan() {
     installmentsTemplate: $.planAllowPartial.checked ? readInstallmentsFromUI() : [],
   };
 
+  // normaliza según duración (guard UX)
+  normalizeStartPolicyUIForDuration();
+  payload.startPolicy = ($.planStartPolicy?.value || payload.startPolicy).toLowerCase();
+
   const err = validatePlanPayload(payload);
   if (err) return alert(err);
 
   // si no es editable y no hay monto, lo calculamos por cuotas
   if (!payload.allowCustomAmount && (payload.totalAmount === null || payload.totalAmount === undefined)) {
-    payload.totalAmount = (payload.installmentsTemplate || []).reduce((sum, x) => sum + (Number(x.amount) || 0), 0);
+    payload.totalAmount = (payload.installmentsTemplate || []).reduce(
+      (sum, x) => sum + (Number(x.amount) || 0),
+      0
+    );
   }
 
   showLoader?.("Guardando…");
@@ -902,7 +919,7 @@ function bindEvents() {
 
   // ✅ nuevos
   $.planDurationMonths?.addEventListener("input", () => {
-    toggleStartPolicyUI();
+    normalizeStartPolicyUIForDuration();
   });
 }
 
@@ -921,7 +938,9 @@ export async function mount(container, cfg) {
 
   // auth watcher: intenta evitar múltiples watchers si el tab se monta varias veces
   if (_unsubAuth) {
-    try { _unsubAuth(); } catch {}
+    try {
+      _unsubAuth();
+    } catch {}
     _unsubAuth = null;
   }
 
