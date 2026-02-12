@@ -1,10 +1,4 @@
 // js/features/subscription_plans.js
-// Tab-mountable + optional standalone automount.
-// - No asume DOM global
-// - Exporta mount(container, cfg)
-// - Compatible con association.js (dynamic import)
-//
-// Requiere que existan estos módulos en /js (porque este archivo vive en /js/features):
 import { db } from "../firebase.js";
 import { watchAuth, logout } from "../auth.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
@@ -27,7 +21,6 @@ import {
 ========================= */
 const COL = "subscription_plans";
 
-let mounted = false;
 let allPlans = [];
 let $ = {};
 let _unsubAuth = null;
@@ -64,9 +57,34 @@ function validateMonthDay(mmdd) {
   return /^\d{2}-\d{2}$/.test(mmdd);
 }
 
+function startPolicyLabel(plan) {
+  const dm = Number(plan.durationMonths || 0);
+  const sp = plan.startPolicy || "JAN_ONLY";
+
+  if (dm <= 0) return "—";
+  if (dm === 12) return "Ene";
+  if (dm === 6) return sp === "JAN_OR_JUL" ? "Ene o Jul" : "Ene";
+  if (dm === 1) return "Cualquier mes";
+  return sp === "ANY_MONTH" ? "Cualquier mes" : "Ene";
+}
+
+function durationLabel(plan) {
+  const dm = Number(plan.durationMonths || 0);
+  if (!dm) return "—";
+  if (dm === 12) return "12 meses (anual)";
+  if (dm === 6) return "6 meses (semestral)";
+  if (dm === 1) return "1 mes (mensual)";
+  return `${dm} meses`;
+}
+
 function validatePlanPayload(p) {
   if (!p.name) return "Falta el nombre del plan.";
   if (!p.season) return "Falta la temporada (ej: 2026 o all).";
+
+  const dm = Number(p.durationMonths);
+  if (!Number.isInteger(dm) || dm < 1 || dm > 12) {
+    return "Duración inválida. Usá un número entre 1 y 12.";
+  }
 
   if (!p.allowCustomAmount && (p.totalAmount === null || p.totalAmount === undefined || p.totalAmount === "")) {
     return "Falta el monto total (o marcá Monto editable).";
@@ -82,12 +100,23 @@ function validatePlanPayload(p) {
   return null;
 }
 
+function computeStartPolicy(durationMonths, allowSecondSemesterStart) {
+  const dm = Number(durationMonths);
+
+  // mensual: cualquier mes
+  if (dm === 1) return "ANY_MONTH";
+
+  // semestral: ene o jul si admin lo permite
+  if (dm === 6) return allowSecondSemesterStart ? "JAN_OR_JUL" : "JAN_ONLY";
+
+  // anual (o cualquier otra duración que quieras tratar fijo): enero
+  return "JAN_ONLY";
+}
+
 /* =========================
    DOM
 ========================= */
 function renderShell(container, { inAssociation }) {
-  // Si estás dentro de association tab, mejor sin título grande ni header propio.
-  // Si es standalone, podés renderizar título y controles completos.
   container.innerHTML = inAssociation
     ? `
       <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
@@ -150,7 +179,7 @@ function renderShell(container, { inAssociation }) {
         <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
           <div>
             <h2 class="h5 mb-1">Planes de suscripción</h2>
-            <div class="text-muted small">Crear/editar planes y cuotas</div>
+            <div class="text-muted small">Crear/editar planes, duración e inicio permitido</div>
           </div>
           <div class="d-flex gap-2">
             <button id="btnNewPlan" class="btn btn-primary btn-sm">
@@ -283,6 +312,27 @@ function renderModalHtml() {
                     </div>
                   </div>
 
+                  <!-- Duración + Inicio permitido -->
+                  <div class="row g-2 mt-2">
+                    <div class="col-12 col-md-4">
+                      <label class="form-label">Duración (meses)</label>
+                      <input id="planDurationMonths" class="form-control" type="number" min="1" max="12" step="1" placeholder="12" value="12" />
+                      <div class="small text-muted mt-1">Ej: 12=anual, 6=semestral, 1=mensual</div>
+                    </div>
+
+                    <div class="col-12 col-md-8 d-flex align-items-end">
+                      <div class="form-check" id="planAllowJulyWrap">
+                        <input class="form-check-input" type="checkbox" id="planAllowJulyStart">
+                        <label class="form-check-label" for="planAllowJulyStart">
+                          Permitir empezar en <b>julio</b> (cubre 2º semestre si el plan es de 6 meses)
+                        </label>
+                        <div class="small text-muted mt-1">
+                          Si está apagado, el plan solo empieza en enero (quien llegue en julio tendría que pagar anual u otro plan).
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="row g-2 mt-2">
                     <div class="col-12 col-md-4">
                       <label class="form-label">Monto total</label>
@@ -393,16 +443,13 @@ function renderModalHtml() {
   `;
 }
 
-
 function cacheDom(container) {
   const root = container || document;
 
   $.root = root;
 
-  // global (puede vivir fuera del container, ej header global)
   $.logoutBtn = document.getElementById("logoutBtn");
 
-  // in-container
   $.tbody = root.querySelector("#plansTbody");
   $.btnNew = root.querySelector("#btnNewPlan");
   $.btnRefresh = root.querySelector("#btnRefresh");
@@ -410,7 +457,6 @@ function cacheDom(container) {
   $.seasonFilter = root.querySelector("#seasonFilter");
   $.statusFilter = root.querySelector("#statusFilter");
 
-  // modal in-container (lo insertamos en container)
   $.planModalEl = root.querySelector("#planModal");
   $.planModalTitle = root.querySelector("#planModalTitle");
   $.planIdEl = root.querySelector("#planId");
@@ -418,6 +464,12 @@ function cacheDom(container) {
   $.planName = root.querySelector("#planName");
   $.planSeason = root.querySelector("#planSeason");
   $.planCurrency = root.querySelector("#planCurrency");
+
+  // ✅ nuevos
+  $.planDurationMonths = root.querySelector("#planDurationMonths");
+  $.planAllowJulyStart = root.querySelector("#planAllowJulyStart");
+  $.planAllowJulyWrap = root.querySelector("#planAllowJulyWrap");
+
   $.planTotal = root.querySelector("#planTotal");
   $.planAllowCustomAmount = root.querySelector("#planAllowCustomAmount");
   $.planAllowPartial = root.querySelector("#planAllowPartial");
@@ -435,12 +487,11 @@ function cacheDom(container) {
   $.btnSavePlan = root.querySelector("#btnSavePlan");
   $.btnArchivePlan = root.querySelector("#btnArchivePlan");
 
-  // bootstrap modal instance
   $.planModal = $.planModalEl ? new bootstrap.Modal($.planModalEl) : null;
 }
 
 /* =========================
-   Render
+   Render / installments
 ========================= */
 function installmentRow(n, dueMonthDay, amount) {
   return `
@@ -483,24 +534,42 @@ function readInstallmentsFromUI() {
 function toggleInstallmentsUI() {
   const enabled = !!$.planAllowPartial?.checked;
 
-  // Botón/tab "Cuotas"
   if ($.tabInstallmentsBtn) {
     $.tabInstallmentsBtn.classList.toggle("disabled", !enabled);
     $.tabInstallmentsBtn.setAttribute("aria-disabled", enabled ? "false" : "true");
     $.tabInstallmentsBtn.tabIndex = enabled ? 0 : -1;
   }
 
-  // Botón "Agregar cuota"
   if ($.btnAddInstallment) {
     $.btnAddInstallment.disabled = !enabled;
   }
 
-  // Mensaje dentro del tab
   if ($.installmentsDisabledHint) {
     $.installmentsDisabledHint.classList.toggle("d-none", enabled);
   }
 }
 
+function toggleStartPolicyUI() {
+  const dm = Number($.planDurationMonths?.value || 0);
+
+  // Mostrar el check solo cuando tiene sentido (semestral)
+  const show = dm === 6;
+
+  if ($.planAllowJulyWrap) {
+    $.planAllowJulyWrap.classList.toggle("d-none", !show);
+  }
+
+  // Defaults útiles
+  if (dm === 12) {
+    // anual: no aplica julio
+    if ($.planAllowJulyStart) $.planAllowJulyStart.checked = false;
+  }
+
+  if (dm === 1) {
+    // mensual: "cualquier mes" (no se controla con este check)
+    if ($.planAllowJulyStart) $.planAllowJulyStart.checked = false;
+  }
+}
 
 function clearModal() {
   if (!$.planIdEl) return;
@@ -511,6 +580,12 @@ function clearModal() {
   $.planName.value = "";
   $.planSeason.value = "2026";
   $.planCurrency.value = "CRC";
+
+  // ✅ nuevos defaults
+  $.planDurationMonths.value = "12";
+  $.planAllowJulyStart.checked = false;
+  toggleStartPolicyUI();
+
   $.planTotal.value = "";
   $.planAllowCustomAmount.checked = false;
   $.planAllowPartial.checked = false;
@@ -545,12 +620,10 @@ function renderPlans() {
 
   let list = [...allPlans];
 
-  // season
   if (seasonVal !== "all") {
     list = list.filter((p) => (p.season || "all") === seasonVal);
   }
 
-  // status
   if (statusVal === "active") {
     list = list.filter((p) => !p.archived && p.active);
   } else if (statusVal === "inactive") {
@@ -559,7 +632,6 @@ function renderPlans() {
     list = list.filter((p) => !!p.archived);
   }
 
-  // search
   if (qText) {
     list = list.filter((p) => {
       const name = norm(p.name);
@@ -582,10 +654,16 @@ function renderPlans() {
       const cuotas = (p.installmentsTemplate || []).length || 0;
       const monto = p.allowCustomAmount ? "Editable" : fmtMoney(p.totalAmount, cur);
 
+      const meta = [
+        `Cubre: ${durationLabel(p)}`,
+        `Inicio: ${startPolicyLabel(p)}`
+      ].join(" · ");
+
       return `
         <tr>
           <td>
             <div class="fw-bold">${p.name || "—"}</div>
+            <div class="small text-muted">${meta}</div>
             <div class="small text-muted">${(p.tags || []).join(", ")}</div>
           </td>
           <td>${season}</td>
@@ -639,6 +717,15 @@ async function openEdit(id) {
   $.planName.value = p.name || "";
   $.planSeason.value = p.season || "all";
   $.planCurrency.value = p.currency || "CRC";
+
+  // ✅ nuevos
+  $.planDurationMonths.value = String(p.durationMonths ?? 12);
+
+  const sp = p.startPolicy || computeStartPolicy(Number($.planDurationMonths.value), false);
+  // solo aplica semestral
+  $.planAllowJulyStart.checked = Number($.planDurationMonths.value) === 6 && sp === "JAN_OR_JUL";
+  toggleStartPolicyUI();
+
   $.planTotal.value = p.totalAmount ?? "";
   $.planAllowCustomAmount.checked = !!p.allowCustomAmount;
   $.planAllowPartial.checked = !!p.allowPartial;
@@ -659,10 +746,18 @@ async function openEdit(id) {
 async function savePlan() {
   const id = $.planIdEl?.value || null;
 
+  const durationMonths = Number($.planDurationMonths?.value || 0);
+  const allowJuly = !!$.planAllowJulyStart?.checked;
+
   const payload = {
     name: $.planName.value.trim(),
     season: $.planSeason.value.trim() || "all",
     currency: $.planCurrency.value,
+
+    // ✅ nuevos
+    durationMonths,
+    startPolicy: computeStartPolicy(durationMonths, allowJuly),
+
     totalAmount: $.planTotal.value === "" ? null : Number($.planTotal.value),
     allowCustomAmount: !!$.planAllowCustomAmount.checked,
     allowPartial: !!$.planAllowPartial.checked,
@@ -747,7 +842,7 @@ async function archivePlan() {
 }
 
 /* =========================
-   Events (bind once)
+   Events
 ========================= */
 function bindEvents() {
   if (!$.root) return;
@@ -790,7 +885,6 @@ function bindEvents() {
     if (!$.planAllowPartial?.checked) {
       e.preventDefault();
       e.stopPropagation();
-      // opcional: llevarlo a General
       const generalBtn = $.root?.querySelector("#tab-general");
       generalBtn?.click?.();
     }
@@ -805,14 +899,17 @@ function bindEvents() {
       setInstallments([{ n: 1, dueMonthDay: "02-15", amount: "" }]);
     }
   });
+
+  // ✅ nuevos
+  $.planDurationMonths?.addEventListener("input", () => {
+    toggleStartPolicyUI();
+  });
 }
 
 /* =========================
    Public API
 ========================= */
 export async function mount(container, cfg) {
-  // reseteo "soft" para permitir re-mount en navegación/tab
-  mounted = false;
   allPlans = [];
   $ = {};
 
@@ -822,32 +919,26 @@ export async function mount(container, cfg) {
   cacheDom(container);
   bindEvents();
 
-  // auth watcher: intentamos evitar múltiple watchers si el tab se monta varias veces
+  // auth watcher: intenta evitar múltiples watchers si el tab se monta varias veces
   if (_unsubAuth) {
     try { _unsubAuth(); } catch {}
     _unsubAuth = null;
   }
 
-  // watchAuth en tu proyecto probablemente NO devuelve unsubscribe (depende tu implementación).
-  // Si devuelve, lo guardamos. Si no, simplemente lo llamamos.
   const ret = watchAuth(async (user) => {
     if (!user) return;
     await loadPlans();
   });
   if (typeof ret === "function") _unsubAuth = ret;
-
-  mounted = true;
 }
 
 /* =========================
    Standalone automount (opcional)
-   - Si querés abrir subscription_plans.html directo
 ========================= */
 async function autoMountIfStandalone() {
   const marker = document.querySelector('[data-page="subscription_plans"]');
   if (!marker) return;
 
-  // si es standalone, sí podemos cargar header
   try {
     await loadHeader("plans");
   } catch {}
