@@ -100,7 +100,7 @@ function methodLabel(m) {
 function renderShell(container) {
   container.innerHTML = `
     <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
-      <div class="text-muted small">Pagos enviados (membership_payment_submissions)</div>
+      <div class="text-muted small">Pagos recibidos por asociados</div>
       <div class="d-flex gap-2">
         <button id="btnRefresh" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-arrow-clockwise me-1"></i> Refrescar
