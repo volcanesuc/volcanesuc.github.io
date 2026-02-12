@@ -126,6 +126,10 @@ body.loading {
   cursor: progress;
 }
 
+.modal-body {
+  padding-bottom: 80px;
+}
+
 /* Responsive tweaks */
 @media (max-width: 768px) {
   .page-title {

@@ -211,7 +211,7 @@ function renderShell(container, { inAssociation }) {
 function renderModalHtml() {
   return `
   <div class="modal fade" id="planModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-fullscreen-md-down modal-xl modal-dialog-scrollable">
       <div class="modal-content">
 
         <div class="modal-header">
