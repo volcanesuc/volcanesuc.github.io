@@ -12,8 +12,6 @@ import {
   where,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// NO loadHeader aquí: lo hace association.js
-
 const COL_ASSOCIATES = "associates";
 const COL_MEMBERSHIPS = "memberships";
 
@@ -41,16 +39,8 @@ function typeLabel(t) {
   return map[t] || "—";
 }
 
-/**
- * Normaliza status de memberships a "estado de asociación" (lo que querés filtrar)
- * - Al día: memberships.status === "validated"
- * - Moroso: NO validated (pending/validating/overdue/etc) y asociado activo
- * - Validando: validating/submitted
- * - Pendiente: pending/created/unpaid/null
- * - Vencido: overdue
- * - Inactivo: associates.active === false
- */
-function assocStatusKey(membershipStatus, associateActive = true) {
+// memberships.status -> key de asociación
+function assocKeyFrom(membershipStatus, associateActive = true) {
   if (associateActive === false) return "inactive";
 
   const s = (membershipStatus || "").toLowerCase();
@@ -59,12 +49,10 @@ function assocStatusKey(membershipStatus, associateActive = true) {
   if (s === "validating" || s === "submitted") return "validating";
   if (s === "overdue") return "overdue";
 
-  // todo lo demás lo tratamos como pendiente/moroso
   return "pending";
 }
 
 function assocBadge(key) {
-  // key: up_to_date | pending | validating | overdue | inactive
   if (key === "up_to_date") return badge("Al día", "green");
   if (key === "validating") return badge("Validando", "yellow");
   if (key === "overdue") return badge("Vencido", "red");
@@ -73,7 +61,6 @@ function assocBadge(key) {
 }
 
 function isMoroso(assocKey, associateActive) {
-  // Moroso = activo y no está al día
   return associateActive !== false && assocKey !== "up_to_date";
 }
 
@@ -83,29 +70,27 @@ function chunk(arr, size = 10) {
   return out;
 }
 
-function cacheDom(root) {
-  $.root = root;
+function cacheDom(container) {
+  $.root = container;
 
   // header logout (global)
   $.logoutBtn = document.getElementById("logoutBtn");
 
-  // local UI
-  $.tbody = root.querySelector("#associatesTbody");
-  $.countLabel = root.querySelector("#countLabel");
+  // local UI (SIEMPRE dentro del panel)
+  $.tbody = container.querySelector("#associatesTbody");
+  $.countLabel = container.querySelector("#countLabel");
 
-  $.searchInput = root.querySelector("#searchInput");
-  $.typeFilter = root.querySelector("#typeFilter");
-  $.statusFilter = root.querySelector("#statusFilter");
+  $.searchInput = container.querySelector("#searchInput");
+  $.typeFilter = container.querySelector("#typeFilter");
+  $.statusFilter = container.querySelector("#statusFilter");
+  $.assocFilter = container.querySelector("#associationFilter");
 
-  // nuevo filtro de asociación
-  $.assocFilter = root.querySelector("#associationFilter");
-
-  $.btnRefresh = root.querySelector("#btnRefresh");
-  $.btnNewAssociate = root.querySelector("#btnNewAssociate");
+  $.btnRefresh = container.querySelector("#btnRefresh");
+  $.btnNewAssociate = container.querySelector("#btnNewAssociate");
 }
 
-// ---------- shell (tab dentro de association.html) ----------
-function renderShellForTab(container) {
+// ---------- shell ----------
+function renderShell(container) {
   container.innerHTML = `
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
       <div>
@@ -192,7 +177,7 @@ function renderShellForTab(container) {
 
 // ---------- data ----------
 async function loadMembershipMapForSeason(season, associateIds) {
-  const map = {}; // { [associateId]: membershipDocData }
+  const map = {};
   const groups = chunk(associateIds.filter(Boolean), 10);
 
   for (const ids of groups) {
@@ -207,7 +192,6 @@ async function loadMembershipMapForSeason(season, associateIds) {
       if (m?.associateId) map[m.associateId] = { id: d.id, ...m };
     });
   }
-
   return map;
 }
 
@@ -218,7 +202,6 @@ async function loadAssociates() {
     const snap = await getDocs(q);
     const associates = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    // temporada (si association.js te pasa cfg.season, perfecto)
     const season = (_cfg?.season || new Date().getFullYear().toString());
     const ids = associates.map((a) => a.id);
 
@@ -227,18 +210,29 @@ async function loadAssociates() {
     all = associates.map((a) => {
       const isActive = a.active !== false;
       const membership = membershipMap[a.id] || null;
-      const aKey = assocStatusKey(membership?.status, isActive);
+      const key = assocKeyFrom(membership?.status, isActive);
 
       return {
         ...a,
         membership,
         _season: season,
-        _assocKey: aKey, // up_to_date | pending | validating | overdue | inactive
-        _isMoroso: isMoroso(aKey, isActive),
+        _assocKey: key,
+        _isMoroso: isMoroso(key, isActive),
       };
     });
 
     render();
+  } catch (err) {
+    console.error("[associates_list] load error", err);
+    if ($.tbody) {
+      $.tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-danger">
+            Error cargando miembros: ${String(err?.message || err)}
+          </td>
+        </tr>
+      `;
+    }
   } finally {
     hideLoader?.();
   }
@@ -254,28 +248,16 @@ function render() {
 
   let list = [...all];
 
-  // tipo
-  if (typeVal !== "all") {
-    list = list.filter((a) => (a.type || "other") === typeVal);
-  }
+  if (typeVal !== "all") list = list.filter((a) => (a.type || "other") === typeVal);
 
-  // estado del perfil (activo/inactivo)
-  if (statusVal === "active") {
-    list = list.filter((a) => a.active !== false);
-  } else if (statusVal === "inactive") {
-    list = list.filter((a) => a.active === false);
-  }
+  if (statusVal === "active") list = list.filter((a) => a.active !== false);
+  else if (statusVal === "inactive") list = list.filter((a) => a.active === false);
 
-  // filtro asociación (al día / morosos / pendiente / validando / vencido / inactivo)
   if (assocVal !== "all") {
-    if (assocVal === "moroso") {
-      list = list.filter((a) => a._isMoroso);
-    } else {
-      list = list.filter((a) => a._assocKey === assocVal);
-    }
+    if (assocVal === "moroso") list = list.filter((a) => a._isMoroso);
+    else list = list.filter((a) => a._assocKey === assocVal);
   }
 
-  // búsqueda (nombre/email/teléfono)
   if (qText) {
     list = list.filter((a) => {
       const fullName = normalize(a.fullName);
@@ -295,12 +277,8 @@ function render() {
   $.tbody.innerHTML = list
     .map((a) => {
       const isActive = a.active !== false;
-
-      // Perfil (activo/inactivo)
-      const estado = isActive ? badge("Activo", "yellow") : badge("Inactivo", "gray");
-
-      // Asociación (según memberships.status para la season)
-      const aBadge = assocBadge(a._assocKey);
+      const perfilBadge = isActive ? badge("Activo", "yellow") : badge("Inactivo", "gray");
+      const asocBadge = assocBadge(a._assocKey);
 
       const contacto = [
         a.email ? `<div>${a.email}</div>` : "",
@@ -315,8 +293,8 @@ function render() {
           </td>
           <td>${contacto || `<span class="text-muted">—</span>`}</td>
           <td>${typeLabel(a.type)}</td>
-          <td>${aBadge}</td>
-          <td>${estado}</td>
+          <td>${asocBadge}</td>
+          <td>${perfilBadge}</td>
           <td class="text-end">
             <button class="btn btn-sm btn-outline-primary btnEdit" data-id="${a.id}" type="button">
               <i class="bi bi-pencil me-1"></i> Editar
@@ -339,28 +317,19 @@ function render() {
 export async function mount(container, cfg) {
   _cfg = cfg || {};
 
-  // Siempre estamos como tab dentro de association.html.
-  // Render shell si el contenedor no trae ya la tabla.
-  const hasTableAlready = !!container?.querySelector?.("#associatesTbody");
-  if (!hasTableAlready) {
-    renderShellForTab(container);
-  }
-
+  // Siempre renderizamos el shell en el panel del tab (porque ya no existe associates.html)
+  renderShell(container);
   cacheDom(container);
 
-  // logout (si existe en header global)
   $.logoutBtn?.addEventListener("click", logout);
 
-  // listeners
   $.btnRefresh?.addEventListener("click", loadAssociates);
   $.searchInput?.addEventListener("input", render);
   $.typeFilter?.addEventListener("change", render);
   $.statusFilter?.addEventListener("change", render);
   $.assocFilter?.addEventListener("change", render);
 
-  $.btnNewAssociate?.addEventListener("click", () => {
-    openModal(`associate_modal.html`);
-  });
+  $.btnNewAssociate?.addEventListener("click", () => openModal(`associate_modal.html`));
 
   watchAuth(async (user) => {
     if (!user) return;
