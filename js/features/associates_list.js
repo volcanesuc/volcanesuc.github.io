@@ -197,7 +197,7 @@ function render() {
           <td>${typeLabel(a.type)}</td>
           <td>${estado}</td>
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary btnEdit" data-id="${encodeURIComponent(a.id)}" type="button">
+            <button class="btn btn-sm btn-outline-primary btnEdit" data-id="${a.id}" type="button">
               <i class="bi bi-pencil me-1"></i> Editar
             </button>
           </td>
