@@ -209,7 +209,6 @@ function renderShell(container, { inAssociation }) {
 }
 
 function renderModalHtml() {
-  // OJO: requiere bootstrap JS cargado en la página (como ya usás).
   return `
   <div class="modal fade" id="planModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -225,93 +224,134 @@ function renderModalHtml() {
         <div class="modal-body">
           <input type="hidden" id="planId" />
 
-          <div class="row g-2">
-            <div class="col-12 col-md-7">
-              <label class="form-label">Nombre</label>
-              <input id="planName" class="form-control" placeholder="Membresía 2026" />
+          <div class="card">
+            <div class="card-header bg-white">
+              <ul class="nav nav-tabs card-header-tabs" id="planTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" id="tab-general" data-bs-toggle="tab" data-bs-target="#panel-general"
+                          type="button" role="tab" aria-controls="panel-general" aria-selected="true">
+                    General
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="tab-installments" data-bs-toggle="tab" data-bs-target="#panel-installments"
+                          type="button" role="tab" aria-controls="panel-installments" aria-selected="false">
+                    Cuotas
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="tab-text" data-bs-toggle="tab" data-bs-target="#panel-text"
+                          type="button" role="tab" aria-controls="panel-text" aria-selected="false">
+                    Texto
+                  </button>
+                </li>
+              </ul>
             </div>
-            <div class="col-6 col-md-3">
-              <label class="form-label">Temporada</label>
-              <input id="planSeason" class="form-control" placeholder="2026 / all" value="2026" />
-            </div>
-            <div class="col-6 col-md-2">
-              <label class="form-label">Moneda</label>
-              <select id="planCurrency" class="form-select">
-                <option value="CRC">CRC</option>
-                <option value="USD">USD</option>
-              </select>
-            </div>
-          </div>
 
-          <div class="row g-2 mt-2">
-            <div class="col-12 col-md-4">
-              <label class="form-label">Monto total</label>
-              <input id="planTotal" class="form-control" type="number" placeholder="45000" />
-            </div>
-            <div class="col-6 col-md-4 d-flex align-items-end">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="planAllowCustomAmount">
-                <label class="form-check-label" for="planAllowCustomAmount">Monto editable</label>
+            <div class="card-body">
+              <div class="tab-content">
+
+                <!-- GENERAL -->
+                <div class="tab-pane fade show active" id="panel-general" role="tabpanel" aria-labelledby="tab-general">
+                  <div class="row g-2">
+                    <div class="col-12 col-md-7">
+                      <label class="form-label">Nombre</label>
+                      <input id="planName" class="form-control" placeholder="Membresía 2026" />
+                    </div>
+                    <div class="col-6 col-md-3">
+                      <label class="form-label">Temporada</label>
+                      <input id="planSeason" class="form-control" placeholder="2026 / all" value="2026" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <label class="form-label">Moneda</label>
+                      <select id="planCurrency" class="form-select">
+                        <option value="CRC">CRC</option>
+                        <option value="USD">USD</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="row g-2 mt-2">
+                    <div class="col-12 col-md-4">
+                      <label class="form-label">Monto total</label>
+                      <input id="planTotal" class="form-control" type="number" placeholder="45000" />
+                    </div>
+                    <div class="col-6 col-md-4 d-flex align-items-end">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="planAllowCustomAmount">
+                        <label class="form-check-label" for="planAllowCustomAmount">Monto editable</label>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-4 d-flex align-items-end">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="planAllowPartial">
+                        <label class="form-check-label" for="planAllowPartial">Permite cuotas</label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row g-2 mt-2">
+                    <div class="col-6 col-md-4">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="planRequiresValidation" checked>
+                        <label class="form-check-label" for="planRequiresValidation">Requiere validación</label>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="planActive" checked>
+                        <label class="form-check-label" for="planActive">Activo</label>
+                      </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                      <label class="form-label">Tags</label>
+                      <input id="planTags" class="form-control" placeholder="membresía, adulto, juvenil" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CUOTAS -->
+                <div class="tab-pane fade" id="panel-installments" role="tabpanel" aria-labelledby="tab-installments">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                      Definí cuotas solo si activaste “Permite cuotas” en General.
+                    </div>
+                    <button id="btnAddInstallment" class="btn btn-outline-secondary btn-sm" type="button">
+                      <i class="bi bi-plus-lg me-1"></i> Agregar cuota
+                    </button>
+                  </div>
+
+                  <div class="table-responsive mt-2">
+                    <table class="table table-sm align-middle">
+                      <thead>
+                        <tr>
+                          <th style="width:64px;">#</th>
+                          <th style="width:160px;">Vence (MM-DD)</th>
+                          <th style="width:200px;">Monto</th>
+                          <th class="text-end"></th>
+                        </tr>
+                      </thead>
+                      <tbody id="installmentsTbody"></tbody>
+                    </table>
+                  </div>
+
+                  <div class="alert alert-warning small mt-2 mb-0">
+                    Si el plan no es “Monto editable” y dejás “Monto total” vacío, lo calculamos sumando las cuotas.
+                  </div>
+                </div>
+
+                <!-- TEXTO -->
+                <div class="tab-pane fade" id="panel-text" role="tabpanel" aria-labelledby="tab-text">
+                  <label class="form-label">Beneficios (1 por línea)</label>
+                  <textarea id="planBenefits" class="form-control" rows="6"
+                    placeholder="Camiseta&#10;Cancha&#10;Torneos"></textarea>
+
+                  <div class="form-text">
+                    Esto se puede mostrar al usuario en la pantalla de pago / plan.
+                  </div>
+                </div>
+
               </div>
-            </div>
-            <div class="col-6 col-md-4 d-flex align-items-end">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="planAllowPartial">
-                <label class="form-check-label" for="planAllowPartial">Permite cuotas</label>
-              </div>
-            </div>
-          </div>
-
-          <div class="row g-2 mt-2">
-            <div class="col-6 col-md-4">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="planRequiresValidation" checked>
-                <label class="form-check-label" for="planRequiresValidation">Requiere validación</label>
-              </div>
-            </div>
-            <div class="col-6 col-md-4">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="planActive" checked>
-                <label class="form-check-label" for="planActive">Activo</label>
-              </div>
-            </div>
-            <div class="col-12 col-md-4">
-              <label class="form-label">Orden</label>
-              <input id="planSortIndex" class="form-control" type="number" value="10" />
-            </div>
-          </div>
-
-          <div class="row g-2 mt-2">
-            <div class="col-12 col-md-6">
-              <label class="form-label">Tags (coma-separado)</label>
-              <input id="planTags" class="form-control" placeholder="membresía, adulto, juvenil" />
-            </div>
-            <div class="col-12 col-md-6">
-              <label class="form-label">Beneficios (1 por línea)</label>
-              <textarea id="planBenefits" class="form-control" rows="4" placeholder="Camiseta&#10;Cancha"></textarea>
-            </div>
-          </div>
-
-          <div id="installmentsSection" class="mt-3 d-none">
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="fw-bold">Cuotas</div>
-              <button id="btnAddInstallment" class="btn btn-outline-secondary btn-sm" type="button">
-                <i class="bi bi-plus-lg me-1"></i> Agregar cuota
-              </button>
-            </div>
-
-            <div class="table-responsive mt-2">
-              <table class="table table-sm align-middle">
-                <thead>
-                  <tr>
-                    <th style="width:64px;">#</th>
-                    <th style="width:160px;">Vence (MM-DD)</th>
-                    <th style="width:200px;">Monto</th>
-                    <th class="text-end"> </th>
-                  </tr>
-                </thead>
-                <tbody id="installmentsTbody"></tbody>
-              </table>
             </div>
           </div>
 
@@ -364,11 +404,9 @@ function cacheDom(container) {
   $.planAllowPartial = root.querySelector("#planAllowPartial");
   $.planRequiresValidation = root.querySelector("#planRequiresValidation");
   $.planActive = root.querySelector("#planActive");
-  $.planSortIndex = root.querySelector("#planSortIndex");
   $.planTags = root.querySelector("#planTags");
   $.planBenefits = root.querySelector("#planBenefits");
 
-  $.installmentsSection = root.querySelector("#installmentsSection");
   $.installmentsTbody = root.querySelector("#installmentsTbody");
   $.btnAddInstallment = root.querySelector("#btnAddInstallment");
 
@@ -421,9 +459,12 @@ function readInstallmentsFromUI() {
 }
 
 function toggleInstallmentsUI() {
-  if (!$.installmentsSection || !$.planAllowPartial) return;
-  const show = !!$.planAllowPartial.checked;
-  $.installmentsSection.classList.toggle("d-none", !show);
+  // ya no ocultamos el panel; solo aseguramos que si se desactiva cuotas,
+  // no quede data basura (opcional)
+  if (!$.planAllowPartial?.checked && $.installmentsTbody) {
+    // opcional: limpiar cuotas si desmarcan
+    // $.installmentsTbody.innerHTML = "";
+  }
 }
 
 function clearModal() {
@@ -440,14 +481,11 @@ function clearModal() {
   $.planAllowPartial.checked = false;
   $.planRequiresValidation.checked = true;
   $.planActive.checked = true;
-  $.planSortIndex.value = "10";
   $.planTags.value = "";
   $.planBenefits.value = "";
 
   if ($.installmentsTbody) $.installmentsTbody.innerHTML = "";
   if ($.btnArchivePlan) $.btnArchivePlan.style.display = "none";
-
-  toggleInstallmentsUI();
 }
 
 function setInstallments(rows) {
@@ -570,7 +608,6 @@ async function openEdit(id) {
   $.planAllowPartial.checked = !!p.allowPartial;
   $.planRequiresValidation.checked = !!p.requiresValidation;
   $.planActive.checked = !!p.active;
-  $.planSortIndex.value = String(p.sortIndex ?? 10);
   $.planTags.value = (p.tags || []).join(", ");
   $.planBenefits.value = (p.benefits || []).join("\n");
 
@@ -596,7 +633,7 @@ async function savePlan() {
     requiresValidation: !!$.planRequiresValidation.checked,
     active: !!$.planActive.checked,
     archived: false,
-    sortIndex: Number($.planSortIndex.value || 10),
+    sortIndex: 10,
 
     tags: $.planTags.value.split(",").map((s) => s.trim()).filter(Boolean),
     benefits: $.planBenefits.value.split("\n").map((s) => s.trim()).filter(Boolean),
