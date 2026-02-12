@@ -64,8 +64,8 @@ function renderShellForTab(container) {
         <div class="text-muted small">Listado de miembros con filtros y acceso a edición.</div>
       </div>
       <div class="d-flex gap-2">
-        <button class="btn btn-primary btn-sm" id="btnNewAssociate" type="button">
-          <i class="bi bi-plus-circle me-1"></i> Nuevo
+        <button id="btnNewPlan" class="btn btn-primary btn-sm">
+          <i class="bi bi-plus-lg me-1"></i> Nuevo
         </button>
         <button id="btnRefresh" class="btn btn-outline-secondary btn-sm" type="button">
           <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
