@@ -356,7 +356,8 @@ export async function mount(container, cfg) {
     const code = btn.dataset.code || "";
 
     if (action === "detail") {
-      window.location.href = `membership_detail.html?mid=${encodeURIComponent(mid)}`;
+      const url = `membership_detail.html?mid=${encodeURIComponent(mid)}`;
+      window.open(url, "_blank", "noopener");
       return;
     }
     if (action === "copyPayLink") {
