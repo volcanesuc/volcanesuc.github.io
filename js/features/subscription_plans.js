@@ -57,6 +57,53 @@ function validateMonthDay(mmdd) {
   return /^\d{2}-\d{2}$/.test(mmdd);
 }
 
+function pad2(n){ return String(n).padStart(2, "0"); }
+
+function defaultDueMonthDays(n, day = "01") {
+  n = Math.max(1, Number(n || 1));
+
+  // pedido explícito
+  if (n === 2) return [`01-${day}`, `07-${day}`];
+
+  // perfecto cuando 12 % n === 0
+  if (12 % n === 0) {
+    const step = 12 / n;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const month = 1 + i * step;
+      out.push(`${pad2(month)}-${day}`);
+    }
+    return out;
+  }
+
+  // fallback aproximado
+  const used = new Set();
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    let month = 1 + Math.round((i * 11) / Math.max(1, (n - 1)));
+    month = Math.min(12, Math.max(1, month));
+
+    while (used.has(month) && month < 12) month++;
+    while (used.has(month) && month > 1) month--;
+
+    used.add(month);
+    out.push(`${pad2(month)}-${day}`);
+  }
+  return out;
+}
+
+function distributeAmounts(total, n) {
+  const T = Math.max(0, Number(total || 0));
+  n = Math.max(1, Number(n || 1));
+
+  const base = Math.floor(T / n);
+  const rem = T - base * n;
+
+  const arr = Array(n).fill(base);
+  arr[n - 1] = base + rem;
+  return arr;
+}
+
 /**
  * startPolicy values (persisted in Firestore):
  * - "any"      => puede iniciar cualquier mes
@@ -546,11 +593,27 @@ function cacheDom(container) {
    Installments UI
 ========================= */
 function installmentRow(n, dueMonthDay, amount) {
+  // data-touched: evita que auto-cálculo pise lo editado por el user
   return `
     <tr data-row="installment">
       <td class="fw-bold"><span class="installment-n">${n}</span></td>
-      <td><input class="form-control form-control-sm due" placeholder="MM-DD" value="${dueMonthDay || ""}"></td>
-      <td><input class="form-control form-control-sm amt" type="number" placeholder="20000" value="${amount ?? ""}"></td>
+      <td>
+        <input
+          class="form-control form-control-sm due"
+          placeholder="MM-DD"
+          value="${dueMonthDay || ""}"
+          data-touched="0"
+        >
+      </td>
+      <td>
+        <input
+          class="form-control form-control-sm amt"
+          type="number"
+          placeholder="20000"
+          value="${amount ?? ""}"
+          data-touched="0"
+        >
+      </td>
       <td class="text-end">
         <button class="btn btn-sm btn-outline-danger" type="button" data-action="removeInstallment">
           <i class="bi bi-trash"></i>
@@ -581,6 +644,65 @@ function readInstallmentsFromUI() {
       };
     })
     .filter((r) => r.dueMonthDay || r.amount);
+}
+
+function getInstallmentRows() {
+  if (!$.installmentsTbody) return [];
+  return [...$.installmentsTbody.querySelectorAll('tr[data-row="installment"]')];
+}
+
+function syncInstallmentDefaults({ forceDates = false, forceAmounts = false } = {}) {
+  const rows = getInstallmentRows();
+  if (!rows.length) return;
+
+  const n = rows.length;
+  const dueDefaults = defaultDueMonthDays(n, "01");
+
+  // 1) fechas sugeridas
+  rows.forEach((tr, idx) => {
+    const dueEl = tr.querySelector(".due");
+    if (!dueEl) return;
+
+    const touched = dueEl.dataset.touched === "1";
+    const empty = !(dueEl.value || "").trim();
+
+    if (forceDates || (!touched && empty)) {
+      dueEl.value = dueDefaults[idx] || "";
+    }
+  });
+
+  // 2) montos sugeridos (si hay total y NO editable)
+  const allowCustom = !!$.planAllowCustomAmount?.checked;
+  const totalVal = $.planTotal?.value;
+  const total = totalVal === "" ? 0 : Number(totalVal || 0);
+
+  if (!allowCustom && total > 0) {
+    const amts = distributeAmounts(total, n);
+
+    rows.forEach((tr, idx) => {
+      const amtEl = tr.querySelector(".amt");
+      if (!amtEl) return;
+
+      const touched = amtEl.dataset.touched === "1";
+      const empty = amtEl.value === "" || amtEl.value === null || amtEl.value === undefined;
+
+      if (forceAmounts || (!touched && empty)) {
+        amtEl.value = String(amts[idx] ?? "");
+      }
+    });
+  }
+}
+
+/**
+ * Cuando el user agrega/elimina cuotas, normalmente querés:
+ * - renumerar
+ * - sugerir fechas SI están vacías
+ * - recalcular montos SI hay total (y no editable)
+ */
+function afterInstallmentCountChanged() {
+  renumberInstallments();
+  // no pises lo que el user tocó, pero completá vacíos
+  syncInstallmentDefaults({ forceDates: false, forceAmounts: true });
 }
 
 function toggleInstallmentsUI() {
@@ -770,6 +892,9 @@ async function openEdit(id) {
   $.planBenefits.value = (p.benefits || []).join("\n");
 
   setInstallments(p.installmentsTemplate || []);
+  if ($.planAllowPartial.checked) {
+    syncInstallmentDefaults({ forceDates: false, forceAmounts: true });
+  }
   toggleInstallmentsUI();
 
   if ($.btnArchivePlan) $.btnArchivePlan.style.display = "inline-block";
@@ -908,7 +1033,7 @@ function bindEvents() {
 
   $.btnAddInstallment?.addEventListener("click", () => {
     $.installmentsTbody?.insertAdjacentHTML("beforeend", installmentRow(1, "", ""));
-    renumberInstallments();
+    afterInstallmentCountChanged();
   });
 
   $.installmentsTbody?.addEventListener("click", (e) => {
@@ -916,7 +1041,7 @@ function bindEvents() {
     if (!btn) return;
     if (btn.dataset.action === "removeInstallment") {
       btn.closest("tr")?.remove();
-      renumberInstallments();
+      afterInstallmentCountChanged();
     }
   });
 
@@ -929,13 +1054,62 @@ function bindEvents() {
     }
   });
 
+  // ✅ si el user edita una cuota, no la pisamos luego
+  $.installmentsTbody?.addEventListener("input", (e) => {
+    const t = e.target;
+    if (!t) return;
+
+    if (t.classList.contains("due")) t.dataset.touched = "1";
+    if (t.classList.contains("amt")) t.dataset.touched = "1";
+  });
+
   $.btnSavePlan?.addEventListener("click", savePlan);
   $.btnArchivePlan?.addEventListener("click", archivePlan);
 
   $.planAllowPartial?.addEventListener("change", () => {
     toggleInstallmentsUI();
-    if ($.planAllowPartial.checked && $.installmentsTbody && $.installmentsTbody.children.length === 0) {
-      setInstallments([{ n: 1, dueMonthDay: "02-15", amount: "" }]);
+
+    if (!$.planAllowPartial.checked) return;
+
+    if ($.installmentsTbody && $.installmentsTbody.children.length === 0) {
+      const dm = Number($.planDurationMonths?.value || 12);
+
+      let n;
+      if (dm === 12) n = 12;       // mensual
+      else if (dm === 6) n = 2;    // semestral (ene/jul)
+      else if (dm === 1) n = 1;
+      else n = dm;                // default: mensual según duración
+
+      const dues = defaultDueMonthDays(n, "01");
+      const totalVal = $.planTotal?.value;
+      const total = totalVal === "" ? 0 : Number(totalVal || 0);
+      const allowCustom = !!$.planAllowCustomAmount?.checked;
+      const amts = (!allowCustom && total > 0) ? distributeAmounts(total, n) : Array(n).fill("");
+
+      setInstallments(
+        Array.from({ length: n }).map((_, i) => ({
+          n: i + 1,
+          dueMonthDay: dues[i] || "",
+          amount: amts[i] ?? ""
+        }))
+      );
+    }
+
+    // recalcular/normalizar por si ya existían filas vacías
+    syncInstallmentDefaults({ forceDates: false, forceAmounts: true });
+  });
+
+  $.planTotal?.addEventListener("input", () => {
+    // si hay cuotas activas, recalculá montos (sin tocar fechas)
+    if ($.planAllowPartial?.checked) {
+      syncInstallmentDefaults({ forceDates: false, forceAmounts: true });
+    }
+  });
+
+  $.planAllowCustomAmount?.addEventListener("change", () => {
+    // si deja de ser editable y hay total + cuotas, sugerimos montos
+    if (!$.planAllowCustomAmount.checked && $.planAllowPartial?.checked) {
+      syncInstallmentDefaults({ forceDates: false, forceAmounts: true });
     }
   });
 
