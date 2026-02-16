@@ -102,46 +102,20 @@ function pickBestMembership(list) {
   return sorted[0] || null;
 }
 
-/**
- * ✅ "hasta cuándo está pagado"
- * - Acepta validated o paid (planes sin validación)
- * - Usa planSnapshot o membership._plan (resuelto por planId)
- */
 function assocKeyFromMembership(membership, associateActive = true) {
   if (associateActive === false) return "inactive";
   if (!membership) return "pending";
 
   const s = (membership.status || "").toLowerCase();
 
-  // 👇 Inferir "tiene cuotas" aunque falten rollups:
-  // - si hay rollup installmentsTotal > 0
-  // - o si el status ya es "partial"
-  // - o si existe nextUnpaidDueDate
-  const total = Number(membership.installmentsTotal || 0);
-  const settled = Number(membership.installmentsSettled || 0);
-  const hasInstallmentsSignal = total > 0 || s === "partial" || !!membership.nextUnpaidDueDate;
+  // ✅ si está en "partial", NO es "pendiente"
+  // (sin rollups no podemos saber overdue vs up_to_date)
+  if (s === "partial") return "up_to_date"; // o "overdue" si querés ser estricto, ver nota abajo
 
-  // Si está "submitted" (o "validating") => en revisión
-  if (s === "submitted" || s === "validating") return "validating";
-
-  if (hasInstallmentsSignal) {
-    if (settled <= 0) return "pending";
-
-    const dueStr = membership.nextUnpaidDueDate; // "YYYY-MM-DD"
-    if (!dueStr) return "up_to_date"; // no queda nada pendiente
-
-    const due = new Date(dueStr + "T00:00:00");
-    const now = new Date();
-
-    return now > due ? "overdue" : "up_to_date";
-  }
-
-  // Pago único/anual (real)
   if (s === "validated" || s === "paid") return "up_to_date";
+  if (s === "submitted" || s === "validating") return "validating";
   return "pending";
 }
-
-
 
 /* =========================
    UI helpers
