@@ -149,30 +149,39 @@ function assocKeyFromMembership(membership, associateActive = true) {
   if (associateActive === false) return "inactive";
   if (!membership) return "pending";
 
-  const paidUntil = computePaidUntil(membership);
+  const s = (membership.status || "").toLowerCase();
+  const linkBlocked = membership.payLinkEnabled === false;
 
-  if (!paidUntil) {
-    const s = (membership.status || "").toLowerCase();
-    const linkBlocked = membership.payLinkEnabled === false;
+  // si está en revisión, mostramos Validando
+  if (linkBlocked && (s === "submitted" || s === "pending" || s === "partial")) return "validating";
 
-    if (s === "validating" || s === "submitted") return "validating";
-    if (linkBlocked && (s === "pending" || s === "partial")) return "validating";
+  // ✅ si hay cuotas pendientes, definimos al día/vencido por nextUnpaidDueDate
+  const pendingCount = Number(membership.pendingInstallmentsCount || 0);
+  const nextDue = membership.nextUnpaidDueDate;
 
-    if (s === "overdue") return "overdue";
-    return "pending";
+  if (pendingCount > 0 && nextDue) {
+    const now = new Date();
+    const dueDate = new Date(nextDue); // si es "YYYY-MM-DD" funciona OK
+    if (now > dueDate) return "overdue";
+    return "up_to_date";
   }
 
-  const now = new Date();
-  if (now < paidUntil) return "up_to_date";
-  return "overdue";
+  // si no debe cuotas, y está paid/validated => al día
+  if (s === "paid" || s === "validated") return "up_to_date";
+
+  // fallback
+  return "pending";
 }
 
-function assocBadge(key) {
-  if (key === "up_to_date") return badge("Al día", "green");
-  if (key === "validating") return badge("Validando", "yellow");
-  if (key === "overdue") return badge("Vencido", "red");
+function assocBadge(key, membership) {
+  const prog = progressText(membership);
+  const suffix = prog ? ` • ${prog}` : "";
+
+  if (key === "up_to_date") return badge(`Al día${suffix}`, "green");
+  if (key === "validating") return badge(`Validando${suffix}`, "yellow");
+  if (key === "overdue") return badge(`Vencido${suffix}`, "red");
   if (key === "inactive") return badge("Inactivo", "gray");
-  return badge("Pendiente", "orange");
+  return badge(`Pendiente${suffix}`, "orange");
 }
 
 /**
@@ -394,6 +403,18 @@ async function loadAssociates() {
 }
 
 /* =========================
+   Helper
+========================= */
+
+function progressText(membership) {
+  const total = Number(membership?.installmentsTotal || 0);
+  const settled = Number(membership?.installmentsSettled || 0);
+
+  if (!total) return ""; // pago único
+  return `${settled}/${total} cuotas`;
+}
+
+/* =========================
    Render
 ========================= */
 function render() {
@@ -436,7 +457,7 @@ function render() {
     .map((a) => {
       const isActive = a.active !== false;
       const perfilBadge = isActive ? badge("Activo", "yellow") : badge("Inactivo", "gray");
-      const asocBadge = assocBadge(a._assocKey);
+      const asocBadge = assocBadge(a._assocKey, a.membership);
 
       const contacto = [
         a.email ? `<div>${a.email}</div>` : "",

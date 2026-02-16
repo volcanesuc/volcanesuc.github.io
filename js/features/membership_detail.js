@@ -479,6 +479,22 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
     await loadInstallments();
     await loadSubmissions();
 
+    const stats = computeInstallmentStats();
+
+    await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+      installmentsTotal: stats.total,
+      installmentsSettled: stats.settled,
+      installmentsPending: stats.pending,
+      nextUnpaidDueDate: stats.nextDue,
+      updatedAt: serverTimestamp()
+    });
+
+    // mantener state local
+    membership.installmentsTotal = stats.total;
+    membership.installmentsSettled = stats.settled;
+    membership.installmentsPending = stats.pending;
+    membership.nextUnpaidDueDate = stats.nextDue;
+
     // 4) Membership metadata + pay link rules
     if (newStatus === "validated" || newStatus === "paid") {
       const enableAgain = shouldEnablePayLinkAfterDecision();
@@ -509,6 +525,17 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
       membership.payLinkEnabled = true;
       membership.payLinkDisabledReason = null;
     }
+
+    const nextDue = computeNextUnpaidDue(installments);
+    const pendingCount = installments.filter(it => !isSettledInstallmentStatus(it.status)).length;
+
+    await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+      nextUnpaidDueDate: nextDue || null,
+      pendingInstallmentsCount: pendingCount,
+      updatedAt: serverTimestamp()
+    });
+    membership.nextUnpaidDueDate = nextDue || null;
+    membership.pendingInstallmentsCount = pendingCount;
 
     // 5) status membership consistente con cuotas
     await reconcileMembershipStatus();
@@ -606,3 +633,43 @@ async function refreshAll() {
     hideLoader?.();
   }
 }
+
+function computeNextUnpaidDue(installments) {
+  const pending = installments
+    .filter((it) => !isSettledInstallmentStatus(it.status))
+    .map((it) => {
+      const due = it.dueDate || (it.dueMonthDay ? `${membership.season}-${it.dueMonthDay}` : null);
+      return { it, due };
+    })
+    .filter(x => !!x.due);
+
+  // ordenar por due asc (string YYYY-MM-DD sirve, o convertís a Date)
+  pending.sort((a,b) => String(a.due).localeCompare(String(b.due), "es"));
+
+  return pending[0]?.due || null;
+}
+
+function isSettledInstallmentStatus(st) {
+  const s = (st || "pending").toLowerCase();
+  return s === "validated" || s === "paid";
+}
+
+function getDueText(it) {
+  return it.dueDate || (it.dueMonthDay ? `${membership.season}-${it.dueMonthDay}` : null);
+}
+
+function computeInstallmentStats() {
+  const total = installments.length;
+  const settled = installments.filter(it => isSettledInstallmentStatus(it.status)).length;
+  const pending = total - settled;
+
+  const nextDue = installments
+    .filter(it => !isSettledInstallmentStatus(it.status))
+    .map(it => getDueText(it))
+    .filter(Boolean)
+    .sort((a,b) => String(a).localeCompare(String(b)))
+    [0] || null;
+
+  return { total, settled, pending, nextDue };
+}
+
