@@ -188,16 +188,26 @@ function clearAlert() {
 async function loadDrills() {
   const showArchived = !!$.showArchivedSwitch.checked;
 
+  // Si estás filtrando por isActive, evitá orderBy para no pedir índice compuesto
   const filters = [where("clubId", "==", clubId)];
   if (!showArchived) filters.push(where("isActive", "==", true));
 
-  const qy = query(collection(db, COL_DRILLS), ...filters, orderBy("createdAt", "desc"));
+  const qy = query(collection(db, COL_DRILLS), ...filters); // 👈 sin orderBy
   const snap = await getDocs(qy);
 
   drills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  // Orden local (por createdAt si existe)
+  drills.sort((a, b) => {
+    const da = a.createdAt?.toDate?.() ?? (a.createdAt ? new Date(a.createdAt) : new Date(0));
+    const dbb = b.createdAt?.toDate?.() ?? (b.createdAt ? new Date(b.createdAt) : new Date(0));
+    return dbb - da;
+  });
+
   renderDrills();
   renderDrillsDatalist();
 }
+
 
 async function loadTrainings() {
   const qy = query(
