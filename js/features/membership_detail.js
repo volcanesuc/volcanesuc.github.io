@@ -7,7 +7,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
   updateDoc,
   collection,
   query,
@@ -136,22 +135,33 @@ function getInstallmentById(id) {
   return installments.find((x) => x.id === id) || null;
 }
 
+function norm(s) {
+  return (s || "").toString().toLowerCase().trim();
+}
+
 /* =========================
-   Status reconcile
+   Status reconcile (FIXED)
+   - Si hay cuotas, también consideramos submissions validated/paid
+     especialmente cuando installmentId es null ("pago general").
 ========================= */
 function computeMembershipStatus() {
   const p = membership?.planSnapshot || {};
   const requiresValidation = !!p.requiresValidation;
 
-  // con cuotas: inferimos por estado de cuotas
+  const subStatuses = submissions.map((s) => (s.status || "pending").toLowerCase());
+  const anySubPaidOrValidated = subStatuses.some((s) => s === "paid" || s === "validated");
+  const anySubValidated = subStatuses.includes("validated");
+
+  // con cuotas: inferimos por estado de cuotas, pero SIN ignorar submissions generales
   if (installments.length) {
     const statuses = installments.map((i) => (i.status || "pending").toLowerCase());
-    const anyPaidOrValidated = statuses.some((s) => s === "paid" || s === "validated");
+    const anyPaidOrValidated = statuses.some((s) => s === "paid" || s === "validated") || anySubPaidOrValidated;
     const allValidated = statuses.every((s) => s === "validated");
     const allPaidOrValidated = statuses.every((s) => s === "paid" || s === "validated");
 
     if (requiresValidation) {
       if (allValidated) return "validated";
+      if (anySubValidated) return "partial"; // submission validated pero cuotas no mapeadas
       if (anyPaidOrValidated) return "partial";
       return "pending";
     } else {
@@ -162,7 +172,6 @@ function computeMembershipStatus() {
   }
 
   // sin cuotas: inferimos por submissions
-  const subStatuses = submissions.map((s) => (s.status || "pending").toLowerCase());
   if (!subStatuses.length) return "pending";
 
   if (requiresValidation) {
@@ -250,7 +259,6 @@ function render() {
     }
   };
 
-  // Pay link enable/disable buttons
   const enabled = membership.payLinkEnabled !== false;
   btnDisablePayLink && (btnDisablePayLink.style.display = enabled ? "inline-block" : "none");
   btnEnablePayLink && (btnEnablePayLink.style.display = enabled ? "none" : "inline-block");
@@ -311,15 +319,16 @@ function renderSubmissions() {
       <div class="mt-1">${fileLink}</div>
     `;
 
+    const locked = st === "validated" || st === "rejected";
     const actions = `
       <div class="btn-group btn-group-sm" role="group">
-        <button class="btn btn-outline-secondary" data-action="paid" data-sid="${s.id}">
+        <button class="btn btn-outline-secondary" data-action="paid" data-sid="${s.id}" ${locked ? "disabled" : ""}>
           Pagado
         </button>
-        <button class="btn btn-outline-success" data-action="validated" data-sid="${s.id}">
+        <button class="btn btn-outline-success" data-action="validated" data-sid="${s.id}" ${locked ? "disabled" : ""}>
           Validar
         </button>
-        <button class="btn btn-outline-danger" data-action="reject" data-sid="${s.id}">
+        <button class="btn btn-outline-danger" data-action="reject" data-sid="${s.id}" ${locked ? "disabled" : ""}>
           Rechazar
         </button>
       </div>
@@ -348,6 +357,9 @@ subsTbody.addEventListener("click", async (e) => {
   const sid = btn.dataset.sid;
   const sub = submissions.find((x) => x.id === sid);
   if (!sub) return;
+
+  const st = norm(sub.status || "pending");
+  if (st === "validated" || st === "rejected") return; // ya bloqueado
 
   if (action === "reject") {
     if (!rejectModal) return;
@@ -390,6 +402,7 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
     await updateDoc(doc(db, COL_SUBMISSIONS, sub.id), {
       status: newStatus,
       adminNote: adminNote ?? null,
+      decidedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
 
@@ -398,7 +411,6 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
       const newInstStatus =
         newStatus === "validated" ? "validated" :
         newStatus === "paid" ? "paid" :
-        // si se rechaza, devolvemos a pendiente para que pueda reenviar
         "pending";
 
       await updateDoc(doc(db, COL_INSTALLMENTS, sub.installmentId), {
@@ -407,16 +419,28 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
       });
     }
 
-    // 3) Auto-enable/disable pay link
-    //    - paid/validated => bloquear
-    //    - rejected => habilitar (para que pueda reenviar)
-    if (newStatus === "paid" || newStatus === "validated") {
+    // 3) Membership metadata (audit + help lists)
+    if (newStatus === "validated") {
       await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+        lastPaymentSubmissionId: sub.id,
+        lastPaymentAt: serverTimestamp(),
+        validatedAt: serverTimestamp(),
+        // al validar, normalmente bloqueamos link (ya se registró)
+        payLinkEnabled: false,
+        payLinkDisabledReason: "Pago validado por admin.",
+        updatedAt: serverTimestamp()
+      });
+      membership.payLinkEnabled = false;
+      membership.payLinkDisabledReason = "Pago validado por admin.";
+    } else if (newStatus === "paid") {
+      await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+        lastPaymentSubmissionId: sub.id,
+        lastPaymentAt: serverTimestamp(),
+        // pago registrado sin validación final
         payLinkEnabled: false,
         payLinkDisabledReason: "Pago registrado por admin.",
         updatedAt: serverTimestamp()
       });
-      // mantenemos state local consistente sin reload extra
       membership.payLinkEnabled = false;
       membership.payLinkDisabledReason = "Pago registrado por admin.";
     } else if (newStatus === "rejected") {
@@ -434,10 +458,6 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
     await loadSubmissions();
     await reconcileMembershipStatus();
 
-    // 5) Reload membership (opcional)
-    // Si querés 100% exactitud desde server, descomentá:
-    // await loadMembership();
-
     render();
     alert("✅ Actualizado");
 
@@ -448,7 +468,6 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
     hideLoader?.();
   }
 }
-
 
 /* =========================
    Pay link controls (ADMIN)
