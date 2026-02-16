@@ -122,6 +122,11 @@ function cacheDom() {
     drillVolume: document.getElementById("drillVolume"),
     drillRest: document.getElementById("drillRest"),
     drillRecs: document.getElementById("drillRecs"),
+
+    openCreateDrillBtn: document.getElementById("openCreateDrillBtn"),
+    createDrillModal: document.getElementById("createDrillModal"),
+    saveCreateDrillBtn: document.getElementById("saveCreateDrillBtn"),
+
     drillSearch: document.getElementById("drillSearch"),
     showArchivedSwitch: document.getElementById("showArchivedSwitch"),
     refreshDrillsBtn: document.getElementById("refreshDrillsBtn"),
@@ -593,8 +598,8 @@ async function saveTraining() {
    Events
 ========================= */
 function bindEvents() {
-  // Drills
-  $.openCreateDrillBtn?.addEventListener("click", () => {
+    // Drills
+    $.openCreateDrillBtn?.addEventListener("click", () => {
     if (!canEdit) return;
     clearAlert();
     $.drillForm?.reset();
@@ -604,12 +609,9 @@ function bindEvents() {
 
     $.saveCreateDrillBtn?.addEventListener("click", async () => {
     if (!canEdit) return;
-
     showLoader();
     try {
         await createDrillFromForm();
-
-        // cerrar modal
         const modal = bootstrap.Modal.getOrCreateInstance($.createDrillModal);
         modal.hide();
     } finally {
@@ -617,25 +619,26 @@ function bindEvents() {
     }
     });
 
-  $.drillSearch?.addEventListener("input", renderDrills);
+    $.drillSearch?.addEventListener("input", renderDrills);
 
-  $.showArchivedSwitch?.addEventListener("change", async () => {
+    $.showArchivedSwitch?.addEventListener("change", async () => {
     showLoader();
     try {
-      await loadDrills();
+        await loadDrills();
     } finally {
-      hideLoader();
+        hideLoader();
     }
-  });
+    });
 
-  $.refreshDrillsBtn?.addEventListener("click", async () => {
+    $.refreshDrillsBtn?.addEventListener("click", async () => {
     showLoader();
     try {
-      await loadDrills();
+        await loadDrills();
     } finally {
-      hideLoader();
+        hideLoader();
     }
-  });
+    });
+
 
   // Trainings
   $.trainingDate?.addEventListener("input", () => {
