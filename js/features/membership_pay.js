@@ -337,16 +337,60 @@ function fillUI(){
   }
 
   // al cambiar selección de cuotas => sugerir monto
-  const syncAmountFromSelection = () => {
-    const ids = getSelectedInstallmentIdsFromUI();
-    if (!ids.length) return; // si no selecciona, no tocamos el input
+  const syncAmountFromSelection = (opts = {}) => {
+    const { force = false } = opts;
 
-    const { total } = sumSelectedInstallments(ids);
-    if (!amount.value) amount.value = String(total || "");
+    const cur = inferCurrency();
+    const p = membership?.planSnapshot || {};
+
+    // 1) Si es plan con cuotas:
+    if (p.allowPartial && installments.length) {
+      const selectedIds = getSelectedInstallmentIdsFromUI();
+
+      // Si hay seleccionadas -> suma exacta de seleccionadas
+      if (selectedIds.length) {
+        const { total } = sumSelectedInstallments(selectedIds);
+        if (force || amount.value === "" || payForm?._autoAmount === true) {
+          amount.value = String(total || "");
+          payForm._autoAmount = true;
+        }
+        return;
+      }
+
+      // Si NO hay seleccionadas -> sugerimos la PRIMERA cuota pendiente (recomendado)
+      const pending = installments.filter(x => !isSettledInstallmentStatus(x.status));
+      const first = pending.slice().sort((a,b)=> (a.n||0)-(b.n||0))[0] || null;
+
+      if (first) {
+        if (force || amount.value === "" || payForm?._autoAmount === true) {
+          amount.value = String(Number(first.amount || 0) || "");
+          payForm._autoAmount = true;
+        }
+        return;
+      }
+
+      // No hay cuotas pendientes -> no tocar
+      return;
+    }
+
+    // 2) Pago único (sin cuotas)
+    const totalOneShot =
+      (membership?.totalAmount ?? null) ??
+      (p.totalAmount ?? null) ??
+      null;
+
+    if (totalOneShot !== null && totalOneShot !== undefined) {
+      if (force || amount.value === "" || payForm?._autoAmount === true) {
+        amount.value = String(Number(totalOneShot) || "");
+        payForm._autoAmount = true;
+      }
+    }
   };
 
   // listeners (idempotentes por wireOnce)
   payForm && (payForm._syncAmountFromSelection = syncAmountFromSelection);
+  payForm && (payForm._autoAmount = true);
+  payForm?._syncAmountFromSelection?.({ force: true });
 }
 
 /* =========================
@@ -360,7 +404,7 @@ function wireOnce(){
   document.addEventListener("change", (e) => {
     const t = e.target;
     if (t && t.matches && t.matches('input[name="installmentChk"]')) {
-      payForm?._syncAmountFromSelection?.();
+      payForm?._syncAmountFromSelection?.({ force: true });
     }
   });
 
