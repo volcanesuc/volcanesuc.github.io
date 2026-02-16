@@ -6,5 +6,6 @@ export const PAGE_CONFIG = {
   roster:     { tabId: "roster",     href: "roster.html" },
   trainings:  { tabId: "trainings",  href: "trainings.html" },
   attendance: { tabId: "attendance", href: "attendance.html" },
-  tournaments:{ tabId: "tournaments",href: "tournaments.html" }
+  tournaments:{ tabId: "tournaments",href: "tournaments.html" },
+  association:{ tabId: "association",href: "association.html" }
 };
