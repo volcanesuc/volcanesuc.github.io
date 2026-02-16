@@ -90,10 +90,7 @@ function showAlert(msg, type = "warning"){
   alertBox.textContent = msg;
   alertBox.classList.remove("d-none");
 }
-
-function hideAlert(){
-  alertBox?.classList.add("d-none");
-}
+function hideAlert(){ alertBox?.classList.add("d-none"); }
 
 function disableForm(disabled = true){
   if (!payForm) return;
@@ -133,7 +130,6 @@ function getInstallmentById(id){
 }
 
 function setPayDisabledUI(msg){
-  // show card + hide form
   payForm?.classList.add("d-none");
   payDisabledCard?.classList.remove("d-none");
   if (payDisabledMsg) payDisabledMsg.textContent = msg || "";
@@ -142,6 +138,11 @@ function setPayDisabledUI(msg){
   disableForm(true);
 
   if (pagePill) pagePill.textContent = "En revisión";
+}
+
+function isSettledInstallmentStatus(st){
+  const s = (st || "pending").toString().toLowerCase();
+  return s === "validated" || s === "paid";
 }
 
 /* =========================
@@ -160,7 +161,6 @@ function setPayDisabledUI(msg){
   if (pagePill) pagePill.textContent = "Cargando…";
   disableForm(true);
 
-  // Anonymous auth (sin login)
   try{
     const auth = getAuth();
     await signInAnonymously(auth);
@@ -172,9 +172,8 @@ function setPayDisabledUI(msg){
     await loadMembership();
     await loadInstallments();
 
-    // Gate: si está bloqueado, mostramos card y salimos sin inicializar submit
     if (membership?.payLinkEnabled === false){
-      fillSummaryOnly(); // llena asociado/plan arriba
+      fillSummaryOnly();
       const reason =
         membership?.payLinkDisabledReason ||
         "Este link está deshabilitado mientras el admin revisa el comprobante.";
@@ -209,14 +208,12 @@ async function loadMembership(){
 
   membership = { id: snap.id, ...snap.data() };
 
-  // Validar code
   if ((membership.payCode || "") !== code){
     throw new Error("invalid_code");
   }
 }
 
 async function loadInstallments(){
-  // sin orderBy para evitar índices; ordenamos client-side
   const q = query(collection(db, COL_INSTALLMENTS), where("membershipId", "==", mid));
   const snap = await getDocs(q);
 
@@ -245,15 +242,13 @@ function fillSummaryOnly(){
 function fillUI(){
   fillSummaryOnly();
 
-  // defaults
   const a = membership.associateSnapshot || {};
   payerName && (payerName.value = a.fullName || "");
   email && (email.value = a.email || "");
   phone && (phone.value = a.phone || "");
 
-  // installments select
   const cur = inferCurrency();
-  const pending = installments.filter(x => (x.status || "pending") !== "validated");
+  const pending = installments.filter(x => !isSettledInstallmentStatus(x.status));
   const options = pending.map(x => {
     const due = x.dueDate || (x.dueMonthDay ? `${membership.season}-${x.dueMonthDay}` : "—");
     const label = `Cuota #${x.n} • vence ${due} • ${fmtMoney(x.amount, cur)} • ${x.status || "pending"}`;
@@ -268,14 +263,11 @@ function fillUI(){
     ? "Podés elegir una cuota pendiente o dejarlo como pago general."
     : "No hay cuotas pendientes (o este plan es pago único). Podés enviar pago general si aplica.";
 
-  // amount hint
   const p = membership.planSnapshot || {};
   amountHint.textContent = p.allowCustomAmount
     ? "Este plan permite monto editable. Escribí el monto que pagaste."
     : "Escribí el monto exacto del pago (si es una cuota, suele ser el monto de la cuota).";
 
-  // si selecciona cuota, sugerimos monto
-  // (evitar duplicar listener si fillUI corre más de una vez)
   installmentSelect.onchange = () => {
     const iid = installmentSelect.value || "";
     if (!iid) return;
@@ -285,7 +277,6 @@ function fillUI(){
     }
   };
 
-  // reset (guard: si está bloqueado, no hace nada)
   btnReset.onclick = () => {
     if (membership?.payLinkEnabled === false) return;
     installmentSelect.value = "";
@@ -297,7 +288,6 @@ function fillUI(){
     hideAlert();
   };
 
-  // submit (evitar duplicar listener)
   payForm.onsubmit = onSubmit;
 }
 
@@ -308,7 +298,6 @@ async function onSubmit(e){
   e.preventDefault();
   hideAlert();
 
-  // gate extra (por si cambió en backend mientras la página está abierta)
   if (membership?.payLinkEnabled === false){
     const reason =
       membership?.payLinkDisabledReason ||
@@ -332,11 +321,9 @@ async function onSubmit(e){
   const f = fileInput.files?.[0];
   if (!f) return showAlert("Adjuntá un comprobante (imagen o PDF).", "warning");
 
-  // tipo permitido
   const okType = f.type.startsWith("image/") || f.type === "application/pdf";
   if (!okType) return showAlert("Tipo de archivo no permitido. Usá imagen o PDF.", "warning");
 
-  // tamaño
   const MAX_MB = 10;
   if (f.size > MAX_MB * 1024 * 1024){
     return showAlert(`Archivo muy grande. Máximo ${MAX_MB}MB.`, "warning");
@@ -351,7 +338,6 @@ async function onSubmit(e){
   let path = null;
 
   try{
-    // 1) Crear submission primero (para usar sid en storage path)
     const iid = installmentSelect.value || null;
 
     const submissionDoc = await addDoc(collection(db, COL_SUBMISSIONS), {
@@ -383,7 +369,6 @@ async function onSubmit(e){
 
     sid = submissionDoc.id;
 
-    // 2) Subir a Storage
     const storage = getStorage();
     const safeName = (f.name || "comprobante").replace(/[^\w.\-()]+/g, "_");
     path = `membership_submissions/${mid}/${sid}/${Date.now()}_${safeName}`;
@@ -407,33 +392,35 @@ async function onSubmit(e){
 
     const url = await getDownloadURL(fileRef);
 
-    // 3) Guardar fileUrl + filePath en submission
     await setDoc(doc(db, COL_SUBMISSIONS, sid), {
       fileUrl: url,
       filePath: path,
       updatedAt: serverTimestamp()
     }, { merge: true });
 
-    // 4) (best-effort) Bloquear link mientras revisa admin
-    // ⚠️ Si Firestore rules no permiten, lo ignoramos.
+    // ✅ Bloquear link + marcar membership como "submitted" (para que en lista salga “Validando”)
     try{
+      const currStatus = (membership?.status || "pending").toLowerCase();
+      const nextStatus =
+        (currStatus === "pending" || currStatus === "partial") ? "submitted" : currStatus;
+
       await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+        status: nextStatus,
         payLinkEnabled: false,
         payLinkDisabledReason: "Comprobante enviado. En revisión por el admin.",
+        lastPaymentSubmissionId: sid,
+        lastPaymentAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
 
-      // actualizar estado local + UI sin recargar
+      membership.status = nextStatus;
       membership.payLinkEnabled = false;
       membership.payLinkDisabledReason = "Comprobante enviado. En revisión por el admin.";
 
       setProgress(100, "✅ Enviado");
       showAlert("✅ Comprobante enviado. Un admin lo revisará pronto.", "success");
-
-      // mostrar card y ocultar form
       setPayDisabledUI(membership.payLinkDisabledReason);
-
-      return; // salimos; ya no dejamos seguir
+      return;
 
     }catch (e){
       console.warn("No se pudo bloquear el link automáticamente (rules).", e?.code || e);
@@ -442,7 +429,6 @@ async function onSubmit(e){
     setProgress(100, "✅ Enviado");
     showAlert("✅ Comprobante enviado. Un admin lo revisará pronto.", "success");
 
-    // limpiar campos de pago (dejamos contacto)
     installmentSelect.value = "";
     amount.value = "";
     fileInput.value = "";
@@ -466,7 +452,6 @@ async function onSubmit(e){
     showAlert(msg, "danger");
     clearProgress();
 
-    // (opcional) marcar submission como error si ya existe sid
     if (sid){
       try{
         await setDoc(doc(db, COL_SUBMISSIONS, sid), {
@@ -480,7 +465,6 @@ async function onSubmit(e){
     }
 
   } finally {
-    // si quedó bloqueado, mantenemos disabled
     if (membership?.payLinkEnabled === false){
       btnSubmit.disabled = true;
       disableForm(true);
