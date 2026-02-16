@@ -479,6 +479,14 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
     // 3) Reload (para decidir si quedan cuotas)
     await loadInstallments();
     await loadSubmissions();
+    console.log("MID", mid);
+    console.table(installments.map(i => ({
+      id: i.id,
+      n: i.n,
+      dueDate: i.dueDate,
+      membershipId: i.membershipId,
+      status: i.status
+    })));
     await recomputeMembershipRollup(mid);
     await loadMembership(); // refrescar membership con los rollups guardados
 
@@ -516,6 +524,7 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
       membership.payLinkDisabledReason = null;
     }
 
+    await loadMembership();
     render();
     alert("✅ Actualizado");
 

@@ -16,33 +16,30 @@ function norm(s) {
   return (s || "").toString().toLowerCase().trim();
 }
 
-function isSettled(st) {
+function isSettledStatus(st) {
   const s = norm(st || "pending");
   return s === "paid" || s === "validated";
 }
 
-/**
- * Recalcula y persiste rollup en memberships/{mid}
- * - installmentsTotal, installmentsSettled, installmentsPending
- * - nextUnpaidN, nextUnpaidDueDate
- */
+function dueOf(it) {
+  return it.dueDate || (it.dueMonthDay && it.season ? `${it.season}-${it.dueMonthDay}` : null);
+}
+
 export async function recomputeMembershipRollup(mid) {
   const q = query(collection(db, COL_INSTALLMENTS), where("membershipId", "==", mid));
   const snap = await getDocs(q);
+
   const inst = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
   const total = inst.length;
-  const settled = inst.filter(i => isSettled(i.status)).length;
+  const settled = inst.filter(i => isSettledStatus(i.status)).length;
   const pending = Math.max(0, total - settled);
 
   const next = inst
-    .filter(i => !isSettled(i.status))
-    .map(i => ({
-      n: i.n ?? null,
-      due: i.dueDate || (i.dueMonthDay ? `${i.season}-${i.dueMonthDay}` : null)
-    }))
+    .filter(i => !isSettledStatus(i.status))
+    .map(i => ({ n: i.n ?? null, due: dueOf(i) }))
     .filter(x => !!x.due)
-    .sort((a,b) => String(a.due).localeCompare(String(b.due)))[0] || null;
+    .sort((a, b) => String(a.due).localeCompare(String(b.due)))[0] || null;
 
   const rollup = {
     installmentsTotal: total,
