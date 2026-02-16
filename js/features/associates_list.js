@@ -107,16 +107,32 @@ function assocKeyFromMembership(membership, associateActive = true) {
   if (!membership) return "pending";
 
   const s = (membership.status || "").toLowerCase();
-  if (s === "partial" && !membership.nextUnpaidDueDate) return "up_to_date";
 
-  // ✅ si está en "partial", NO es "pendiente"
-  // (sin rollups no podemos saber overdue vs up_to_date)
-  if (s === "partial") return "up_to_date"; // o "overdue" si querés ser estricto, ver nota abajo
-
-  if (s === "validated" || s === "paid") return "up_to_date";
+  // si está validando/en revisión, no es moroso
   if (s === "submitted" || s === "validating") return "validating";
-  return "pending";
+
+  // si no hay cuotas (pago único), usar status
+  const total = Number(membership.installmentsTotal || 0);
+  const settled = Number(membership.installmentsSettled || 0);
+
+  if (!total) {
+    if (s === "validated" || s === "paid") return "up_to_date";
+    return "pending";
+  }
+
+  // con cuotas:
+  if (settled <= 0) return "pending";
+
+  // si ya no hay next unpaid => al día (pagó todo)
+  const dueStr = membership.nextUnpaidDueDate;
+  if (!dueStr) return "up_to_date";
+
+  const due = new Date(dueStr + "T00:00:00");
+  const now = new Date();
+
+  return now > due ? "overdue" : "up_to_date";
 }
+
 
 /* =========================
    UI helpers
