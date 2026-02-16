@@ -218,10 +218,6 @@ function renderShell(container) {
       </div>
     </div>
 
-    div class="text-muted small" id="debugStamp" style="font-family: monospace;">
-      JS associates_list cargó: ${new Date().toISOString()}
-    </div>
-
     <div class="row g-2 align-items-end mb-3">
       <div class="col-12 col-md-4">
         <label class="form-label mb-1">Buscar</label>
