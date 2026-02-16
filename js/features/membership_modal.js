@@ -6,7 +6,12 @@ import {
   collection,
   getDocs,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  query,
+  where,
+  limit,
+  updateDoc,
+  doc,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================
@@ -56,6 +61,7 @@ let associates = [];
 let plans = [];
 let selectedAssociate = null;
 let selectedPlan = null;
+let _creating = false;
 
 /* =========================
    postMessage helpers
@@ -101,17 +107,13 @@ function planDisplay(p){
 }
 
 function setResultLink(mid, code){
-  // Construye URL relativa al sitio actual (GitHub pages / hosting)
   const baseDir = window.location.href.replace(/\/[^/]+$/, "/");
   const url = `${baseDir}membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code)}`;
 
+  resultBox.style.display = "block";
   payLinkText.textContent = url;
   btnOpenLink.href = url;
-
-  // Detalle admin en tab nuevo
   btnGoDetail.href = `${baseDir}membership_detail.html?mid=${encodeURIComponent(mid)}`;
-
-  resultBox.style.display = "block";
 }
 
 function clearResultLink(){
@@ -119,6 +121,24 @@ function clearResultLink(){
   payLinkText.textContent = "";
   btnOpenLink.removeAttribute("href");
   btnGoDetail.href = "#";
+}
+
+function durationHint(p){
+  const dm = Number(p.durationMonths || 0);
+  const sp = p.startPolicy || "JAN_ONLY";
+  if (!dm) return "";
+  const dur = dm === 12 ? "12 meses" : dm === 6 ? "6 meses" : dm === 1 ? "1 mes" : `${dm} meses`;
+  const start =
+    dm === 1 ? "cualquier mes"
+    : dm === 6 ? (sp === "JAN_OR_JUL" ? "enero o julio" : "enero")
+    : "enero";
+  return `Cubre ${dur}. Inicio permitido: ${start}.`;
+}
+
+function setCreating(on){
+  _creating = !!on;
+  if (btnCreate) btnCreate.disabled = _creating;
+  if (btnClear) btnClear.disabled = _creating;
 }
 
 /* =========================
@@ -155,9 +175,9 @@ async function loadPlans(){
     .filter(p => !p.archived && p.active)
     .sort((a,b) => (a.name || "").localeCompare(b.name || "", "es"));
 
-  planSelect.innerHTML = `<option value="">Seleccioná un plan…</option>` + plans.map(p => {
-    return `<option value="${p.id}">${planDisplay(p)}</option>`;
-  }).join("");
+  planSelect.innerHTML =
+    `<option value="">Seleccioná un plan…</option>` +
+    plans.map(p => `<option value="${p.id}">${planDisplay(p)}</option>`).join("");
 }
 
 /* =========================
@@ -200,16 +220,12 @@ function wireUI(){
   btnCancel?.addEventListener("click", close);
 
   btnNewAssociate?.addEventListener("click", () => {
-    // le pedimos al host abrir el modal de asociado
     post("associate:open", { mode: "create" });
   });
 
   associateSearch.addEventListener("input", () => {
     const q = norm(associateSearch.value);
-    if (!q){
-      closeMenu();
-      return;
-    }
+    if (!q){ closeMenu(); return; }
     const matches = associates.filter(a => {
       const t = `${norm(a.fullName)} ${norm(a.email)} ${norm(a.phone)}`;
       return t.includes(q);
@@ -219,13 +235,12 @@ function wireUI(){
 
   associateSearch.addEventListener("focus", () => {
     const q = norm(associateSearch.value);
-    if (q){
-      const matches = associates.filter(a => {
-        const t = `${norm(a.fullName)} ${norm(a.email)} ${norm(a.phone)}`;
-        return t.includes(q);
-      }).slice(0, 20);
-      openMenu(matches);
-    }
+    if (!q) return;
+    const matches = associates.filter(a => {
+      const t = `${norm(a.fullName)} ${norm(a.email)} ${norm(a.phone)}`;
+      return t.includes(q);
+    }).slice(0, 20);
+    openMenu(matches);
   });
 
   document.addEventListener("click", (e) => {
@@ -271,12 +286,10 @@ function wireUI(){
 
   btnCreate.addEventListener("click", createMembership);
 
-  // escuchar cuando el host crea un asociado nuevo
   window.addEventListener("message", async (ev) => {
     if (ev.origin !== window.location.origin) return;
     const msg = ev.data || {};
     if (msg.type === "associate:saved") {
-      // recargar lista y autoseleccionar si vino id
       await loadAssociates();
       if (msg.detail?.id) selectAssociateById(msg.detail.id);
     }
@@ -355,22 +368,55 @@ function renderPreview(){
   previewInstallments.innerHTML = rows || `<tr><td colspan="3" class="text-muted">—</td></tr>`;
 }
 
-function durationHint(p){
-  const dm = Number(p.durationMonths || 0);
-  const sp = p.startPolicy || "JAN_ONLY";
-  if (!dm) return "";
-  const dur = dm === 12 ? "12 meses" : dm === 6 ? "6 meses" : dm === 1 ? "1 mes" : `${dm} meses`;
-  const start =
-    dm === 1 ? "cualquier mes"
-    : dm === 6 ? (sp === "JAN_OR_JUL" ? "enero o julio" : "enero")
-    : "enero";
-  return `Cubre ${dur}. Inicio permitido: ${start}.`;
+/* =========================
+   Duplicate protection
+========================= */
+async function findExistingMembership({ associateId, season }) {
+  // Firestore: where + where + limit(5)
+  const q = query(
+    collection(db, COL_MEMBERSHIPS),
+    where("associateId", "==", associateId),
+    where("season", "==", season),
+    limit(5)
+  );
+
+  const snap = await getDocs(q);
+  const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  if (!list.length) return null;
+
+  // escoger el “mejor” (validated > paid > partial > pending > rejected)
+  const rank = (st) => {
+    const s = (st || "pending").toLowerCase();
+    if (s === "validated") return 5;
+    if (s === "paid") return 4;
+    if (s === "partial") return 3;
+    if (s === "pending") return 2;
+    if (s === "rejected") return 1;
+    return 0;
+  };
+  const ts = (x) => {
+    const u = x.updatedAt?.toMillis ? x.updatedAt.toMillis() : 0;
+    const c = x.createdAt?.toMillis ? x.createdAt.toMillis() : 0;
+    return Math.max(u, c);
+  };
+
+  list.sort((a,b) => {
+    const ra = rank(a.status);
+    const rb = rank(b.status);
+    if (rb !== ra) return rb - ra;
+    return ts(b) - ts(a);
+  });
+
+  return list[0];
 }
 
 /* =========================
    Create membership
 ========================= */
 async function createMembership(){
+  if (_creating) return;
+
   const season = (seasonEl.value || "").trim();
   if (!/^\d{4}$/.test(season) && season !== "all"){
     return alert("Temporada inválida. Usá 2026 (YYYY) o 'all'.");
@@ -378,39 +424,79 @@ async function createMembership(){
   if (!selectedAssociate) return alert("Seleccioná un asociado.");
   if (!selectedPlan) return alert("Seleccioná un plan.");
 
-  const planSnap = {
-    id: selectedPlan.id,
-    name: selectedPlan.name || "",
-    currency: selectedPlan.currency || "CRC",
-    totalAmount: selectedPlan.totalAmount ?? null,
-    allowCustomAmount: !!selectedPlan.allowCustomAmount,
-    allowPartial: !!selectedPlan.allowPartial,
-    requiresValidation: !!selectedPlan.requiresValidation,
-    benefits: Array.isArray(selectedPlan.benefits) ? selectedPlan.benefits : [],
-    tags: Array.isArray(selectedPlan.tags) ? selectedPlan.tags : [],
-    durationMonths: Number(selectedPlan.durationMonths || 0),
-    startPolicy: selectedPlan.startPolicy || "JAN_ONLY",
-  };
+  setCreating(true);
+  showLoader?.("Verificando…");
 
-  const assocSnap = {
-    id: selectedAssociate.id,
-    fullName: selectedAssociate.fullName || "",
-    email: selectedAssociate.email || null,
-    phone: selectedAssociate.phone || null
-  };
+  try {
+    // 0) Protege duplicados (associateId + season)
+    // Nota: si season === "all" no dedupe (porque puede tener sentido)
+    if (season !== "all") {
+      const existing = await findExistingMembership({
+        associateId: selectedAssociate.id,
+        season
+      });
 
-  const installmentsTemplate = Array.isArray(selectedPlan.installmentsTemplate) ? selectedPlan.installmentsTemplate : [];
-  let totalAmount = selectedPlan.totalAmount ?? null;
+      if (existing) {
+        hideLoader?.();
 
-  if (!planSnap.allowCustomAmount && (totalAmount === null || totalAmount === undefined)){
-    totalAmount = installmentsTemplate.reduce((sum, x) => sum + (Number(x.amount)||0), 0);
-  }
+        // Mostrar link existente si tiene payCode
+        if (existing.payCode) {
+          setResultLink(existing.id, existing.payCode);
+        } else {
+          clearResultLink();
+        }
 
-  const payCode = randomCode(7);
+        alert(
+          `⚠️ Ya existe una membresía para este asociado en ${season}.\n\n` +
+          `Se usará la existente: ${existing.id}\n` +
+          `Estado: ${(existing.status || "pending")}\n\n` +
+          `Si necesitás cambiar plan o corregir datos, abrí el detalle.`
+        );
 
-  showLoader?.("Creando membresía…");
+        // Abrir detalle en nueva pestaña (admin)
+        const baseDir = window.location.href.replace(/\/[^/]+$/, "/");
+        window.open(`${baseDir}membership_detail.html?mid=${encodeURIComponent(existing.id)}`, "_blank", "noopener");
 
-  try{
+        // avisar host para refrescar listas (por si quieren resaltar)
+        post("membership:created", { id: existing.id, associateId: selectedAssociate.id, season, existed: true });
+
+        return; // ⛔ no crear otra
+      }
+    }
+
+    // 1) Si no existe -> crear
+    showLoader?.("Creando membresía…");
+
+    const planSnap = {
+      id: selectedPlan.id,
+      name: selectedPlan.name || "",
+      currency: selectedPlan.currency || "CRC",
+      totalAmount: selectedPlan.totalAmount ?? null,
+      allowCustomAmount: !!selectedPlan.allowCustomAmount,
+      allowPartial: !!selectedPlan.allowPartial,
+      requiresValidation: !!selectedPlan.requiresValidation,
+      benefits: Array.isArray(selectedPlan.benefits) ? selectedPlan.benefits : [],
+      tags: Array.isArray(selectedPlan.tags) ? selectedPlan.tags : [],
+      durationMonths: Number(selectedPlan.durationMonths || 0),
+      startPolicy: selectedPlan.startPolicy || "JAN_ONLY",
+    };
+
+    const assocSnap = {
+      id: selectedAssociate.id,
+      fullName: selectedAssociate.fullName || "",
+      email: selectedAssociate.email || null,
+      phone: selectedAssociate.phone || null
+    };
+
+    const installmentsTemplate = Array.isArray(selectedPlan.installmentsTemplate) ? selectedPlan.installmentsTemplate : [];
+    let totalAmount = selectedPlan.totalAmount ?? null;
+
+    if (!planSnap.allowCustomAmount && (totalAmount === null || totalAmount === undefined)){
+      totalAmount = installmentsTemplate.reduce((sum, x) => sum + (Number(x.amount)||0), 0);
+    }
+
+    const payCode = randomCode(7);
+
     const membershipDoc = await addDoc(collection(db, COL_MEMBERSHIPS), {
       associateId: assocSnap.id,
       associateSnapshot: assocSnap,
@@ -424,12 +510,16 @@ async function createMembership(){
       currency: planSnap.currency,
 
       payCode,
+      payLinkEnabled: true,
+      payLinkDisabledReason: null,
+
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
 
     const mid = membershipDoc.id;
 
+    // 2) cuotas
     if (planSnap.allowPartial && installmentsTemplate.length){
       const sorted = installmentsTemplate.slice().sort((a,b)=> (a.n||0)-(b.n||0));
       for (const it of sorted){
@@ -451,16 +541,18 @@ async function createMembership(){
       }
     }
 
+    hideLoader?.();
+
     alert("✅ Membresía creada");
     setResultLink(mid, payCode);
 
-    // avisar al host para refrescar lista
     post("membership:created", { id: mid, associateId: assocSnap.id, season });
 
   } catch (e){
     console.error(e);
-    alert("❌ Error creando membresía: " + (e?.message || e));
+    alert("❌ Error: " + (e?.message || e));
   } finally {
     hideLoader?.();
+    setCreating(false);
   }
 }
