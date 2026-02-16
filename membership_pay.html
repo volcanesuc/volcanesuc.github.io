@@ -1,4 +1,3 @@
-<!-- membership_pay.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -46,17 +45,6 @@
       pointer-events:none;
       filter:grayscale(0.3);
     }
-
-    /* ✅ cuotas estilo */
-    .quota-item{
-      cursor:pointer;
-      border:1px solid rgba(0,0,0,.08);
-      border-radius:12px;
-      padding:10px 12px;
-      background:#fff;
-    }
-    .quota-item:hover{ background:rgba(25,71,63,.03); }
-    .quota-item input{ cursor:pointer; }
   </style>
 </head>
 
@@ -90,6 +78,7 @@
       </div>
     </div>
 
+    <!-- Card cuando el link está bloqueado -->
     <div id="payDisabledCard" class="card shadow-sm mb-3 d-none">
       <div class="card-body">
         <div class="fw-bold mb-1">Link no disponible</div>
@@ -107,25 +96,22 @@
       </div>
 
       <form id="payForm" class="row g-3">
-        <!-- ✅ Cuotas (multi) -->
+        <!-- ✅ NUEVO: cuotas multi-select -->
         <div class="col-12">
-          <label class="form-label">¿Qué cuotas estás pagando? (opcional)</label>
-
-          <div class="helper mb-2">
-            Si no marcás ninguna, se registrará como <b>pago general</b>.
+          <label class="form-label">¿Qué cuotas estás pagando?</label>
+          <div id="installmentsBox" class="mt-1">
+            <div class="text-muted">Cargando cuotas…</div>
           </div>
+          <div class="helper mt-1" id="installmentsBoxHint">—</div>
+        </div>
 
-          <!-- JS llena esto con checkboxes -->
-          <div id="installmentsBox"></div>
-          <div class="helper mt-2" id="installmentsBoxHint">—</div>
-
-          <!-- (opcional) fallback viejo: NO se usa con el JS nuevo -->
-          <!--
-          <select id="installmentSelect" class="form-select d-none">
+        <!-- (Fallback opcional) select viejo -->
+        <div class="col-12 d-none">
+          <label class="form-label">Fallback (1 cuota)</label>
+          <select id="installmentSelect" class="form-select">
             <option value="">Pago general (sin cuota específica)</option>
           </select>
-          <div class="helper mt-1 d-none" id="installmentHint">—</div>
-          -->
+          <div class="helper mt-1" id="installmentHint">—</div>
         </div>
 
         <div class="col-12 col-md-6">
