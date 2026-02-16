@@ -28,6 +28,8 @@ let _cfg = {};
 function seasonStartDate(season, startPolicy) {
   const y = Number(season);
   if (!Number.isFinite(y)) return new Date(new Date().getFullYear(), 0, 1);
+
+  // por ahora solo "jan" (podemos ampliar a JAN_OR_JUL, ANY, etc luego)
   if ((startPolicy || "jan") === "jan") return new Date(y, 0, 1);
   return new Date(y, 0, 1);
 }
@@ -40,15 +42,49 @@ function addMonths(date, months) {
   return d;
 }
 
+function tsMillis(ts) {
+  if (!ts) return 0;
+  if (ts.toMillis) return ts.toMillis();
+  if (ts.seconds) return ts.seconds * 1000;
+  const d = new Date(ts);
+  const t = d.getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+function statusRank(st) {
+  const s = (st || "pending").toLowerCase();
+  if (s === "validated") return 5;
+  if (s === "paid") return 4;
+  if (s === "partial") return 3;
+  if (s === "pending") return 2;
+  if (s === "rejected") return 1;
+  return 0;
+}
+
+function pickBestMembership(list) {
+  if (!list?.length) return null;
+  const sorted = [...list].sort((a, b) => {
+    const ra = statusRank(a.status);
+    const rb = statusRank(b.status);
+    if (rb !== ra) return rb - ra;
+
+    const ta = Math.max(tsMillis(a.updatedAt), tsMillis(a.createdAt));
+    const tb = Math.max(tsMillis(b.updatedAt), tsMillis(b.createdAt));
+    return tb - ta;
+  });
+  return sorted[0] || null;
+}
+
 /**
- * ✅ MVP de "hasta cuándo está pagado"
- * Usa planSnapshot si existe, si no usa membership._plan (traído de subscription_plans)
+ * ✅ "hasta cuándo está pagado"
+ * - Acepta validated o paid (planes sin validación)
+ * - Usa planSnapshot o membership._plan (resuelto por planId)
  */
 function computePaidUntil(membership) {
   if (!membership) return null;
 
   const status = (membership.status || "").toLowerCase();
-  if (status !== "validated") return null;
+  if (status !== "validated" && status !== "paid") return null;
 
   const plan = membership.planSnapshot || membership._plan || null;
 
@@ -90,7 +126,13 @@ function assocKeyFromMembership(membership, associateActive = true) {
 
   if (!paidUntil) {
     const s = (membership.status || "").toLowerCase();
+
+    // si el link de pago está bloqueado pero aún no está validated/paid, típicamente está “en revisión”
+    const linkBlocked = membership.payLinkEnabled === false;
+
     if (s === "validating" || s === "submitted") return "validating";
+    if (linkBlocked && (s === "pending" || s === "partial")) return "validating";
+
     if (s === "overdue") return "overdue";
     return "pending";
   }
@@ -227,7 +269,7 @@ function renderShell(container) {
    Data
 ========================= */
 async function loadMembershipMapForSeason(season, associateIds) {
-  const map = {};
+  const byAid = {}; // aid -> [membership,...]
   const groups = chunk(associateIds.filter(Boolean), 10);
 
   for (const ids of groups) {
@@ -239,9 +281,18 @@ async function loadMembershipMapForSeason(season, associateIds) {
     const snap = await getDocs(q);
     snap.forEach((d) => {
       const m = d.data();
-      if (m?.associateId) map[m.associateId] = { id: d.id, ...m };
+      if (!m?.associateId) return;
+      if (!byAid[m.associateId]) byAid[m.associateId] = [];
+      byAid[m.associateId].push({ id: d.id, ...m });
     });
   }
+
+  // escoger mejor membership por asociado (evita que se “pise” aleatorio)
+  const map = {};
+  Object.keys(byAid).forEach((aid) => {
+    map[aid] = pickBestMembership(byAid[aid]);
+  });
+
   return map;
 }
 
@@ -273,7 +324,6 @@ async function loadAssociates() {
 
     const membershipMap = await loadMembershipMapForSeason(season, ids);
 
-    // 🔥 si membership no trae planSnapshot, lo resolvemos por planId
     const planIds = Object.values(membershipMap).map((m) => m?.planId);
     const plansMap = await loadPlansMap(planIds);
 
@@ -281,7 +331,6 @@ async function loadAssociates() {
       const isActive = a.active !== false;
       const membership = membershipMap[a.id] || null;
 
-      // attach plan if snapshot missing
       if (membership && !membership.planSnapshot && membership.planId && plansMap[membership.planId]) {
         membership._plan = plansMap[membership.planId];
       } else if (membership) {
