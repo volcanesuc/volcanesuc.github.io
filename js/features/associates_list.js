@@ -111,29 +111,36 @@ function assocKeyFromMembership(membership, associateActive = true) {
   if (associateActive === false) return "inactive";
   if (!membership) return "pending";
 
+  const s = (membership.status || "").toLowerCase();
+
+  // 👇 Inferir "tiene cuotas" aunque falten rollups:
+  // - si hay rollup installmentsTotal > 0
+  // - o si el status ya es "partial"
+  // - o si existe nextUnpaidDueDate
   const total = Number(membership.installmentsTotal || 0);
   const settled = Number(membership.installmentsSettled || 0);
+  const hasInstallmentsSignal = total > 0 || s === "partial" || !!membership.nextUnpaidDueDate;
 
-  // ✅ si es plan por cuotas
-  if (total > 0) {
+  // Si está "submitted" (o "validating") => en revisión
+  if (s === "submitted" || s === "validating") return "validating";
+
+  if (hasInstallmentsSignal) {
     if (settled <= 0) return "pending";
 
     const dueStr = membership.nextUnpaidDueDate; // "YYYY-MM-DD"
-    if (!dueStr) return "up_to_date"; // no quedan cuotas
+    if (!dueStr) return "up_to_date"; // no queda nada pendiente
 
     const due = new Date(dueStr + "T00:00:00");
     const now = new Date();
 
-    // si ya pasó la fecha de la próxima cuota pendiente => vencido
     return now > due ? "overdue" : "up_to_date";
   }
 
-  // ✅ fallback (pago único/anual)
-  const s = (membership.status || "").toLowerCase();
+  // Pago único/anual (real)
   if (s === "validated" || s === "paid") return "up_to_date";
-  if (s === "submitted") return "validating";
   return "pending";
 }
+
 
 
 /* =========================
