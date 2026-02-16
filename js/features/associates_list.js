@@ -107,22 +107,34 @@ function pickBestMembership(list) {
  * - Acepta validated o paid (planes sin validación)
  * - Usa planSnapshot o membership._plan (resuelto por planId)
  */
-function computePaidUntil(membership) {
-  if (!membership) return null;
+function assocKeyFromMembership(membership, associateActive = true) {
+  if (associateActive === false) return "inactive";
+  if (!membership) return "pending";
 
-  const status = (membership.status || "").toLowerCase();
-  if (status !== "validated" && status !== "paid") return null;
+  const total = Number(membership.installmentsTotal || 0);
+  const settled = Number(membership.installmentsSettled || 0);
 
-  const plan = membership.planSnapshot || membership._plan || null;
+  // ✅ si es plan por cuotas
+  if (total > 0) {
+    if (settled <= 0) return "pending";
 
-  const season = membership.season || new Date().getFullYear().toString();
-  const startPolicy = plan?.startPolicy || "jan";
-  const durationMonths = Number(plan?.durationMonths ?? 12);
+    const dueStr = membership.nextUnpaidDueDate; // "YYYY-MM-DD"
+    if (!dueStr) return "up_to_date"; // no quedan cuotas
 
-  const start = seasonStartDate(season, startPolicy);
-  const end = addMonths(start, durationMonths);
-  return end; // exclusive
+    const due = new Date(dueStr + "T00:00:00");
+    const now = new Date();
+
+    // si ya pasó la fecha de la próxima cuota pendiente => vencido
+    return now > due ? "overdue" : "up_to_date";
+  }
+
+  // ✅ fallback (pago único/anual)
+  const s = (membership.status || "").toLowerCase();
+  if (s === "validated" || s === "paid") return "up_to_date";
+  if (s === "submitted") return "validating";
+  return "pending";
 }
+
 
 /* =========================
    UI helpers
@@ -457,7 +469,14 @@ function render() {
     .map((a) => {
       const isActive = a.active !== false;
       const perfilBadge = isActive ? badge("Activo", "yellow") : badge("Inactivo", "gray");
-      const asocBadge = assocBadge(a._assocKey, a.membership);
+
+      // ✅ badge + progreso (X/Y) si hay cuotas
+      const m = a.membership || null;
+      const total = Number(m?.installmentsTotal || 0);
+      const settled = Number(m?.installmentsSettled || 0);
+      const progress = total > 0 ? ` <span class="text-muted small">(${settled}/${total})</span>` : "";
+
+      const asocBadge = `${assocBadge(a._assocKey)}${progress}`;
 
       const contacto = [
         a.email ? `<div>${a.email}</div>` : "",
@@ -491,6 +510,7 @@ function render() {
     });
   });
 }
+
 
 /* =========================
    Public API

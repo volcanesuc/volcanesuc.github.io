@@ -257,6 +257,42 @@ async function loadSubmissions() {
     });
 }
 
+function computeInstallmentRollup() {
+  const total = installments.length;
+
+  const settled = installments.filter(it => {
+    const s = (it.status || "pending").toLowerCase();
+    return s === "validated" || s === "paid";
+  }).length;
+
+  const pendingSorted = installments
+    .filter(it => {
+      const s = (it.status || "pending").toLowerCase();
+      return !(s === "validated" || s === "paid");
+    })
+    .sort((a,b) => (a.n||0)-(b.n||0));
+
+  const next = pendingSorted[0] || null;
+
+  return {
+    installmentsTotal: total,
+    installmentsSettled: settled,
+    nextUnpaidN: next?.n ?? null,
+    nextUnpaidDueDate: next?.dueDate ?? null, // "YYYY-MM-DD"
+  };
+}
+
+async function syncMembershipRollup() {
+  const roll = computeInstallmentRollup();
+  await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+    ...roll,
+    updatedAt: serverTimestamp()
+  });
+
+  // state local
+  Object.assign(membership, roll);
+}
+
 /* =========================
    Render
 ========================= */
@@ -478,6 +514,8 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
     // 3) Reload (para decidir si quedan cuotas)
     await loadInstallments();
     await loadSubmissions();
+    await syncMembershipRollup();
+    await reconcileMembershipStatus();
 
     const stats = computeInstallmentStats();
 
