@@ -64,6 +64,17 @@ const rejectNote = document.getElementById("rejectNote");
 const rejectSid = document.getElementById("rejectSid");
 const btnConfirmReject = document.getElementById("btnConfirmReject");
 
+/* Apply (multi-installments) modal */
+const applyModalEl = document.getElementById("applyModal");
+const applyModal = applyModalEl ? new bootstrap.Modal(applyModalEl) : null;
+const applySid = document.getElementById("applySid");
+const applyList = document.getElementById("applyList");
+const applyReported = document.getElementById("applyReported");
+const applySelectedTotal = document.getElementById("applySelectedTotal");
+const applyDiff = document.getElementById("applyDiff");
+const applyAdminNote = document.getElementById("applyAdminNote");
+const btnConfirmApplyValidate = document.getElementById("btnConfirmApplyValidate");
+
 /* =========================
    State
 ========================= */
@@ -139,29 +150,35 @@ function norm(s) {
   return (s || "").toString().toLowerCase().trim();
 }
 
+function isInstallmentSettled(it) {
+  const st = norm(it?.status || "pending");
+  return st === "validated" || st === "paid";
+}
+
+function pendingInstallments() {
+  return installments.filter((it) => !isInstallmentSettled(it));
+}
+
+function sumAmounts(arr) {
+  return (arr || []).reduce((acc, x) => acc + (Number(x?.amount) || 0), 0);
+}
+
 /* =========================
-   Status reconcile (FIXED)
-   - Si hay cuotas, también consideramos submissions validated/paid
-     especialmente cuando installmentId es null ("pago general").
+   Status reconcile
 ========================= */
 function computeMembershipStatus() {
   const p = membership?.planSnapshot || {};
   const requiresValidation = !!p.requiresValidation;
 
-  const subStatuses = submissions.map((s) => (s.status || "pending").toLowerCase());
-  const anySubPaidOrValidated = subStatuses.some((s) => s === "paid" || s === "validated");
-  const anySubValidated = subStatuses.includes("validated");
-
-  // con cuotas: inferimos por estado de cuotas, pero SIN ignorar submissions generales
+  // con cuotas: status por cuotas (source of truth)
   if (installments.length) {
-    const statuses = installments.map((i) => (i.status || "pending").toLowerCase());
-    const anyPaidOrValidated = statuses.some((s) => s === "paid" || s === "validated") || anySubPaidOrValidated;
-    const allValidated = statuses.every((s) => s === "validated");
-    const allPaidOrValidated = statuses.every((s) => s === "paid" || s === "validated");
+    const sts = installments.map((i) => norm(i.status || "pending"));
+    const anyPaidOrValidated = sts.some((s) => s === "paid" || s === "validated");
+    const allValidated = sts.every((s) => s === "validated");
+    const allPaidOrValidated = sts.every((s) => s === "paid" || s === "validated");
 
     if (requiresValidation) {
       if (allValidated) return "validated";
-      if (anySubValidated) return "partial"; // submission validated pero cuotas no mapeadas
       if (anyPaidOrValidated) return "partial";
       return "pending";
     } else {
@@ -171,7 +188,8 @@ function computeMembershipStatus() {
     }
   }
 
-  // sin cuotas: inferimos por submissions
+  // sin cuotas: por submissions
+  const subStatuses = submissions.map((s) => norm(s.status || "pending"));
   if (!subStatuses.length) return "pending";
 
   if (requiresValidation) {
@@ -182,8 +200,7 @@ function computeMembershipStatus() {
 
 async function reconcileMembershipStatus() {
   const next = computeMembershipStatus();
-  const curr = (membership?.status || "pending").toLowerCase();
-
+  const curr = norm(membership?.status || "pending");
   if (next !== curr) {
     await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
       status: next,
@@ -278,7 +295,7 @@ function renderInstallments() {
 
   installmentsTbody.innerHTML = installments.map((it) => {
     const due = it.dueDate || (it.dueMonthDay ? `${membership.season}-${it.dueMonthDay}` : "—");
-    const st = (it.status || "pending").toLowerCase();
+    const st = norm(it.status || "pending");
 
     return `
       <tr>
@@ -301,7 +318,7 @@ function renderSubmissions() {
   }
 
   subsTbody.innerHTML = submissions.map((s) => {
-    const st = (s.status || "pending").toLowerCase();
+    const st = norm(s.status || "pending");
     const when = toDateText(s.createdAt);
 
     const it = s.installmentId ? getInstallmentById(s.installmentId) : null;
@@ -311,25 +328,32 @@ function renderSubmissions() {
       ? `<a class="btn btn-sm btn-outline-dark" href="${s.fileUrl}" target="_blank" rel="noreferrer">Ver</a>`
       : `<span class="text-muted">—</span>`;
 
+    const applied = Array.isArray(s.appliedInstallmentIds) && s.appliedInstallmentIds.length
+      ? `<div class="small text-muted">Aplicado a: ${s.appliedInstallmentIds.length} cuota(s)</div>`
+      : "";
+
     const detail = `
       <div class="fw-bold">${s.payerName || "—"}</div>
       <div class="small text-muted">${itLabel} • ${s.method || "—"}</div>
+      ${applied}
       ${s.note ? `<div class="small text-muted">Nota: ${s.note}</div>` : ""}
       ${s.adminNote ? `<div class="small text-danger">Admin: ${s.adminNote}</div>` : ""}
       <div class="mt-1">${fileLink}</div>
     `;
 
     const locked = st === "validated" || st === "rejected";
+    const canApply = !locked && installments.length > 0;
+
     const actions = `
       <div class="btn-group btn-group-sm" role="group">
-        <button class="btn btn-outline-secondary" data-action="paid" data-sid="${s.id}" ${locked ? "disabled" : ""}>
-          Pagado
-        </button>
         <button class="btn btn-outline-success" data-action="validated" data-sid="${s.id}" ${locked ? "disabled" : ""}>
           Validar
         </button>
         <button class="btn btn-outline-danger" data-action="reject" data-sid="${s.id}" ${locked ? "disabled" : ""}>
           Rechazar
+        </button>
+        <button class="btn btn-outline-secondary" data-action="apply" data-sid="${s.id}" ${canApply ? "" : "disabled"}>
+          Aplicar cuotas
         </button>
       </div>
     `;
@@ -347,6 +371,121 @@ function renderSubmissions() {
 }
 
 /* =========================
+   Apply modal (multi cuotas)
+========================= */
+function greedySuggestInstallments(reportAmount, pendingList) {
+  const amt = Number(reportAmount) || 0;
+  if (!amt || !pendingList?.length) return [];
+  const sorted = [...pendingList].sort((a, b) => (a.n || 0) - (b.n || 0));
+
+  const out = [];
+  let acc = 0;
+  for (const it of sorted) {
+    const v = Number(it.amount) || 0;
+    if (acc + v <= amt) {
+      out.push(it.id);
+      acc += v;
+    } else {
+      // si no cabe, lo saltamos (admin puede ajustar)
+    }
+  }
+  // fallback: si no seleccionó nada, al menos sugerir la primera pendiente
+  if (!out.length && sorted[0]) out.push(sorted[0].id);
+  return out;
+}
+
+function renderApplyModalForSubmission(sub) {
+  if (!applyModal || !applyList || !applySid) {
+    alert("Falta el modal applyModal en el HTML.");
+    return;
+  }
+
+  const cur = getCurrency();
+  const pending = pendingInstallments();
+
+  applySid.value = sub.id;
+
+  const reported = Number(sub.amountReported) || 0;
+  if (applyReported) applyReported.textContent = fmtMoney(reported, cur);
+
+  // sugerencia: por monto reportado
+  const suggestedIds = greedySuggestInstallments(reported, pending);
+
+  // si submission venía con installmentId, lo pre-seleccionamos (y lo sumamos a sugeridos)
+  const pre = new Set(suggestedIds);
+  if (sub.installmentId) pre.add(sub.installmentId);
+
+  // si ya tenía appliedInstallmentIds, se respetan
+  if (Array.isArray(sub.appliedInstallmentIds) && sub.appliedInstallmentIds.length) {
+    pre.clear();
+    sub.appliedInstallmentIds.forEach((id) => pre.add(id));
+  }
+
+  applyList.innerHTML = pending.map((it) => {
+    const due = it.dueDate || (it.dueMonthDay ? `${membership.season}-${it.dueMonthDay}` : "—");
+    const checked = pre.has(it.id) ? "checked" : "";
+    return `
+      <label class="list-group-item d-flex justify-content-between align-items-center">
+        <span>
+          <span class="fw-bold">Cuota #${it.n ?? "—"}</span>
+          <span class="text-muted small ms-2">vence ${due}</span>
+        </span>
+        <span class="d-flex align-items-center gap-3">
+          <span class="mono">${fmtMoney(it.amount, cur)}</span>
+          <input class="form-check-input" type="checkbox" data-itid="${it.id}" ${checked} />
+        </span>
+      </label>
+    `;
+  }).join("") || `<div class="text-muted p-2">No hay cuotas pendientes.</div>`;
+
+  if (applyAdminNote) applyAdminNote.value = sub.adminNote || "";
+
+  // calcular totales iniciales
+  recalcApplyTotals();
+
+  // listeners
+  applyList.querySelectorAll('input[type="checkbox"][data-itid]').forEach((cb) => {
+    cb.addEventListener("change", recalcApplyTotals);
+  });
+
+  applyModal.show();
+}
+
+function getApplySelectedIds() {
+  if (!applyList) return [];
+  return [...applyList.querySelectorAll('input[type="checkbox"][data-itid]:checked')]
+    .map((x) => x.getAttribute("data-itid"))
+    .filter(Boolean);
+}
+
+function recalcApplyTotals() {
+  const cur = getCurrency();
+  const ids = getApplySelectedIds();
+  const selected = ids.map(getInstallmentById).filter(Boolean);
+  const total = sumAmounts(selected);
+
+  if (applySelectedTotal) applySelectedTotal.textContent = fmtMoney(total, cur);
+
+  const sid = applySid?.value;
+  const sub = submissions.find((x) => x.id === sid);
+  const reported = Number(sub?.amountReported) || 0;
+
+  if (applyDiff) {
+    const diff = reported - total;
+    const sign = diff === 0 ? "" : diff > 0 ? "Sobra" : "Falta";
+    applyDiff.textContent =
+      reported && total
+        ? `${sign}: ${fmtMoney(Math.abs(diff), cur)}`
+        : "—";
+
+    applyDiff.className =
+      diff === 0 ? "text-success small" :
+      diff > 0 ? "text-warning small" :
+      "text-danger small";
+  }
+}
+
+/* =========================
    Actions (submissions)
 ========================= */
 subsTbody.addEventListener("click", async (e) => {
@@ -359,7 +498,7 @@ subsTbody.addEventListener("click", async (e) => {
   if (!sub) return;
 
   const st = norm(sub.status || "pending");
-  if (st === "validated" || st === "rejected") return; // ya bloqueado
+  if (st === "validated" || st === "rejected") return;
 
   if (action === "reject") {
     if (!rejectModal) return;
@@ -369,13 +508,24 @@ subsTbody.addEventListener("click", async (e) => {
     return;
   }
 
-  if (action === "paid") {
-    await setSubmissionStatus(sub, "paid");
+  if (action === "apply") {
+    renderApplyModalForSubmission(sub);
     return;
   }
 
   if (action === "validated") {
-    await setSubmissionStatus(sub, "validated");
+    // Si hay cuotas y no hay installmentId, abrir modal para aplicar.
+    // Si sí hay installmentId, igual permitimos validar directo (aplica 1 cuota).
+    const hasInstallments = installments.length > 0;
+    const needsApplyModal = hasInstallments && !sub.installmentId;
+
+    if (needsApplyModal) {
+      renderApplyModalForSubmission(sub);
+      return;
+    }
+
+    await setSubmissionValidatedWithInstallments(sub, sub.installmentId ? [sub.installmentId] : [], sub.adminNote || null);
+    return;
   }
 });
 
@@ -385,85 +535,113 @@ btnConfirmReject?.addEventListener("click", async () => {
   if (!sub) return;
 
   const noteTxt = (rejectNote.value || "").trim();
-  await setSubmissionStatus(sub, "rejected", noteTxt || "Rechazado por admin");
+  await setSubmissionRejected(sub, noteTxt || "Rechazado por admin");
   rejectModal?.hide();
 });
 
-async function setSubmissionStatus(sub, newStatus, adminNote = null) {
-  const label =
-    newStatus === "paid" ? "Marcando pagado…" :
-    newStatus === "validated" ? "Validando…" :
-    newStatus === "rejected" ? "Rechazando…" : "Actualizando…";
+btnConfirmApplyValidate?.addEventListener("click", async () => {
+  const sid = applySid?.value;
+  const sub = submissions.find((x) => x.id === sid);
+  if (!sub) return;
 
-  showLoader?.(label);
+  const ids = getApplySelectedIds();
+  const note = (applyAdminNote?.value || "").trim() || null;
 
+  if (!ids.length) {
+    alert("Seleccioná al menos 1 cuota.");
+    return;
+  }
+
+  applyModal?.hide();
+  await setSubmissionValidatedWithInstallments(sub, ids, note);
+});
+
+async function setSubmissionRejected(sub, adminNote = null) {
+  showLoader?.("Rechazando…");
   try {
-    // 1) Update submission
     await updateDoc(doc(db, COL_SUBMISSIONS, sub.id), {
-      status: newStatus,
+      status: "rejected",
       adminNote: adminNote ?? null,
       decidedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
 
-    // 2) If linked installment, update installment too
-    if (sub.installmentId) {
-      const newInstStatus =
-        newStatus === "validated" ? "validated" :
-        newStatus === "paid" ? "paid" :
-        "pending";
+    // habilitar link para que re-envíe
+    await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+      payLinkEnabled: true,
+      payLinkDisabledReason: null,
+      updatedAt: serverTimestamp()
+    });
+    membership.payLinkEnabled = true;
+    membership.payLinkDisabledReason = null;
 
-      await updateDoc(doc(db, COL_INSTALLMENTS, sub.installmentId), {
-        status: newInstStatus,
-        updatedAt: serverTimestamp()
-      });
-    }
-
-    // 3) Membership metadata (audit + help lists)
-    if (newStatus === "validated") {
-      await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
-        lastPaymentSubmissionId: sub.id,
-        lastPaymentAt: serverTimestamp(),
-        validatedAt: serverTimestamp(),
-        // al validar, normalmente bloqueamos link (ya se registró)
-        payLinkEnabled: false,
-        payLinkDisabledReason: "Pago validado por admin.",
-        updatedAt: serverTimestamp()
-      });
-      membership.payLinkEnabled = false;
-      membership.payLinkDisabledReason = "Pago validado por admin.";
-    } else if (newStatus === "paid") {
-      await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
-        lastPaymentSubmissionId: sub.id,
-        lastPaymentAt: serverTimestamp(),
-        // pago registrado sin validación final
-        payLinkEnabled: false,
-        payLinkDisabledReason: "Pago registrado por admin.",
-        updatedAt: serverTimestamp()
-      });
-      membership.payLinkEnabled = false;
-      membership.payLinkDisabledReason = "Pago registrado por admin.";
-    } else if (newStatus === "rejected") {
-      await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
-        payLinkEnabled: true,
-        payLinkDisabledReason: null,
-        updatedAt: serverTimestamp()
-      });
-      membership.payLinkEnabled = true;
-      membership.payLinkDisabledReason = null;
-    }
-
-    // 4) Reload + reconcile status
     await loadInstallments();
     await loadSubmissions();
     await reconcileMembershipStatus();
-
     render();
-    alert("✅ Actualizado");
-
+    alert("✅ Rechazado");
   } catch (e) {
     console.error(e);
-    alert("❌ Error actualizando: " + (e?.message || e));
+    alert("❌ Error rechazando: " + (e?.message || e));
+  } finally {
+    hideLoader?.();
+  }
+}
+
+async function setSubmissionValidatedWithInstallments(sub, installmentIds = [], adminNote = null) {
+  showLoader?.("Validando…");
+
+  try {
+    // 1) actualiza submission
+    const appliedIds = [...new Set((installmentIds || []).filter(Boolean))];
+    const selected = appliedIds.map(getInstallmentById).filter(Boolean);
+    const appliedTotal = sumAmounts(selected);
+
+    await updateDoc(doc(db, COL_SUBMISSIONS, sub.id), {
+      status: "validated",
+      adminNote: adminNote ?? null,
+      appliedInstallmentIds: appliedIds.length ? appliedIds : null,
+      appliedTotal: appliedIds.length ? appliedTotal : null,
+      decidedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    // 2) actualiza cuotas seleccionadas
+    for (const itid of appliedIds) {
+      await updateDoc(doc(db, COL_INSTALLMENTS, itid), {
+        status: "validated",
+        paymentSubmissionId: sub.id,
+        validatedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    // 3) refresca data
+    await loadInstallments();
+    await loadSubmissions();
+
+    // 4) status membership
+    await reconcileMembershipStatus();
+
+    // 5) payLinkEnabled: si aún debe cuotas -> habilitar
+    const stillPending = pendingInstallments().length > 0;
+
+    await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+      lastPaymentSubmissionId: sub.id,
+      lastPaymentAt: serverTimestamp(),
+      payLinkEnabled: stillPending, // ✅ ESTE ES EL FIX CLAVE
+      payLinkDisabledReason: stillPending ? null : "Membresía al día.",
+      updatedAt: serverTimestamp()
+    });
+
+    membership.payLinkEnabled = stillPending;
+    membership.payLinkDisabledReason = stillPending ? null : "Membresía al día.";
+
+    render();
+    alert(stillPending ? "✅ Validado. Quedan cuotas pendientes (link habilitado)." : "✅ Validado. Ya está al día (link bloqueado).");
+  } catch (e) {
+    console.error(e);
+    alert("❌ Error validando: " + (e?.message || e));
   } finally {
     hideLoader?.();
   }
