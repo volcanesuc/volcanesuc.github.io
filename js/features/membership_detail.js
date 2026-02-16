@@ -514,9 +514,8 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
     // 3) Reload (para decidir si quedan cuotas)
     await loadInstallments();
     await loadSubmissions();
-    await syncMembershipRollup();
-    await reconcileMembershipStatus();
 
+    // ✅ Rollup único (total/settled/pending/nextDue)
     const stats = computeInstallmentStats();
 
     await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
@@ -527,11 +526,14 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
       updatedAt: serverTimestamp()
     });
 
-    // mantener state local
+    // state local
     membership.installmentsTotal = stats.total;
     membership.installmentsSettled = stats.settled;
     membership.installmentsPending = stats.pending;
     membership.nextUnpaidDueDate = stats.nextDue;
+
+    // ✅ status consistente con cuotas
+    await reconcileMembershipStatus();
 
     // 4) Membership metadata + pay link rules
     if (newStatus === "validated" || newStatus === "paid") {
@@ -661,7 +663,9 @@ async function refreshAll() {
     await loadInstallments();
     await loadSubmissions();
 
+    await syncMembershipRollup();      // ✅ clave
     await reconcileMembershipStatus();
+
     render();
     hideAlert();
   } catch (e) {

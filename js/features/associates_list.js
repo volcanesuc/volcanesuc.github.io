@@ -442,13 +442,8 @@ function render() {
       const isActive = a.active !== false;
       const perfilBadge = isActive ? badge("Activo", "yellow") : badge("Inactivo", "gray");
 
-      // ✅ badge + progreso (X/Y) si hay cuotas
       const m = a.membership || null;
-      const total = Number(m?.installmentsTotal || 0);
-      const settled = Number(m?.installmentsSettled || 0);
-      const progress = total > 0 ? ` <span class="text-muted small">(${settled}/${total})</span>` : "";
-
-      const asocBadge = `${assocBadge(a._assocKey)}${progress}`;
+      const asocBadge = assocBadge(a._assocKey, m);
 
       const contacto = [
         a.email ? `<div>${a.email}</div>` : "",
