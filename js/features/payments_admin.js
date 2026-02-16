@@ -1,5 +1,6 @@
 // js/features/payments_admin.js
-// Admin tab: lista membership_payment_submissions con esquema real (payerName/email/phone/amountReported/fileUrl/etc)
+// Admin tab: lista membership_payment_submissions + acciones Validar/Rechazar
+// Al validar/rechazar: actualiza submission + membership + (opcional) installment
 
 import { db } from "../firebase.js";
 import { watchAuth, logout } from "../auth.js";
@@ -11,12 +12,19 @@ import {
   query,
   orderBy,
   limit,
+  doc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================
    Collections
 ========================= */
 const COL_SUBMISSIONS = "membership_payment_submissions";
+const COL_MEMBERSHIPS = "memberships";
+const COL_INSTALLMENTS = "membership_installments";
+
 const DEFAULT_LIMIT = 300;
 
 /* =========================
@@ -24,12 +32,32 @@ const DEFAULT_LIMIT = 300;
 ========================= */
 let $ = {};
 let allSubs = [];
+let currentSub = null;
+let _busy = false;
 
 /* =========================
    Helpers
 ========================= */
 function norm(s) {
   return (s || "").toString().toLowerCase().trim();
+}
+
+function esc(s) {
+  return (s ?? "—")
+    .toString()
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function pick(obj, keys, fallback = null) {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v !== undefined && v !== null && v !== "") return v;
+  }
+  return fallback;
 }
 
 function fmtMoney(n, cur = "CRC") {
@@ -55,24 +83,6 @@ function fmtDate(ts) {
   }
 }
 
-function esc(s) {
-  return (s ?? "—")
-    .toString()
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function pick(obj, keys, fallback = null) {
-  for (const k of keys) {
-    const v = obj?.[k];
-    if (v !== undefined && v !== null && v !== "") return v;
-  }
-  return fallback;
-}
-
 function badge(text, cls = "gray") {
   return `<span class="badge-soft ${cls}">${esc(text)}</span>`;
 }
@@ -92,6 +102,13 @@ function methodLabel(m) {
   if (s === "cash") return "Efectivo";
   if (s === "card") return "Tarjeta";
   return m ? String(m) : "—";
+}
+
+function setBusy(on) {
+  _busy = !!on;
+  if ($.btnApprove) $.btnApprove.disabled = _busy || !currentSub;
+  if ($.btnReject) $.btnReject.disabled = _busy || !currentSub;
+  if ($.btnSaveNote) $.btnSaveNote.disabled = _busy || !currentSub;
 }
 
 /* =========================
@@ -145,7 +162,7 @@ function renderShell(container) {
             <th>Método</th>
             <th>Comprobante</th>
             <th>Monto</th>
-            <th class="text-end">Ver</th>
+            <th class="text-end">Acciones</th>
           </tr>
         </thead>
         <tbody id="subsTbody">
@@ -170,12 +187,34 @@ function renderModalHtml() {
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
+
         <div class="modal-body">
           <div id="submissionQuick" class="mb-3"></div>
-          <pre id="submissionJson" class="small bg-light p-2 rounded" style="white-space:pre-wrap;"></pre>
+
+          <div class="card border-0 bg-light">
+            <div class="card-body">
+              <label class="form-label mb-1">Nota admin</label>
+              <textarea id="adminNoteInput" class="form-control" rows="2" placeholder="Opcional: comentario interno o razón de rechazo..."></textarea>
+              <div class="d-flex justify-content-between align-items-center mt-2">
+                <div class="small text-muted" id="membershipSyncHint">—</div>
+                <button id="btnSaveNote" class="btn btn-sm btn-outline-secondary" type="button">
+                  Guardar nota
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <pre id="submissionJson" class="small bg-light p-2 rounded mt-3" style="white-space:pre-wrap;"></pre>
         </div>
+
         <div class="modal-footer">
           <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cerrar</button>
+          <button id="btnReject" class="btn btn-outline-danger" type="button">
+            <i class="bi bi-x-circle me-1"></i> Rechazar
+          </button>
+          <button id="btnApprove" class="btn btn-success" type="button">
+            <i class="bi bi-check-circle me-1"></i> Validar
+          </button>
         </div>
       </div>
     </div>
@@ -200,8 +239,16 @@ function cacheDom(container) {
 
   $.modalEl = root.querySelector("#submissionModal");
   $.modal = $.modalEl ? new bootstrap.Modal($.modalEl) : null;
+  $.modalTitle = root.querySelector("#submissionModalTitle");
   $.modalJson = root.querySelector("#submissionJson");
   $.modalQuick = root.querySelector("#submissionQuick");
+
+  $.adminNoteInput = root.querySelector("#adminNoteInput");
+  $.membershipSyncHint = root.querySelector("#membershipSyncHint");
+
+  $.btnApprove = root.querySelector("#btnApprove");
+  $.btnReject = root.querySelector("#btnReject");
+  $.btnSaveNote = root.querySelector("#btnSaveNote");
 }
 
 /* =========================
@@ -237,6 +284,10 @@ function getSeason(s) {
 
 function getMembershipId(s) {
   return pick(s, ["membershipId"], null);
+}
+
+function getInstallmentId(s) {
+  return pick(s, ["installmentId"], null);
 }
 
 function getAssociateCell(s) {
@@ -311,6 +362,7 @@ function render() {
         pick(s, ["email"], ""),
         pick(s, ["phone"], ""),
         pick(s, ["membershipId"], ""),
+        pick(s, ["installmentId"], ""),
         pick(s, ["planId"], ""),
         pick(s, ["method"], ""),
         pick(s, ["status"], ""),
@@ -323,7 +375,6 @@ function render() {
     });
   }
 
-  // suma (si hay mezcla de monedas, esto es solo guía)
   const sum = list.reduce((acc, s) => acc + (Number(getAmount(s)) || 0), 0);
 
   $.countLabel.textContent = `${list.length} submissions`;
@@ -351,12 +402,20 @@ function render() {
 
       const amt = fmtMoney(getAmount(s), getCurrency(s));
 
-      // botón ver: ícono + fallback "Ver"
       const viewBtn = `
         <button class="btn btn-sm btn-outline-primary" type="button" data-action="view" data-id="${s.id}">
           <i class="bi bi-eye-fill me-1"></i><span>Ver</span>
         </button>
       `;
+
+      const quickApprove =
+        norm(pick(s, ["status"], "pending")) === "pending"
+          ? `
+            <button class="btn btn-sm btn-success ms-2" type="button" data-action="approve" data-id="${s.id}">
+              <i class="bi bi-check2 me-1"></i><span>Validar</span>
+            </button>
+          `
+          : "";
 
       return `
         <tr>
@@ -367,7 +426,10 @@ function render() {
           <td>${method}</td>
           <td>${proof}</td>
           <td style="white-space:nowrap;">${amt}</td>
-          <td class="text-end">${viewBtn}</td>
+          <td class="text-end">
+            ${viewBtn}
+            ${quickApprove}
+          </td>
         </tr>
       `;
     })
@@ -375,25 +437,162 @@ function render() {
 }
 
 /* =========================
+   Actions (core fix)
+========================= */
+async function applyDecision(sub, decision /* "validated" | "rejected" */) {
+  if (!sub?.id) return;
+  if (_busy) return;
+
+  const sid = sub.id;
+  const membershipId = getMembershipId(sub);
+  const installmentId = getInstallmentId(sub);
+
+  const note = ($.adminNoteInput?.value || "").trim() || null;
+
+  setBusy(true);
+  showLoader?.(decision === "validated" ? "Validando pago…" : "Rechazando pago…");
+
+  try {
+    // 1) Update submission status
+    await updateDoc(doc(db, COL_SUBMISSIONS, sid), {
+      status: decision,
+      adminNote: note,
+      decidedAt: serverTimestamp(), // nuevo campo
+      updatedAt: serverTimestamp(),
+    });
+
+    // 2) Update installment if referenced
+    if (decision === "validated" && membershipId && installmentId) {
+      try {
+        await updateDoc(doc(db, COL_INSTALLMENTS, installmentId), {
+          status: "validated",
+          validatedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (e) {
+        console.warn("[payments_admin] No se pudo actualizar installment:", e?.code || e);
+      }
+    }
+
+    // 3) Update membership (THIS is what fixes “moroso”)
+    if (membershipId) {
+      const mRef = doc(db, COL_MEMBERSHIPS, membershipId);
+      const mSnap = await getDoc(mRef);
+
+      if (!mSnap.exists()) {
+        console.warn("[payments_admin] membershipId no existe:", membershipId);
+      } else {
+        const updates = {
+          updatedAt: serverTimestamp(),
+          lastPaymentSubmissionId: sid,
+          lastPaymentAt: serverTimestamp(),
+          // después de decisión, permitir que vuelvan a usar el link
+          payLinkEnabled: true,
+          payLinkDisabledReason: null,
+        };
+
+        if (decision === "validated") {
+          updates.status = "validated";
+          updates.validatedAt = serverTimestamp();
+        } else {
+          // si rechazás, NO lo marco validated; lo dejo como estaba o pending
+          // (si querés forzar un estado, lo definimos luego)
+          updates.status = mSnap.data()?.status || "pending";
+          updates.rejectedAt = serverTimestamp();
+        }
+
+        await updateDoc(mRef, updates);
+      }
+    }
+
+    // 4) Update local state (so UI refreshes without full reload)
+    const idx = allSubs.findIndex((x) => x.id === sid);
+    if (idx >= 0) {
+      allSubs[idx] = {
+        ...allSubs[idx],
+        status: decision,
+        adminNote: note,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    // refresh table + modal
+    render();
+    if (currentSub?.id === sid) {
+      currentSub = allSubs.find((x) => x.id === sid) || currentSub;
+      openView(sid, { keepOpen: true });
+    }
+  } finally {
+    hideLoader?.();
+    setBusy(false);
+  }
+}
+
+async function saveAdminNoteOnly(sub) {
+  if (!sub?.id) return;
+  if (_busy) return;
+
+  const sid = sub.id;
+  const note = ($.adminNoteInput?.value || "").trim() || null;
+
+  setBusy(true);
+  showLoader?.("Guardando nota…");
+  try {
+    await updateDoc(doc(db, COL_SUBMISSIONS, sid), {
+      adminNote: note,
+      updatedAt: serverTimestamp(),
+    });
+
+    const idx = allSubs.findIndex((x) => x.id === sid);
+    if (idx >= 0) allSubs[idx] = { ...allSubs[idx], adminNote: note };
+
+    if (currentSub?.id === sid) currentSub.adminNote = note;
+    openView(sid, { keepOpen: true });
+  } finally {
+    hideLoader?.();
+    setBusy(false);
+  }
+}
+
+/* =========================
    Modal detail
 ========================= */
-function openView(id) {
+function openView(id, opts = {}) {
   const s = allSubs.find((x) => x.id === id);
   if (!s) return;
 
+  currentSub = s;
+
   const membershipId = pick(s, ["membershipId"], "—");
+  const installmentId = pick(s, ["installmentId"], null);
   const planId = pick(s, ["planId"], "—");
   const amount = fmtMoney(pick(s, ["amountReported"], null), pick(s, ["currency"], "CRC"));
   const status = pick(s, ["status"], "pending");
   const method = methodLabel(pick(s, ["method"], "—"));
   const proof = pick(s, ["fileUrl"], null);
 
+  if ($.modalTitle) {
+    $.modalTitle.textContent = `#${id} • ${pick(s, ["payerName"], "—")}`;
+  }
+
+  if ($.adminNoteInput) $.adminNoteInput.value = pick(s, ["adminNote"], "") || "";
+
+  // hint para debug morosidad
+  if ($.membershipSyncHint) {
+    const hasMid = !!pick(s, ["membershipId"], null);
+    const hint = hasMid
+      ? `Al validar/rechazar se sincroniza memberships/${membershipId}${installmentId ? ` + installment ${installmentId}` : ""}`
+      : "⚠️ Este submission no tiene membershipId; no se puede sincronizar la membresía.";
+    $.membershipSyncHint.textContent = hint;
+  }
+
   if ($.modalQuick) {
     $.modalQuick.innerHTML = `
       <div class="row g-2">
         <div class="col-12 col-md-6">
           <div class="small text-muted">Membresía</div>
-          <div class="mono">#${esc(membershipId)}</div>
+          <div class="mono">${membershipId !== "—" ? `#${esc(membershipId)}` : "—"}</div>
+          ${installmentId ? `<div class="small text-muted mt-1">Cuota: <span class="mono">#${esc(installmentId)}</span></div>` : ""}
         </div>
         <div class="col-12 col-md-6">
           <div class="small text-muted">Plan</div>
@@ -420,7 +619,17 @@ function openView(id) {
   }
 
   if ($.modalJson) $.modalJson.textContent = JSON.stringify(s, null, 2);
+
+  // botones según estado
+  const st = norm(status);
+  const canDecide = st === "pending";
+
+  if ($.btnApprove) $.btnApprove.disabled = _busy || !canDecide;
+  if ($.btnReject) $.btnReject.disabled = _busy || !canDecide;
+
   $.modal?.show();
+
+  if (opts.keepOpen !== true) return;
 }
 
 /* =========================
@@ -437,7 +646,38 @@ function bindEvents() {
   $.tbody?.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
-    if (btn.dataset.action === "view") openView(btn.dataset.id);
+
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
+
+    if (action === "view") openView(id);
+    if (action === "approve") {
+      openView(id);
+      // Quick approve: abre modal y deja listo para confirmar
+      // (si querés aprobar directo sin modal, lo cambiamos)
+    }
+  });
+
+  $.btnApprove?.addEventListener("click", async () => {
+    if (!currentSub) return;
+    await applyDecision(currentSub, "validated");
+  });
+
+  $.btnReject?.addEventListener("click", async () => {
+    if (!currentSub) return;
+    await applyDecision(currentSub, "rejected");
+  });
+
+  $.btnSaveNote?.addEventListener("click", async () => {
+    if (!currentSub) return;
+    await saveAdminNoteOnly(currentSub);
+  });
+
+  // reset modal state on close
+  $.modalEl?.addEventListener("hidden.bs.modal", () => {
+    currentSub = null;
+    if ($.adminNoteInput) $.adminNoteInput.value = "";
+    setBusy(false);
   });
 }
 
@@ -446,7 +686,9 @@ function bindEvents() {
 ========================= */
 export async function mount(container, cfg) {
   allSubs = [];
+  currentSub = null;
   $ = {};
+  _busy = false;
 
   renderShell(container);
   cacheDom(container);
