@@ -106,8 +106,9 @@ function methodLabel(m) {
 
 function setBusy(on) {
   _busy = !!on;
-  if ($.btnApprove) $.btnApprove.disabled = _busy || !currentSub;
-  if ($.btnReject) $.btnReject.disabled = _busy || !currentSub;
+  const can = !!currentSub && norm(pick(currentSub, ["status"], "pending")) === "pending";
+  if ($.btnApprove) $.btnApprove.disabled = _busy || !can;
+  if ($.btnReject) $.btnReject.disabled = _busy || !can;
   if ($.btnSaveNote) $.btnSaveNote.disabled = _busy || !currentSub;
 }
 
@@ -281,11 +282,9 @@ async function loadSubmissions() {
 function getSeason(s) {
   return pick(s, ["season"], "—");
 }
-
 function getMembershipId(s) {
   return pick(s, ["membershipId"], null);
 }
-
 function getInstallmentId(s) {
   return pick(s, ["installmentId"], null);
 }
@@ -304,15 +303,12 @@ function getAssociateCell(s) {
 function getAmount(s) {
   return pick(s, ["amountReported"], null);
 }
-
 function getCurrency(s) {
   return pick(s, ["currency"], "CRC");
 }
-
 function getMethod(s) {
   return pick(s, ["method"], "—");
 }
-
 function getFileUrl(s) {
   return pick(s, ["fileUrl"], null);
 }
@@ -408,14 +404,14 @@ function render() {
         </button>
       `;
 
-      const quickApprove =
-        norm(pick(s, ["status"], "pending")) === "pending"
-          ? `
-            <button class="btn btn-sm btn-success ms-2" type="button" data-action="approve" data-id="${s.id}">
-              <i class="bi bi-check2 me-1"></i><span>Validar</span>
-            </button>
-          `
-          : "";
+      const canQuickApprove = norm(pick(s, ["status"], "pending")) === "pending";
+      const quickApprove = canQuickApprove
+        ? `
+          <button class="btn btn-sm btn-success ms-2" type="button" data-action="approve" data-id="${s.id}">
+            <i class="bi bi-check2 me-1"></i><span>Validar</span>
+          </button>
+        `
+        : "";
 
       return `
         <tr>
@@ -437,7 +433,21 @@ function render() {
 }
 
 /* =========================
-   Actions (core fix)
+   Core: reconcile membership status
+========================= */
+function inferMembershipStatusFromPlan(mData, decision) {
+  // decision solo se usa para validated/rejected
+  if (decision !== "validated") return null;
+
+  const p = mData?.planSnapshot || {};
+  const requiresValidation = !!p.requiresValidation;
+
+  // si requiere validación, validated. Si no, paid.
+  return requiresValidation ? "validated" : "paid";
+}
+
+/* =========================
+   Actions (FIXED)
 ========================= */
 async function applyDecision(sub, decision /* "validated" | "rejected" */) {
   if (!sub?.id) return;
@@ -453,15 +463,19 @@ async function applyDecision(sub, decision /* "validated" | "rejected" */) {
   showLoader?.(decision === "validated" ? "Validando pago…" : "Rechazando pago…");
 
   try {
+    // Guard: no decidir dos veces
+    const currentStatus = norm(pick(sub, ["status"], "pending"));
+    if (currentStatus !== "pending") return;
+
     // 1) Update submission status
     await updateDoc(doc(db, COL_SUBMISSIONS, sid), {
       status: decision,
       adminNote: note,
-      decidedAt: serverTimestamp(), // nuevo campo
+      decidedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
-    // 2) Update installment if referenced
+    // 2) Update installment if referenced (solo al validar)
     if (decision === "validated" && membershipId && installmentId) {
       try {
         await updateDoc(doc(db, COL_INSTALLMENTS, installmentId), {
@@ -474,7 +488,7 @@ async function applyDecision(sub, decision /* "validated" | "rejected" */) {
       }
     }
 
-    // 3) Update membership (THIS is what fixes “moroso”)
+    // 3) Update membership (status + bloqueo link + audit)
     if (membershipId) {
       const mRef = doc(db, COL_MEMBERSHIPS, membershipId);
       const mSnap = await getDoc(mRef);
@@ -482,42 +496,49 @@ async function applyDecision(sub, decision /* "validated" | "rejected" */) {
       if (!mSnap.exists()) {
         console.warn("[payments_admin] membershipId no existe:", membershipId);
       } else {
-        const updates = {
-          updatedAt: serverTimestamp(),
-          lastPaymentSubmissionId: sid,
-          lastPaymentAt: serverTimestamp(),
-          // después de decisión, permitir que vuelvan a usar el link
-          payLinkEnabled: true,
-          payLinkDisabledReason: null,
-        };
+        const mData = mSnap.data() || {};
+        const nextStatus = inferMembershipStatusFromPlan(mData, decision);
 
         if (decision === "validated") {
-          updates.status = "validated";
-          updates.validatedAt = serverTimestamp();
-        } else {
-          // si rechazás, NO lo marco validated; lo dejo como estaba o pending
-          // (si querés forzar un estado, lo definimos luego)
-          updates.status = mSnap.data()?.status || "pending";
-          updates.rejectedAt = serverTimestamp();
-        }
+          const updates = {
+            updatedAt: serverTimestamp(),
+            lastPaymentSubmissionId: sid,
+            lastPaymentAt: serverTimestamp(),
+            // importante: al validar, BLOQUEAMOS link
+            payLinkEnabled: false,
+            payLinkDisabledReason: "Pago registrado por admin.",
+          };
 
-        await updateDoc(mRef, updates);
+          if (nextStatus) updates.status = nextStatus;
+          if (nextStatus === "validated") updates.validatedAt = serverTimestamp();
+          if (nextStatus === "paid") updates.paidAt = serverTimestamp();
+
+          await updateDoc(mRef, updates);
+        } else {
+          // rejected: habilitar link para que reenvíe
+          await updateDoc(mRef, {
+            updatedAt: serverTimestamp(),
+            payLinkEnabled: true,
+            payLinkDisabledReason: null,
+            rejectedAt: serverTimestamp(),
+          });
+        }
       }
     }
 
-    // 4) Update local state (so UI refreshes without full reload)
+    // 4) Update local state (sin inventar timestamps)
     const idx = allSubs.findIndex((x) => x.id === sid);
     if (idx >= 0) {
       allSubs[idx] = {
         ...allSubs[idx],
         status: decision,
         adminNote: note,
-        updatedAt: new Date().toISOString(),
       };
     }
 
-    // refresh table + modal
     render();
+
+    // refrescar modal si está abierto
     if (currentSub?.id === sid) {
       currentSub = allSubs.find((x) => x.id === sid) || currentSub;
       openView(sid, { keepOpen: true });
@@ -577,11 +598,10 @@ function openView(id, opts = {}) {
 
   if ($.adminNoteInput) $.adminNoteInput.value = pick(s, ["adminNote"], "") || "";
 
-  // hint para debug morosidad
   if ($.membershipSyncHint) {
     const hasMid = !!pick(s, ["membershipId"], null);
     const hint = hasMid
-      ? `Al validar/rechazar se sincroniza memberships/${membershipId}${installmentId ? ` + installment ${installmentId}` : ""}`
+      ? `Sync: memberships/${membershipId}${installmentId ? ` + installment ${installmentId}` : ""}`
       : "⚠️ Este submission no tiene membershipId; no se puede sincronizar la membresía.";
     $.membershipSyncHint.textContent = hint;
   }
@@ -620,7 +640,6 @@ function openView(id, opts = {}) {
 
   if ($.modalJson) $.modalJson.textContent = JSON.stringify(s, null, 2);
 
-  // botones según estado
   const st = norm(status);
   const canDecide = st === "pending";
 
@@ -651,11 +670,7 @@ function bindEvents() {
     const action = btn.dataset.action;
 
     if (action === "view") openView(id);
-    if (action === "approve") {
-      openView(id);
-      // Quick approve: abre modal y deja listo para confirmar
-      // (si querés aprobar directo sin modal, lo cambiamos)
-    }
+    if (action === "approve") openView(id);
   });
 
   $.btnApprove?.addEventListener("click", async () => {
@@ -673,7 +688,6 @@ function bindEvents() {
     await saveAdminNoteOnly(currentSub);
   });
 
-  // reset modal state on close
   $.modalEl?.addEventListener("hidden.bs.modal", () => {
     currentSub = null;
     if ($.adminNoteInput) $.adminNoteInput.value = "";
@@ -684,7 +698,7 @@ function bindEvents() {
 /* =========================
    Public API
 ========================= */
-export async function mount(container, cfg) {
+export async function mount(container) {
   allSubs = [];
   currentSub = null;
   $ = {};
