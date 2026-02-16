@@ -447,8 +447,7 @@ function render() {
       const perfilBadge = isActive ? badge("Activo", "yellow") : badge("Inactivo", "gray");
 
       const m = a.membership || null;
-      const dbg = m ? ` (${a._assocKey} | due=${m.nextUnpaidDueDate || "-"} | settled=${m.installmentsSettled || 0})` : "";
-      const asocBadge = assocBadge(a._assocKey, m) + `<div class="small text-muted">${dbg}</div>`;
+      const asocBadge = assocBadge(a._assocKey, m);
 
       const contacto = [
         a.email ? `<div>${a.email}</div>` : "",
