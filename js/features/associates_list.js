@@ -107,6 +107,7 @@ function assocKeyFromMembership(membership, associateActive = true) {
   if (!membership) return "pending";
 
   const s = (membership.status || "").toLowerCase();
+  if (s === "partial" && !membership.nextUnpaidDueDate) return "up_to_date";
 
   // ✅ si está en "partial", NO es "pendiente"
   // (sin rollups no podemos saber overdue vs up_to_date)
@@ -374,9 +375,11 @@ async function loadAssociates() {
 function progressText(membership) {
   const total = Number(membership?.installmentsTotal || 0);
   const settled = Number(membership?.installmentsSettled || 0);
+  if (!total) return "";
 
-  if (!total) return ""; // pago único
-  return `${settled}/${total} cuotas`;
+  const next = membership?.nextUnpaidDueDate;
+  const nextTxt = next ? ` • Próx: ${next}` : "";
+  return `${settled}/${total} cuotas${nextTxt}`;
 }
 
 /* =========================

@@ -3,6 +3,7 @@ import { db } from "../firebase.js";
 import { watchAuth, logout } from "../auth.js";
 import { loadHeader } from "../components/header.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
+import { recomputeMembershipRollup } from "./membership_rollup.js";
 
 import {
   doc,
@@ -257,42 +258,6 @@ async function loadSubmissions() {
     });
 }
 
-function computeInstallmentRollup() {
-  const total = installments.length;
-
-  const settled = installments.filter(it => {
-    const s = (it.status || "pending").toLowerCase();
-    return s === "validated" || s === "paid";
-  }).length;
-
-  const pendingSorted = installments
-    .filter(it => {
-      const s = (it.status || "pending").toLowerCase();
-      return !(s === "validated" || s === "paid");
-    })
-    .sort((a,b) => (a.n||0)-(b.n||0));
-
-  const next = pendingSorted[0] || null;
-
-  return {
-    installmentsTotal: total,
-    installmentsSettled: settled,
-    nextUnpaidN: next?.n ?? null,
-    nextUnpaidDueDate: next?.dueDate ?? null, // "YYYY-MM-DD"
-  };
-}
-
-async function syncMembershipRollup() {
-  const roll = computeInstallmentRollup();
-  await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
-    ...roll,
-    updatedAt: serverTimestamp()
-  });
-
-  // state local
-  Object.assign(membership, roll);
-}
-
 /* =========================
    Render
 ========================= */
@@ -514,23 +479,8 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
     // 3) Reload (para decidir si quedan cuotas)
     await loadInstallments();
     await loadSubmissions();
-
-    // ✅ Rollup único (total/settled/pending/nextDue)
-    const stats = computeInstallmentStats();
-
-    await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
-      installmentsTotal: stats.total,
-      installmentsSettled: stats.settled,
-      installmentsPending: stats.pending,
-      nextUnpaidDueDate: stats.nextDue,
-      updatedAt: serverTimestamp()
-    });
-
-    // state local
-    membership.installmentsTotal = stats.total;
-    membership.installmentsSettled = stats.settled;
-    membership.installmentsPending = stats.pending;
-    membership.nextUnpaidDueDate = stats.nextDue;
+    await recomputeMembershipRollup(mid);
+    await loadMembership(); // refrescar membership con los rollups guardados
 
     // ✅ status consistente con cuotas
     await reconcileMembershipStatus();
@@ -565,20 +515,6 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
       membership.payLinkEnabled = true;
       membership.payLinkDisabledReason = null;
     }
-
-    const nextDue = computeNextUnpaidDue(installments);
-    const pendingCount = installments.filter(it => !isSettledInstallmentStatus(it.status)).length;
-
-    await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
-      nextUnpaidDueDate: nextDue || null,
-      pendingInstallmentsCount: pendingCount,
-      updatedAt: serverTimestamp()
-    });
-    membership.nextUnpaidDueDate = nextDue || null;
-    membership.pendingInstallmentsCount = pendingCount;
-
-    // 5) status membership consistente con cuotas
-    await reconcileMembershipStatus();
 
     render();
     alert("✅ Actualizado");
@@ -663,7 +599,8 @@ async function refreshAll() {
     await loadInstallments();
     await loadSubmissions();
 
-    await syncMembershipRollup();      // ✅ clave
+    await recomputeMembershipRollup(mid);
+    await loadMembership(); // trae installmentsTotal/nextUnpaidDueDate ya guardados
     await reconcileMembershipStatus();
 
     render();
@@ -674,44 +611,5 @@ async function refreshAll() {
   } finally {
     hideLoader?.();
   }
-}
-
-function computeNextUnpaidDue(installments) {
-  const pending = installments
-    .filter((it) => !isSettledInstallmentStatus(it.status))
-    .map((it) => {
-      const due = it.dueDate || (it.dueMonthDay ? `${membership.season}-${it.dueMonthDay}` : null);
-      return { it, due };
-    })
-    .filter(x => !!x.due);
-
-  // ordenar por due asc (string YYYY-MM-DD sirve, o convertís a Date)
-  pending.sort((a,b) => String(a.due).localeCompare(String(b.due), "es"));
-
-  return pending[0]?.due || null;
-}
-
-function isSettledInstallmentStatus(st) {
-  const s = (st || "pending").toLowerCase();
-  return s === "validated" || s === "paid";
-}
-
-function getDueText(it) {
-  return it.dueDate || (it.dueMonthDay ? `${membership.season}-${it.dueMonthDay}` : null);
-}
-
-function computeInstallmentStats() {
-  const total = installments.length;
-  const settled = installments.filter(it => isSettledInstallmentStatus(it.status)).length;
-  const pending = total - settled;
-
-  const nextDue = installments
-    .filter(it => !isSettledInstallmentStatus(it.status))
-    .map(it => getDueText(it))
-    .filter(Boolean)
-    .sort((a,b) => String(a).localeCompare(String(b)))
-    [0] || null;
-
-  return { total, settled, pending, nextDue };
 }
 

@@ -25,6 +25,7 @@ import {
   getAuth,
   signInAnonymously
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { recomputeMembershipRollup } from "./membership_rollup.js";
 
 /* =========================
    Collections
@@ -199,6 +200,8 @@ function getSelectedInstallmentIdsFromUI(){
   try{
     await loadMembership();
     await loadInstallments();
+
+    try { await recomputeMembershipRollup(mid); } catch (_) {}
 
     if (membership?.payLinkEnabled === false){
       fillSummaryOnly();
@@ -520,6 +523,8 @@ async function onSubmit(e){
         lastPaymentAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      // rollup se mantiene actualizado aunque el admin no haya abierto detalle
+      try { await recomputeMembershipRollup(mid); } catch (_) {}
 
       membership.status = nextStatus;
       membership.payLinkEnabled = false;

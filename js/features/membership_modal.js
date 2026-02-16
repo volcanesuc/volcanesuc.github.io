@@ -1,6 +1,7 @@
 import { db } from "../firebase.js";
 import { watchAuth } from "../auth.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
+import { recomputeMembershipRollup } from "./membership_rollup.js";
 
 import {
   collection,
@@ -513,6 +514,12 @@ async function createMembership(){
       payLinkEnabled: true,
       payLinkDisabledReason: null,
 
+      installmentsTotal: planSnap.allowPartial ? installmentsTemplate.length : 0,
+      installmentsSettled: 0,
+      installmentsPending: planSnap.allowPartial ? installmentsTemplate.length : 0,
+      nextUnpaidN: planSnap.allowPartial ? 1 : null,
+      nextUnpaidDueDate: null,
+
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -539,6 +546,12 @@ async function createMembership(){
           updatedAt: serverTimestamp()
         });
       }
+    }
+    // ✅ persistir rollups en memberships (para lista de asociados)
+    try {
+      await recomputeMembershipRollup(mid);
+    } catch (e) {
+      console.warn("No se pudo calcular rollup (rules?)", e?.code || e);
     }
 
     hideLoader?.();
