@@ -5,10 +5,7 @@ import { showLoader, hideLoader } from "../ui/loader.js";
 import { STR } from "../strings/membership_strings.js";
 import { openModal } from "../ui/modal_host.js";
 
-import {
-  collection,
-  getDocs,
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================
    Collections
@@ -17,13 +14,12 @@ const COL_MEMBERSHIPS = "memberships";
 const COL_PLANS = "subscription_plans";
 
 /* =========================
-   State (module-scoped)
+   State
 ========================= */
 let allMemberships = [];
 let allPlans = [];
+let viewMemberships = []; // 👈 lo que renderizamos (dedup)
 
-// guard contra dobles mounts / listeners
-let mounted = false;
 let $ = {};
 let _msgListenerBound = false;
 
@@ -32,6 +28,19 @@ let _msgListenerBound = false;
 ========================= */
 function norm(s) {
   return (s || "").toString().toLowerCase().trim();
+}
+
+function digitsOnly(s) {
+  return (s || "").toString().replace(/\D+/g, "");
+}
+
+function tsMillis(ts) {
+  if (!ts) return 0;
+  if (ts.toMillis) return ts.toMillis();
+  if (ts.seconds) return ts.seconds * 1000;
+  const d = new Date(ts);
+  const t = d.getTime();
+  return Number.isFinite(t) ? t : 0;
 }
 
 function fmtMoney(n, cur = "CRC") {
@@ -58,14 +67,20 @@ function statusBadgeHtml(st) {
   return badge(STR.status.pending, "gray");
 }
 
+function statusRank(st) {
+  // más alto = mejor
+  const s = (st || "pending").toLowerCase();
+  if (s === "validated") return 5;
+  if (s === "paid") return 4;
+  if (s === "partial") return 3;
+  if (s === "pending") return 2;
+  if (s === "rejected") return 1;
+  return 0;
+}
+
 function payUrl(mid, code) {
-  const base = `${window.location.origin}${window.location.pathname.replace(
-    /\/[^/]+$/,
-    "/"
-  )}`;
-  return `${base}membership_pay.html?mid=${encodeURIComponent(
-    mid
-  )}&code=${encodeURIComponent(code || "")}`;
+  const base = `${window.location.origin}${window.location.pathname.replace(/\/[^/]+$/, "/")}`;
+  return `${base}membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code || "")}`;
 }
 
 async function copyToClipboard(text) {
@@ -77,10 +92,85 @@ async function copyToClipboard(text) {
   }
 }
 
+/**
+ * Clave de deduplicación:
+ * - preferimos associateId (si existe en el doc membership)
+ * - si no, fallback a email / phone del associateSnapshot
+ */
+function membershipKey(m) {
+  const season = String(m.season || "—");
+  const aid = m.associateId || null;
+  if (aid) return `aid:${aid}::season:${season}`;
+
+  const a = m.associateSnapshot || {};
+  const email = norm(a.email);
+  const phone = digitsOnly(a.phone);
+
+  if (email) return `email:${email}::season:${season}`;
+  if (phone) return `phone:${phone}::season:${season}`;
+
+  // peor caso: cae a id (no dedup)
+  return `mid:${m.id}::season:${season}`;
+}
+
+/**
+ * Escoger la mejor membership de un grupo:
+ * 1) statusRank mayor
+ * 2) updatedAt/createdAt más reciente
+ */
+function pickBestMembership(group) {
+  const sorted = [...group].sort((a, b) => {
+    const ra = statusRank(a.status);
+    const rb = statusRank(b.status);
+    if (rb !== ra) return rb - ra;
+
+    const ta = Math.max(tsMillis(a.updatedAt), tsMillis(a.createdAt));
+    const tb = Math.max(tsMillis(b.updatedAt), tsMillis(b.createdAt));
+    return tb - ta;
+  });
+  return sorted[0] || null;
+}
+
+/**
+ * Construye viewMemberships (dedup) y deja metadata de duplicados
+ */
+function buildViewMemberships() {
+  const map = new Map();
+
+  for (const m of allMemberships) {
+    const key = membershipKey(m);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(m);
+  }
+
+  const out = [];
+  for (const [key, group] of map.entries()) {
+    const best = pickBestMembership(group);
+    if (!best) continue;
+
+    out.push({
+      ...best,
+      _dupKey: key,
+      _dupCount: group.length,
+      _dupIds: group.map((x) => x.id),
+      _hasDup: group.length > 1,
+    });
+  }
+
+  // orden general: más reciente primero (por createdAt/updatedAt)
+  out.sort((a, b) => {
+    const ta = Math.max(tsMillis(a.updatedAt), tsMillis(a.createdAt));
+    const tb = Math.max(tsMillis(b.updatedAt), tsMillis(b.createdAt));
+    return tb - ta;
+  });
+
+  viewMemberships = out;
+}
+
 function renderKpis() {
   const counts = { pending: 0, partial: 0, paid: 0, validated: 0 };
 
-  for (const m of allMemberships) {
+  for (const m of viewMemberships) {
     const st = (m.status || "pending").toLowerCase();
     if (st === "pending") counts.pending++;
     else if (st === "partial") counts.partial++;
@@ -117,7 +207,7 @@ function cacheDom(container) {
 }
 
 /* =========================
-   Shell
+   Shell (igual que el tuyo)
 ========================= */
 function renderShell(container) {
   container.innerHTML = `
@@ -223,6 +313,7 @@ function renderShell(container) {
 }
 
 function renderShellWithoutHeader(container) {
+  // igual que tu versión (la dejo igual)
   container.innerHTML = `
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
       <div id="countLabel" class="text-muted small">${STR.count(0)}</div>
@@ -317,37 +408,25 @@ function renderShellWithoutHeader(container) {
 }
 
 /* =========================
-   Public API: mount(container, cfg)
+   Public API
 ========================= */
 export async function mount(container, cfg) {
-  mounted = false;
-
   const inAssociation = window.location.pathname.endsWith("/association.html");
-
-  if (inAssociation) {
-    renderShellWithoutHeader(container);
-  } else {
-    renderShell(container);
-  }
+  if (inAssociation) renderShellWithoutHeader(container);
+  else renderShell(container);
 
   cacheDom(container);
 
   $.logoutBtn?.addEventListener("click", logout);
 
-  // abrir modal de nueva membresía
-  $.btnNewMembership?.addEventListener("click", () => {
-    openModal("membership_modal.html");
-  });
+  $.btnNewMembership?.addEventListener("click", () => openModal("membership_modal.html"));
 
-  // refrescar al crear membresía desde el modal
   if (!_msgListenerBound) {
     _msgListenerBound = true;
     window.addEventListener("message", (ev) => {
       if (ev.origin !== window.location.origin) return;
       const msg = ev.data || {};
-      if (msg.type === "membership:created") {
-        refreshAll();
-      }
+      if (msg.type === "membership:created") refreshAll();
     });
   }
 
@@ -367,8 +446,7 @@ export async function mount(container, cfg) {
     const code = btn.dataset.code || "";
 
     if (action === "detail") {
-      const url = `membership_detail.html?mid=${encodeURIComponent(mid)}`;
-      window.open(url, "_blank", "noopener");
+      window.open(`membership_detail.html?mid=${encodeURIComponent(mid)}`, "_blank", "noopener");
       return;
     }
     if (action === "copyPayLink") {
@@ -384,8 +462,6 @@ export async function mount(container, cfg) {
     if (!user) return;
     await refreshAll();
   });
-
-  mounted = true;
 }
 
 /* =========================
@@ -395,15 +471,17 @@ async function refreshAll() {
   showLoader?.(STR.loader.loadingMemberships);
   try {
     await Promise.all([loadPlans(), loadMemberships()]);
+
+    // 👇 clave del fix visual
+    buildViewMemberships();
+
     fillSeasonFilter();
     fillPlanFilter();
     renderKpis();
     render();
   } catch (e) {
     console.error(e);
-    if ($.tbody) {
-      $.tbody.innerHTML = `<tr><td colspan="6" class="text-danger">${STR.errors.loadData}</td></tr>`;
-    }
+    if ($.tbody) $.tbody.innerHTML = `<tr><td colspan="6" class="text-danger">${STR.errors.loadData}</td></tr>`;
   } finally {
     hideLoader?.();
   }
@@ -419,13 +497,7 @@ async function loadPlans() {
 
 async function loadMemberships() {
   const snap = await getDocs(collection(db, COL_MEMBERSHIPS));
-  allMemberships = snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => {
-      const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-      const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-      return tb - ta;
-    });
+  allMemberships = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 function fillPlanFilter() {
@@ -437,7 +509,6 @@ function fillPlanFilter() {
   );
 
   $.planFilter.innerHTML = opts.join("");
-
   const exists = [...$.planFilter.options].some((o) => o.value === curr);
   $.planFilter.value = exists ? curr : "all";
 }
@@ -446,16 +517,15 @@ function fillSeasonFilter() {
   if (!$.seasonFilter) return;
 
   const curr = $.seasonFilter.value || "all";
-  const seasons = Array.from(
-    new Set(allMemberships.map((m) => m.season).filter(Boolean))
-  ).sort((a, b) => String(b).localeCompare(String(a), "es"));
+  const seasons = Array.from(new Set(viewMemberships.map((m) => m.season).filter(Boolean))).sort((a, b) =>
+    String(b).localeCompare(String(a), "es")
+  );
 
   const opts = [`<option value="all">${STR.filters.allSeasons}</option>`].concat(
     seasons.map((s) => `<option value="${s}">${s}</option>`)
   );
 
   $.seasonFilter.innerHTML = opts.join("");
-
   const exists = [...$.seasonFilter.options].some((o) => o.value === curr);
   $.seasonFilter.value = exists ? curr : "all";
 }
@@ -472,19 +542,11 @@ function render() {
   const statusVal = $.statusFilter?.value || "all";
   const actionVal = $.actionFilter?.value || "all";
 
-  let list = [...allMemberships];
+  let list = [...viewMemberships];
 
-  if (seasonVal !== "all") {
-    list = list.filter((m) => (m.season || "all") === seasonVal);
-  }
-
-  if (planVal !== "all") {
-    list = list.filter((m) => (m.planId || m.planSnapshot?.id) === planVal);
-  }
-
-  if (statusVal !== "all") {
-    list = list.filter((m) => (m.status || "pending").toLowerCase() === statusVal);
-  }
+  if (seasonVal !== "all") list = list.filter((m) => (m.season || "all") === seasonVal);
+  if (planVal !== "all") list = list.filter((m) => (m.planId || m.planSnapshot?.id) === planVal);
+  if (statusVal !== "all") list = list.filter((m) => (m.status || "pending").toLowerCase() === statusVal);
 
   if (actionVal === "needs_action") {
     list = list.filter((m) => {
@@ -502,16 +564,7 @@ function render() {
     list = list.filter((m) => {
       const a = m.associateSnapshot || {};
       const p = m.planSnapshot || {};
-      const blob = [
-        m.id,
-        m.season,
-        a.fullName,
-        a.email,
-        a.phone,
-        p.name,
-      ]
-        .map(norm)
-        .join(" ");
+      const blob = [m.id, m.season, a.fullName, a.email, a.phone, p.name].map(norm).join(" ");
       return blob.includes(qText);
     });
   }
@@ -529,26 +582,27 @@ function render() {
       const p = m.planSnapshot || {};
       const cur = m.currency || p.currency || "CRC";
 
+      const dupBadge = m._hasDup ? badge(`Duplicado x${m._dupCount}`, "orange") : "";
+
       const associateCell = `
         <div class="fw-bold tight">${a.fullName || STR.common.dash}</div>
         <div class="small text-muted tight">
           ${[a.email || null, a.phone || null].filter(Boolean).join(" • ") || STR.common.dash}
         </div>
         <div class="small text-muted mono tight">${STR.table.idPrefix} ${m.id}</div>
+        ${dupBadge ? `<div class="mt-1">${dupBadge}</div>` : ""}
       `;
 
       const planCell = `
         <div class="fw-bold tight">${p.name || STR.common.dash}</div>
         <div class="small text-muted tight">
           ${(p.allowPartial ? STR.plan.installments : STR.plan.singlePay)} • ${
-        p.requiresValidation ? STR.plan.validation : STR.plan.noValidation
-      }
+            p.requiresValidation ? STR.plan.validation : STR.plan.noValidation
+          }
         </div>
       `;
 
-      const amountTxt = p.allowCustomAmount
-        ? STR.amount.editable
-        : fmtMoney(m.totalAmount ?? p.totalAmount, cur);
+      const amountTxt = p.allowCustomAmount ? STR.amount.editable : fmtMoney(m.totalAmount ?? p.totalAmount, cur);
 
       const actions = `
         <div class="btn-group btn-group-sm" role="group">
@@ -586,7 +640,6 @@ async function autoMountIfStandalone() {
   if (!marker) return;
 
   const container = document.getElementById("page-content") || document.body;
-
   await mount(container);
 }
 
