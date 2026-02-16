@@ -53,25 +53,52 @@ function tsMillis(ts) {
 
 function statusRank(st) {
   const s = (st || "pending").toLowerCase();
-  if (s === "validated") return 5;
-  if (s === "paid") return 4;
-  if (s === "partial") return 3;
-  if (s === "pending") return 2;
-  if (s === "rejected") return 1;
+
+  // ✅ top
+  if (s === "validated") return 50;
+  if (s === "paid") return 40;
+
+  // ✅ mid
+  if (s === "partial") return 30;
+
+  // ✅ “en revisión”
+  if (s === "submitted" || s === "validating") return 20;
+
+  // ✅ base
+  if (s === "pending") return 10;
+
+  // ✅ low
+  if (s === "rejected") return 5;
+
   return 0;
 }
 
+/**
+ * Elige la membresía "más relevante" para el asociado en la temporada.
+ * Orden:
+ * 1) statusRank
+ * 2) lastPaymentAt (si existe)
+ * 3) updatedAt / createdAt
+ */
 function pickBestMembership(list) {
   if (!list?.length) return null;
+
   const sorted = [...list].sort((a, b) => {
     const ra = statusRank(a.status);
     const rb = statusRank(b.status);
     if (rb !== ra) return rb - ra;
 
+    // 🔥 evidencia de pago
+    const pa = tsMillis(a.lastPaymentAt);
+    const pb = tsMillis(b.lastPaymentAt);
+    if (pb !== pa) return pb - pa;
+
+    // fallback: reciente
     const ta = Math.max(tsMillis(a.updatedAt), tsMillis(a.createdAt));
     const tb = Math.max(tsMillis(b.updatedAt), tsMillis(b.createdAt));
     return tb - ta;
   });
+
   return sorted[0] || null;
 }
 
@@ -126,8 +153,6 @@ function assocKeyFromMembership(membership, associateActive = true) {
 
   if (!paidUntil) {
     const s = (membership.status || "").toLowerCase();
-
-    // si el link de pago está bloqueado pero aún no está validated/paid, típicamente está “en revisión”
     const linkBlocked = membership.payLinkEnabled === false;
 
     if (s === "validating" || s === "submitted") return "validating";
@@ -150,8 +175,14 @@ function assocBadge(key) {
   return badge("Pendiente", "orange");
 }
 
+/**
+ * ✅ “Moroso” recomendado:
+ * - Activo y (pendiente o vencido)
+ * - “Validando” NO debería ser moroso (ya mandó comprobante)
+ */
 function isMoroso(assocKey, associateActive) {
-  return associateActive !== false && assocKey !== "up_to_date";
+  if (associateActive === false) return false;
+  return assocKey === "pending" || assocKey === "overdue";
 }
 
 function chunk(arr, size = 10) {
@@ -287,7 +318,6 @@ async function loadMembershipMapForSeason(season, associateIds) {
     });
   }
 
-  // escoger mejor membership por asociado (evita que se “pise” aleatorio)
   const map = {};
   Object.keys(byAid).forEach((aid) => {
     map[aid] = pickBestMembership(byAid[aid]);
