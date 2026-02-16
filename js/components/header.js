@@ -10,7 +10,7 @@ export async function loadHeader(activeTab, cfgOverride) {
   const MENU = CLUB_DATA.header.menu;
   const HOME_HREF = CLUB_DATA.header.homeHref || "dashboard.html";
 
-  // ✅ usa cfgOverride si viene; si no, intenta remote config; si falla, fallback
+  //usa cfgOverride si viene; si no, intenta remote config; si falla, fallback
   let cfg = cfgOverride;
   if (!cfg) {
     try {
