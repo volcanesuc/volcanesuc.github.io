@@ -103,7 +103,7 @@ function badge(text, cls = "") {
 function statusBadgeHtml(st) {
   const s = (st || "pending").toLowerCase();
   if (s === "validated") return badge("Validado", "green");
-  if (s === "paid") return badge("Pagado", "yellow");
+  if (s === "paid") return badge("Pagado", "green");
   if (s === "partial") return badge("Parcial", "yellow");
   if (s === "submitted") return badge("En revisión", "yellow");
   if (s === "rejected") return badge("Rechazado", "red");
@@ -147,85 +147,85 @@ function isSettledInstallmentStatus(st) {
 }
 
 /**
- * Lee IDs de cuotas desde submission:
+ * IDs de cuotas desde submission:
  * - prioridad: selectedInstallmentIds (multi)
- * - fallback: installmentId (single)
+ * - fallback: installmentId (single legacy)
+ * Devuelve ids únicos.
  */
 function getSubmissionInstallmentIds(sub) {
-  const arr = Array.isArray(sub?.selectedInstallmentIds) ? sub.selectedInstallmentIds.filter(Boolean) : [];
-  if (arr.length) return arr;
+  const out = [];
 
-  if (sub?.installmentId) return [sub.installmentId];
-  return [];
+  const arr = sub?.selectedInstallmentIds;
+  if (Array.isArray(arr)) {
+    for (const x of arr) if (x) out.push(String(x));
+  }
+  if (sub?.installmentId) out.push(String(sub.installmentId));
+
+  return [...new Set(out.filter(Boolean))];
+}
+
+/**
+ * ✅ Si hay cuotas y queda al menos 1 cuota pendiente => habilitar link
+ * Si no hay cuotas => normalmente pago único => false
+ */
+function shouldEnablePayLinkAfterDecision() {
+  if (!installments.length) return false;
+  return installments.some((it) => !isSettledInstallmentStatus(it.status));
 }
 
 /* =========================
-   Status reconcile
-   - Si hay cuotas: se decide por cuotas (y submissions generales influyen para "partial" si hay evidencia)
-   - Si no hay cuotas: se decide por submissions
+   Status reconcile (IMPORTANT)
+   - Si HAY cuotas: status se decide por cuotas (no por submissions)
+   - submitted: si hay al menos 1 submission pending => submitted
+   - partial: si hay algo pagado/validado pero no todo settle/validado
 ========================= */
 function computeMembershipStatus() {
   const p = membership?.planSnapshot || {};
   const requiresValidation = !!p.requiresValidation;
 
-  const subStatuses = submissions.map((s) => (s.status || "pending").toLowerCase());
-  const anySubPaidOrValidated = subStatuses.some((s) => s === "paid" || s === "validated");
-  const anySubValidated = subStatuses.includes("validated");
+  // si hay algún submission pendiente, lo marcamos como "submitted"
+  const hasPendingSubmission = submissions.some((s) => norm(s.status || "pending") === "pending");
 
-  // con cuotas
   if (installments.length) {
-    const instStatuses = installments.map((i) => (i.status || "pending").toLowerCase());
-    const anyInstPaidOrValidated = instStatuses.some((s) => s === "paid" || s === "validated");
+    const sts = installments.map((i) => norm(i.status || "pending"));
 
-    const anyPaidOrValidated = anyInstPaidOrValidated || anySubPaidOrValidated;
-    const allValidated = instStatuses.every((s) => s === "validated");
-    const allPaidOrValidated = instStatuses.every((s) => s === "paid" || s === "validated");
+    const anySettled = sts.some((s) => s === "paid" || s === "validated");
+    const allValidated = sts.every((s) => s === "validated");
+    const allSettled = sts.every((s) => s === "paid" || s === "validated");
+
+    if (!anySettled) {
+      // si todavía no hay ninguna cuota settled, pero hay submission pendiente => "submitted"
+      return hasPendingSubmission ? "submitted" : "pending";
+    }
 
     if (requiresValidation) {
-      if (allValidated) return "validated";
-      if (anySubValidated) return "partial"; // submission validado pero cuotas no todas mapeadas
-      if (anyPaidOrValidated) return "partial";
-      return "pending";
-    } else {
-      // sin validación: si todas las cuotas están pagadas/validadas => paid
-      if (allPaidOrValidated) return "paid";
-      if (anyPaidOrValidated) return "partial";
-      return "pending";
+      // con validación: solo "validated" si TODAS las cuotas están validated
+      return allValidated ? "validated" : (hasPendingSubmission ? "submitted" : "partial");
     }
+
+    // sin validación: "paid" si TODAS están paid/validated
+    return allSettled ? "paid" : (hasPendingSubmission ? "submitted" : "partial");
   }
 
   // sin cuotas: por submissions
+  const subStatuses = submissions.map((s) => norm(s.status || "pending"));
   if (!subStatuses.length) return "pending";
+  if (hasPendingSubmission) return "submitted";
 
-  if (requiresValidation) {
-    return subStatuses.includes("validated") ? "validated" : "pending";
-  }
+  if (requiresValidation) return subStatuses.includes("validated") ? "validated" : "pending";
   return (subStatuses.includes("paid") || subStatuses.includes("validated")) ? "paid" : "pending";
 }
 
 async function reconcileMembershipStatus() {
   const next = computeMembershipStatus();
-  const curr = (membership?.status || "pending").toLowerCase();
+  const curr = norm(membership?.status || "pending");
+  if (next === curr) return;
 
-  if (next !== curr) {
-    await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
-      status: next,
-      updatedAt: serverTimestamp()
-    });
-    membership.status = next;
-  }
-}
-
-/**
- * ✅ Decide si el link de pago debe quedar habilitado
- * Regla:
- * - Si hay cuotas: si existe al menos 1 cuota NO settle => habilitar (true)
- * - Si no hay cuotas: por defecto lo dejamos bloqueado tras validar (false)
- */
-function shouldEnablePayLinkAfterDecision() {
-  if (!installments.length) return false;
-  const pending = installments.some((it) => !isSettledInstallmentStatus(it.status));
-  return pending;
+  await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
+    status: next,
+    updatedAt: serverTimestamp()
+  });
+  membership.status = next;
 }
 
 /* =========================
@@ -313,7 +313,7 @@ function renderInstallments() {
 
   installmentsTbody.innerHTML = installments.map((it) => {
     const due = it.dueDate || (it.dueMonthDay ? `${membership.season}-${it.dueMonthDay}` : "—");
-    const st = (it.status || "pending").toLowerCase();
+    const st = norm(it.status || "pending");
 
     return `
       <tr>
@@ -336,10 +336,9 @@ function renderSubmissions() {
   }
 
   subsTbody.innerHTML = submissions.map((s) => {
-    const st = (s.status || "pending").toLowerCase();
+    const st = norm(s.status || "pending");
     const when = toDateText(s.createdAt);
 
-    // label cuotas
     const ids = getSubmissionInstallmentIds(s);
     let itLabel = "General";
     if (ids.length === 1) {
@@ -435,90 +434,6 @@ btnConfirmReject?.addEventListener("click", async () => {
   rejectModal?.hide();
 });
 
-function isSettledInstallmentStatus(st) {
-  const s = (st || "pending").toString().toLowerCase();
-  return s === "validated" || s === "paid";
-}
-
-/**
- * Soporta:
- * - sub.selectedInstallmentIds: string[]
- * - sub.installmentId: string (legacy)
- * Devuelve ids únicos y válidos.
- */
-function getSubmissionInstallmentIds(sub) {
-  const out = [];
-
-  const arr = sub?.selectedInstallmentIds;
-  if (Array.isArray(arr)) {
-    for (const x of arr) if (x) out.push(String(x));
-  }
-
-  if (sub?.installmentId) out.push(String(sub.installmentId));
-
-  // uniq
-  return [...new Set(out.filter(Boolean))];
-}
-
-/**
- * ✅ Regla: si el plan tiene cuotas y aún quedan cuotas pendientes => habilitar link
- * - Si NO hay cuotas, normalmente lo dejamos deshabilitado tras validar/pagar (pago único),
- *   pero lo podés cambiar si querés permitir múltiples pagos generales.
- */
-function shouldEnablePayLinkAfterDecision() {
-  // si no hay cuotas, es pago único => no hace falta habilitar de nuevo
-  if (!installments?.length) return false;
-
-  // si hay al menos 1 cuota NO settled, permitir que pague otra cuota
-  const pendingLeft = installments.some((it) => !isSettledInstallmentStatus(it.status));
-  return pendingLeft;
-}
-
-/* =========================
-   (recomendado) Status reconcile consistente con cuotas
-========================= */
-function computeMembershipStatus() {
-  const p = membership?.planSnapshot || {};
-  const requiresValidation = !!p.requiresValidation;
-
-  // Si hay cuotas: manda el estado de cuotas (no los submissions)
-  if (installments.length) {
-    const sts = installments.map((i) => (i.status || "pending").toLowerCase());
-    const anySettled = sts.some((s) => s === "paid" || s === "validated");
-    const allValidated = sts.every((s) => s === "validated");
-    const allSettled = sts.every((s) => s === "paid" || s === "validated");
-
-    if (!anySettled) return "pending";
-
-    if (requiresValidation) {
-      // con validación: solo “validated” si TODAS las cuotas están validated
-      return allValidated ? "validated" : "partial";
-    }
-
-    // sin validación: “paid” si TODAS están paid/validated
-    return allSettled ? "paid" : "partial";
-  }
-
-  // Sin cuotas: usar submissions
-  const subStatuses = submissions.map((s) => (s.status || "pending").toLowerCase());
-  if (!subStatuses.length) return "pending";
-
-  if (requiresValidation) return subStatuses.includes("validated") ? "validated" : "pending";
-  return (subStatuses.includes("paid") || subStatuses.includes("validated")) ? "paid" : "pending";
-}
-
-async function reconcileMembershipStatus() {
-  const next = computeMembershipStatus();
-  const curr = (membership?.status || "pending").toLowerCase();
-  if (next === curr) return;
-
-  await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
-    status: next,
-    updatedAt: serverTimestamp()
-  });
-  membership.status = next;
-}
-
 /* =========================
    Set submission status (single o multi)
 ========================= */
@@ -546,7 +461,6 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
       const newInstStatus =
         newStatus === "validated" ? "validated" :
         newStatus === "paid" ? "paid" :
-        // si se rechaza, devolvemos a pending (para que pueda reenviar/pagar)
         "pending";
 
       for (const iid of ids) {
@@ -561,28 +475,30 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
       }
     }
 
-    // 3) Reload installments/submissions (para decidir payLinkEnabled y status)
+    // 3) Reload (para decidir si quedan cuotas)
     await loadInstallments();
     await loadSubmissions();
 
     // 4) Membership metadata + pay link rules
     if (newStatus === "validated" || newStatus === "paid") {
       const enableAgain = shouldEnablePayLinkAfterDecision();
+      const reason = enableAgain
+        ? null
+        : (newStatus === "validated" ? "Pago(s) validado(s)." : "Pago registrado.");
 
       await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
         lastPaymentSubmissionId: sub.id,
         lastPaymentAt: serverTimestamp(),
         ...(newStatus === "validated" ? { validatedAt: serverTimestamp() } : {}),
 
-        // ✅ si aún debe cuotas => habilitar link otra vez
         payLinkEnabled: enableAgain,
-        payLinkDisabledReason: enableAgain ? null : (newStatus === "validated" ? "Pago(s) validado(s)." : "Pago registrado."),
+        payLinkDisabledReason: reason,
 
         updatedAt: serverTimestamp()
       });
 
       membership.payLinkEnabled = enableAgain;
-      membership.payLinkDisabledReason = enableAgain ? null : (newStatus === "validated" ? "Pago(s) validado(s)." : "Pago registrado.");
+      membership.payLinkDisabledReason = reason;
 
     } else if (newStatus === "rejected") {
       await updateDoc(doc(db, COL_MEMBERSHIPS, mid), {
@@ -594,7 +510,7 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
       membership.payLinkDisabledReason = null;
     }
 
-    // 5) Reconcile membership.status (pending/partial/paid/validated)
+    // 5) status membership consistente con cuotas
     await reconcileMembershipStatus();
 
     render();
@@ -607,7 +523,6 @@ async function setSubmissionStatus(sub, newStatus, adminNote = null) {
     hideLoader?.();
   }
 }
-
 
 /* =========================
    Pay link controls (ADMIN)
