@@ -1,7 +1,6 @@
 // js/features/payments_admin.js
 // Admin tab: lista membership_payment_submissions + acciones Validar/Rechazar
-// FIX: al validar/rechazar SIEMPRE sincroniza memberships/{membershipId}
-//      (aunque installmentId sea null, típico de mensual)
+// Soporta multi-cuotas via selectedInstallmentIds
 
 import { db } from "../firebase.js";
 import { watchAuth, logout } from "../auth.js";
@@ -17,6 +16,7 @@ import {
   getDoc,
   updateDoc,
   serverTimestamp,
+  where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================
@@ -25,6 +25,7 @@ import {
 const COL_SUBMISSIONS = "membership_payment_submissions";
 const COL_MEMBERSHIPS = "memberships";
 const COL_INSTALLMENTS = "membership_installments";
+
 const DEFAULT_LIMIT = 300;
 
 /* =========================
@@ -41,6 +42,7 @@ let _busy = false;
 function norm(s) {
   return (s || "").toString().toLowerCase().trim();
 }
+
 function esc(s) {
   return (s ?? "—")
     .toString()
@@ -50,6 +52,7 @@ function esc(s) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 function pick(obj, keys, fallback = null) {
   for (const k of keys) {
     const v = obj?.[k];
@@ -57,6 +60,7 @@ function pick(obj, keys, fallback = null) {
   }
   return fallback;
 }
+
 function fmtMoney(n, cur = "CRC") {
   if (n === null || n === undefined || n === "") return "—";
   const v = Number(n);
@@ -67,6 +71,7 @@ function fmtMoney(n, cur = "CRC") {
     maximumFractionDigits: 0,
   }).format(v);
 }
+
 function fmtDate(ts) {
   try {
     if (!ts) return "—";
@@ -78,16 +83,20 @@ function fmtDate(ts) {
     return "—";
   }
 }
+
 function badge(text, cls = "gray") {
   return `<span class="badge-soft ${cls}">${esc(text)}</span>`;
 }
+
 function statusBadge(st) {
   const s = (st || "pending").toString().toLowerCase();
   if (s === "validated" || s === "approved") return badge("Validado", "green");
   if (s === "rejected") return badge("Rechazado", "red");
   if (s === "paid") return badge("Pagado", "yellow");
+  if (s === "submitted") return badge("En revisión", "yellow");
   return badge("Pendiente", "gray");
 }
+
 function methodLabel(m) {
   const s = (m || "").toString().toLowerCase();
   if (s === "sinpe") return "SINPE";
@@ -96,11 +105,127 @@ function methodLabel(m) {
   if (s === "card") return "Tarjeta";
   return m ? String(m) : "—";
 }
+
 function setBusy(on) {
   _busy = !!on;
   if ($.btnApprove) $.btnApprove.disabled = _busy || !currentSub;
   if ($.btnReject) $.btnReject.disabled = _busy || !currentSub;
   if ($.btnSaveNote) $.btnSaveNote.disabled = _busy || !currentSub;
+}
+
+/* =========================
+   Submission field accessors
+========================= */
+function getSeason(s) {
+  return pick(s, ["season"], "—");
+}
+function getMembershipId(s) {
+  return pick(s, ["membershipId"], null);
+}
+function getInstallmentId(s) {
+  return pick(s, ["installmentId"], null);
+}
+function getSelectedInstallmentIds(s) {
+  const arr = Array.isArray(s?.selectedInstallmentIds) ? s.selectedInstallmentIds.filter(Boolean) : [];
+  return arr;
+}
+function getAllInstallmentIdsFromSubmission(s) {
+  const multi = getSelectedInstallmentIds(s);
+  if (multi.length) return multi;
+  const one = getInstallmentId(s);
+  return one ? [one] : [];
+}
+function getAssociateCell(s) {
+  const name = pick(s, ["payerName"], "—");
+  const email = pick(s, ["email"], null);
+  const phone = pick(s, ["phone"], null);
+  const lines = [email, phone].filter(Boolean).join(" • ");
+  return `
+    <div class="fw-bold tight">${esc(name)}</div>
+    <div class="small text-muted tight">${lines ? esc(lines) : "—"}</div>
+  `;
+}
+function getAmount(s) {
+  return pick(s, ["amountReported"], null);
+}
+function getCurrency(s) {
+  return pick(s, ["currency"], "CRC");
+}
+function getMethod(s) {
+  return pick(s, ["method"], "—");
+}
+function getFileUrl(s) {
+  return pick(s, ["fileUrl"], null);
+}
+
+/* =========================
+   Installments/membership helpers
+========================= */
+function isSettledInstallmentStatus(st) {
+  const s = (st || "pending").toString().toLowerCase();
+  return s === "validated" || s === "paid";
+}
+
+async function loadInstallmentsForMembership(membershipId) {
+  if (!membershipId) return [];
+  const q = query(collection(db, COL_INSTALLMENTS), where("membershipId", "==", membershipId));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.n || 0) - (b.n || 0));
+}
+
+/**
+ * decide si hay cuotas pendientes => habilitar link
+ */
+function shouldEnablePayLinkFromInstallments(installments) {
+  if (!installments?.length) return false;
+  return installments.some((it) => !isSettledInstallmentStatus(it.status));
+}
+
+/**
+ * Reconciliar status membership en base a installments + submissions
+ * - si hay cuotas:
+ *   - requiresValidation: validated si todas validated; partial si alguna paid/validated; pending si nada
+ *   - no requiresValidation: paid si todas paid/validated; partial si alguna; pending si nada
+ * - si NO hay cuotas:
+ *   - requiresValidation: validated si hay submission validated; sino pending
+ *   - no requiresValidation: paid si hay submission paid/validated; sino pending
+ */
+function computeMembershipStatus(membership, installments, subs) {
+  const p = membership?.planSnapshot || {};
+  const requiresValidation = !!p.requiresValidation;
+
+  const subStatuses = (subs || []).map((s) => (s.status || "pending").toLowerCase());
+  const anySubPaidOrValidated = subStatuses.some((s) => s === "paid" || s === "validated");
+  const anySubValidated = subStatuses.includes("validated");
+
+  if (installments?.length) {
+    const instStatuses = installments.map((i) => (i.status || "pending").toLowerCase());
+    const anyInstPaidOrValidated = instStatuses.some((s) => s === "paid" || s === "validated");
+
+    const anyPaidOrValidated = anyInstPaidOrValidated || anySubPaidOrValidated;
+    const allValidated = instStatuses.every((s) => s === "validated");
+    const allPaidOrValidated = instStatuses.every((s) => s === "paid" || s === "validated");
+
+    if (requiresValidation) {
+      if (allValidated) return "validated";
+      if (anySubValidated) return "partial";
+      if (anyPaidOrValidated) return "partial";
+      return "pending";
+    } else {
+      if (allPaidOrValidated) return "paid";
+      if (anyPaidOrValidated) return "partial";
+      return "pending";
+    }
+  }
+
+  if (!subStatuses.length) return "pending";
+
+  if (requiresValidation) {
+    return subStatuses.includes("validated") ? "validated" : "pending";
+  }
+  return (subStatuses.includes("paid") || subStatuses.includes("validated")) ? "paid" : "pending";
 }
 
 /* =========================
@@ -132,7 +257,9 @@ function renderShell(container) {
         <select id="statusFilter" class="form-select">
           <option value="all">Todos los estados</option>
           <option value="pending">Pendiente</option>
+          <option value="submitted">En revisión</option>
           <option value="validated">Validado</option>
+          <option value="paid">Pagado</option>
           <option value="rejected">Rechazado</option>
         </select>
       </div>
@@ -270,38 +397,6 @@ async function loadSubmissions() {
   hideLoader?.();
 }
 
-function getSeason(s) {
-  return pick(s, ["season"], "—");
-}
-function getMembershipId(s) {
-  return pick(s, ["membershipId"], null);
-}
-function getInstallmentId(s) {
-  return pick(s, ["installmentId"], null);
-}
-function getAssociateCell(s) {
-  const name = pick(s, ["payerName"], "—");
-  const email = pick(s, ["email"], null);
-  const phone = pick(s, ["phone"], null);
-  const lines = [email, phone].filter(Boolean).join(" • ");
-  return `
-    <div class="fw-bold tight">${esc(name)}</div>
-    <div class="small text-muted tight">${lines ? esc(lines) : "—"}</div>
-  `;
-}
-function getAmount(s) {
-  return pick(s, ["amountReported"], null);
-}
-function getCurrency(s) {
-  return pick(s, ["currency"], "CRC");
-}
-function getMethod(s) {
-  return pick(s, ["method"], "—");
-}
-function getFileUrl(s) {
-  return pick(s, ["fileUrl"], null);
-}
-
 function fillSeasonFilterFromData() {
   if (!$.seasonFilter) return;
 
@@ -348,6 +443,7 @@ function render() {
         pick(s, ["phone"], ""),
         pick(s, ["membershipId"], ""),
         pick(s, ["installmentId"], ""),
+        (Array.isArray(s.selectedInstallmentIds) ? s.selectedInstallmentIds.join(" ") : ""),
         pick(s, ["planId"], ""),
         pick(s, ["method"], ""),
         pick(s, ["status"], ""),
@@ -393,6 +489,17 @@ function render() {
         </button>
       `;
 
+      const canQuickApprove = norm(pick(s, ["status"], "pending")) === "pending" || norm(pick(s, ["status"], "")) === "submitted";
+
+      const quickApprove =
+        canQuickApprove
+          ? `
+            <button class="btn btn-sm btn-success ms-2" type="button" data-action="approve" data-id="${s.id}">
+              <i class="bi bi-check2 me-1"></i><span>Validar</span>
+            </button>
+          `
+          : "";
+
       return `
         <tr>
           <td style="white-space:nowrap;">${date}</td>
@@ -402,7 +509,10 @@ function render() {
           <td>${method}</td>
           <td>${proof}</td>
           <td style="white-space:nowrap;">${amt}</td>
-          <td class="text-end">${viewBtn}</td>
+          <td class="text-end">
+            ${viewBtn}
+            ${quickApprove}
+          </td>
         </tr>
       `;
     })
@@ -410,7 +520,7 @@ function render() {
 }
 
 /* =========================
-   CORE FIX: Decision sync
+   Actions (core)
 ========================= */
 async function applyDecision(sub, decision /* "validated" | "rejected" */) {
   if (!sub?.id) return;
@@ -418,14 +528,13 @@ async function applyDecision(sub, decision /* "validated" | "rejected" */) {
 
   const sid = sub.id;
   const membershipId = getMembershipId(sub);
-  const installmentId = getInstallmentId(sub);
   const note = ($.adminNoteInput?.value || "").trim() || null;
 
   setBusy(true);
   showLoader?.(decision === "validated" ? "Validando pago…" : "Rechazando pago…");
 
   try {
-    // 1) submission
+    // 1) Update submission status
     await updateDoc(doc(db, COL_SUBMISSIONS, sid), {
       status: decision,
       adminNote: note,
@@ -433,70 +542,97 @@ async function applyDecision(sub, decision /* "validated" | "rejected" */) {
       updatedAt: serverTimestamp(),
     });
 
-    // 2) installment (si existe)
-    if (installmentId) {
-      const instStatus =
-        decision === "validated" ? "validated" : "pending";
-      try {
-        await updateDoc(doc(db, COL_INSTALLMENTS, installmentId), {
-          status: instStatus,
-          updatedAt: serverTimestamp(),
-          ...(decision === "validated" ? { validatedAt: serverTimestamp() } : {}),
-        });
-      } catch (e) {
-        console.warn("[payments_admin] installment update failed:", e?.code || e);
+    // Si no hay membershipId no podemos sincronizar nada
+    if (!membershipId) {
+      // update local + render
+      const idx = allSubs.findIndex((x) => x.id === sid);
+      if (idx >= 0) allSubs[idx] = { ...allSubs[idx], status: decision, adminNote: note };
+      render();
+      if (currentSub?.id === sid) openView(sid, { keepOpen: true });
+      return;
+    }
+
+    // 2) Load membership
+    const mRef = doc(db, COL_MEMBERSHIPS, membershipId);
+    const mSnap = await getDoc(mRef);
+    if (!mSnap.exists()) {
+      console.warn("[payments_admin] membershipId no existe:", membershipId);
+      return;
+    }
+    const membership = { id: mSnap.id, ...mSnap.data() };
+
+    // 3) Update installments if referenced (single o multi)
+    const installmentIds = getAllInstallmentIdsFromSubmission(sub);
+
+    if (installmentIds.length) {
+      for (const iid of installmentIds) {
+        try {
+          await updateDoc(doc(db, COL_INSTALLMENTS, iid), {
+            status: decision === "validated" ? "validated" : "pending",
+            updatedAt: serverTimestamp(),
+          });
+        } catch (e) {
+          console.warn("[payments_admin] No se pudo actualizar installment", iid, e?.code || e);
+        }
       }
     }
 
-    // 3) membership (SIEMPRE si membershipId existe)
-    if (membershipId) {
-      const mRef = doc(db, COL_MEMBERSHIPS, membershipId);
-      const mSnap = await getDoc(mRef);
+    // 4) Reload installments + submissions for membership (para decidir link + status)
+    const inst = await loadInstallmentsForMembership(membershipId);
 
-      if (mSnap.exists()) {
-        const m = mSnap.data() || {};
-        const requiresValidation = !!m?.planSnapshot?.requiresValidation;
+    const subsQ = query(collection(db, COL_SUBMISSIONS), where("membershipId", "==", membershipId));
+    const subsSnap = await getDocs(subsQ);
+    const subsForMembership = subsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-        // ✅ status correcto según plan
-        const nextStatus =
-          decision === "validated"
-            ? (requiresValidation ? "validated" : "paid")
-            : (m.status || "pending");
+    // 5) Decide pay link
+    // - validated: si quedan cuotas pendientes => habilitar, si no => bloquear
+    // - rejected: habilitar
+    let payLinkEnabled = true;
+    let payLinkDisabledReason = null;
 
-        await updateDoc(mRef, {
-          status: nextStatus,
-          lastPaymentSubmissionId: sid,
-          lastPaymentAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-
-          ...(decision === "validated"
-            ? {
-                payLinkEnabled: false,
-                payLinkDisabledReason: "Pago registrado por admin.",
-                validatedAt: serverTimestamp(),
-              }
-            : {
-                payLinkEnabled: true,
-                payLinkDisabledReason: null,
-                rejectedAt: serverTimestamp(),
-              }),
-        });
-      } else {
-        console.warn("[payments_admin] membership no existe:", membershipId);
-      }
-    } else {
-      console.warn("[payments_admin] submission SIN membershipId, no se puede sincronizar morosidad:", sid);
+    if (decision === "validated") {
+      const enableAgain = shouldEnablePayLinkFromInstallments(inst);
+      payLinkEnabled = enableAgain;
+      payLinkDisabledReason = enableAgain ? null : "Pago(s) validado(s).";
+    } else if (decision === "rejected") {
+      payLinkEnabled = true;
+      payLinkDisabledReason = null;
     }
 
-    // 4) refresh local list
+    // 6) Decide membership.status
+    const nextStatus = computeMembershipStatus(membership, inst, subsForMembership);
+
+    // 7) Update membership
+    const mUpdates = {
+      updatedAt: serverTimestamp(),
+      lastPaymentSubmissionId: sid,
+      lastPaymentAt: serverTimestamp(),
+      payLinkEnabled,
+      payLinkDisabledReason,
+      status: nextStatus,
+    };
+
+    if (decision === "validated") mUpdates.validatedAt = serverTimestamp();
+    if (decision === "rejected") mUpdates.rejectedAt = serverTimestamp();
+
+    await updateDoc(mRef, mUpdates);
+
+    // 8) Update local state (for current list UI)
     const idx = allSubs.findIndex((x) => x.id === sid);
     if (idx >= 0) {
-      allSubs[idx] = { ...allSubs[idx], status: decision, adminNote: note };
+      allSubs[idx] = {
+        ...allSubs[idx],
+        status: decision,
+        adminNote: note,
+        updatedAt: new Date().toISOString(),
+      };
     }
 
     render();
-    if (currentSub?.id === sid) openView(sid, { keepOpen: true });
-
+    if (currentSub?.id === sid) {
+      currentSub = allSubs.find((x) => x.id === sid) || currentSub;
+      openView(sid, { keepOpen: true });
+    }
   } finally {
     hideLoader?.();
     setBusy(false);
@@ -530,7 +666,7 @@ async function saveAdminNoteOnly(sub) {
 }
 
 /* =========================
-   Modal
+   Modal detail
 ========================= */
 function openView(id, opts = {}) {
   const s = allSubs.find((x) => x.id === id);
@@ -539,20 +675,32 @@ function openView(id, opts = {}) {
   currentSub = s;
 
   const membershipId = pick(s, ["membershipId"], "—");
-  const installmentId = pick(s, ["installmentId"], null);
   const planId = pick(s, ["planId"], "—");
   const amount = fmtMoney(pick(s, ["amountReported"], null), pick(s, ["currency"], "CRC"));
   const status = pick(s, ["status"], "pending");
   const method = methodLabel(pick(s, ["method"], "—"));
   const proof = pick(s, ["fileUrl"], null);
 
-  if ($.modalTitle) $.modalTitle.textContent = `#${id} • ${pick(s, ["payerName"], "—")}`;
+  const instIds = getAllInstallmentIdsFromSubmission(s);
+  const instHint =
+    instIds.length === 0
+      ? "General (sin cuota)"
+      : instIds.length === 1
+        ? `1 cuota vinculada`
+        : `${instIds.length} cuotas vinculadas`;
+
+  if ($.modalTitle) {
+    $.modalTitle.textContent = `#${id} • ${pick(s, ["payerName"], "—")}`;
+  }
+
   if ($.adminNoteInput) $.adminNoteInput.value = pick(s, ["adminNote"], "") || "";
 
   if ($.membershipSyncHint) {
-    $.membershipSyncHint.textContent = membershipId !== "—"
-      ? `Sync: memberships/${membershipId}${installmentId ? ` + installment ${installmentId}` : ""}`
-      : "⚠️ Sin membershipId: no se puede actualizar morosidad automáticamente.";
+    const hasMid = !!pick(s, ["membershipId"], null);
+    const hint = hasMid
+      ? `Al validar/rechazar se sincroniza memberships/${membershipId} (${instHint})`
+      : "⚠️ Este submission no tiene membershipId; no se puede sincronizar la membresía.";
+    $.membershipSyncHint.textContent = hint;
   }
 
   if ($.modalQuick) {
@@ -561,7 +709,7 @@ function openView(id, opts = {}) {
         <div class="col-12 col-md-6">
           <div class="small text-muted">Membresía</div>
           <div class="mono">${membershipId !== "—" ? `#${esc(membershipId)}` : "—"}</div>
-          ${installmentId ? `<div class="small text-muted mt-1">Cuota: <span class="mono">#${esc(installmentId)}</span></div>` : ""}
+          <div class="small text-muted mt-1">Cuotas: <span class="mono">${esc(instHint)}</span></div>
         </div>
         <div class="col-12 col-md-6">
           <div class="small text-muted">Plan</div>
@@ -590,11 +738,13 @@ function openView(id, opts = {}) {
   if ($.modalJson) $.modalJson.textContent = JSON.stringify(s, null, 2);
 
   const st = norm(status);
-  const canDecide = st === "pending";
+  const canDecide = st === "pending" || st === "submitted";
+
   if ($.btnApprove) $.btnApprove.disabled = _busy || !canDecide;
   if ($.btnReject) $.btnReject.disabled = _busy || !canDecide;
 
   $.modal?.show();
+
   if (opts.keepOpen !== true) return;
 }
 
@@ -612,7 +762,15 @@ function bindEvents() {
   $.tbody?.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
-    if (btn.dataset.action === "view") openView(btn.dataset.id);
+
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
+
+    if (action === "view") openView(id);
+    if (action === "approve") {
+      openView(id);
+      // Quick approve deja listo el modal
+    }
   });
 
   $.btnApprove?.addEventListener("click", async () => {
@@ -640,7 +798,7 @@ function bindEvents() {
 /* =========================
    Public API
 ========================= */
-export async function mount(container) {
+export async function mount(container, cfg) {
   allSubs = [];
   currentSub = null;
   $ = {};
