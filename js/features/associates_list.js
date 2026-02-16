@@ -398,6 +398,40 @@ function progressText(membership) {
   return `${settled}/${total} cuotas${nextTxt}`;
 }
 
+function baseDir() {
+  // .../asociacion.html -> .../
+  const p = window.location.pathname.replace(/\/[^/]+$/, "/");
+  return `${window.location.origin}${p}`;
+}
+
+function payUrlForMembership(m) {
+  if (!m?.id || !m?.payCode) return null;
+  return `${baseDir()}membership_pay.html?mid=${encodeURIComponent(m.id)}&code=${encodeURIComponent(m.payCode)}`;
+}
+
+function normalizePhoneForWa(phone) {
+  // wa.me quiere: countrycode + number, sin '+'
+  const digits = String(phone || "").replace(/\D+/g, "");
+  if (!digits) return null;
+
+  // Costa Rica: 8 dígitos locales -> prefijo 506
+  if (digits.length === 8) return "506" + digits;
+
+  // Si ya viene con 506 y 11 dígitos
+  if (digits.length === 11 && digits.startsWith("506")) return digits;
+
+  // Si viene con +506 ya quedó limpio arriba.
+  // Para otros largos, lo devolvemos como esté (mejor que nada)
+  return digits;
+}
+
+function whatsappLink(phone, text) {
+  const p = normalizePhoneForWa(phone);
+  if (!p) return null;
+  return `https://wa.me/${p}?text=${encodeURIComponent(text || "")}`;
+}
+
+
 /* =========================
    Render
 ========================= */
@@ -411,6 +445,7 @@ function render() {
 
   let list = [...all];
 
+  // filters
   if (typeVal !== "all") list = list.filter((a) => (a.type || "other") === typeVal);
 
   if (statusVal === "active") list = list.filter((a) => a.active !== false);
@@ -437,18 +472,65 @@ function render() {
     return;
   }
 
+  // helpers local
+  const baseDir = () => {
+    const p = window.location.pathname.replace(/\/[^/]+$/, "/");
+    return `${window.location.origin}${p}`;
+  };
+
+  const payUrlForMembership = (m) => {
+    if (!m?.id || !m?.payCode) return null;
+    return `${baseDir()}membership_pay.html?mid=${encodeURIComponent(m.id)}&code=${encodeURIComponent(m.payCode)}`;
+  };
+
+  const waMsgFor = (payLink) =>
+    payLink
+      ? `Hola! Recordatorio de pago a la asociación usando el siguiente link ${payLink}`
+      : `Hola! Recordatorio de pago a la asociación.`;
+
   $.tbody.innerHTML = list
     .map((a) => {
       const isActive = a.active !== false;
       const perfilBadge = isActive ? badge("Activo", "yellow") : badge("Inactivo", "gray");
 
       const m = a.membership || null;
-      const asocBadge = assocBadge(a._assocKey, m);
+      const asocBadgeHtml = assocBadge(a._assocKey, m);
 
-      const contacto = [
-        a.email ? `<div>${a.email}</div>` : "",
-        a.phone ? `<div class="text-muted small">${a.phone}</div>` : "",
-      ].join("");
+      // contacto clickeable
+      const emailHtml = a.email
+        ? `<div><a href="mailto:${a.email}" class="link-dark text-decoration-none">${a.email}</a></div>`
+        : "";
+
+      const phoneHtml = a.phone
+        ? (() => {
+            const telHref = `tel:${String(a.phone).replace(/\s+/g, "")}`;
+            const waQuick = whatsappLink(a.phone, "Hola!");
+            const waBtn = waQuick
+              ? `<a class="ms-2 small text-decoration-none" href="${waQuick}" target="_blank" rel="noreferrer" title="WhatsApp">
+                   <i class="bi bi-whatsapp"></i>
+                 </a>`
+              : "";
+            return `<div class="text-muted small">
+                      <a href="${telHref}" class="link-dark text-decoration-none">${a.phone}</a>
+                      ${waBtn}
+                    </div>`;
+          })()
+        : "";
+
+      const contactoHtml = (emailHtml || phoneHtml)
+        ? `${emailHtml}${phoneHtml}`
+        : `<span class="text-muted">—</span>`;
+
+      // acción WhatsApp recordatorio SOLO si moroso (pending u overdue)
+      const payLink = payUrlForMembership(m);
+      const waHref = a._isMoroso ? whatsappLink(a.phone, waMsgFor(payLink)) : null;
+
+      const waActionBtn =
+        a._isMoroso && waHref
+          ? `<a class="btn btn-sm btn-outline-success" href="${waHref}" target="_blank" rel="noreferrer" title="Enviar WhatsApp">
+               <i class="bi bi-whatsapp me-1"></i> WhatsApp
+             </a>`
+          : "";
 
       return `
         <tr>
@@ -456,14 +538,22 @@ function render() {
             <div class="fw-bold">${a.fullName || "—"}</div>
             ${a.idNumber ? `<div class="text-muted small">Cédula: ${a.idNumber}</div>` : ""}
           </td>
-          <td>${contacto || `<span class="text-muted">—</span>`}</td>
+
+          <td>${contactoHtml}</td>
+
           <td>${typeLabel(a.type)}</td>
-          <td>${asocBadge}</td>
+
+          <td>${asocBadgeHtml}</td>
+
           <td>${perfilBadge}</td>
+
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary btnEdit" data-id="${a.id}" type="button">
-              <i class="bi bi-pencil me-1"></i> Editar
-            </button>
+            <div class="d-inline-flex gap-2">
+              ${waActionBtn}
+              <button class="btn btn-sm btn-outline-primary btnEdit" data-id="${a.id}" type="button">
+                <i class="bi bi-pencil me-1"></i> Editar
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -477,7 +567,6 @@ function render() {
     });
   });
 }
-
 
 /* =========================
    Public API
