@@ -47,7 +47,9 @@ const payDisabledCard = document.getElementById("payDisabledCard");
 const payDisabledMsg = document.getElementById("payDisabledMsg");
 
 const payForm = document.getElementById("payForm");
-const installmentSelect = document.getElementById("installmentSelect");
+
+// ✅ NUEVO: checklist cuotas
+const installmentList = document.getElementById("installmentList");
 const installmentHint = document.getElementById("installmentHint");
 
 const payerName = document.getElementById("payerName");
@@ -143,6 +145,31 @@ function setPayDisabledUI(msg){
 function isSettledInstallmentStatus(st){
   const s = (st || "pending").toString().toLowerCase();
   return s === "validated" || s === "paid";
+}
+
+function selectedInstallmentIds(){
+  if (!installmentList) return [];
+  return [...installmentList.querySelectorAll('input[type="checkbox"][data-itid]:checked')]
+    .map(el => el.getAttribute("data-itid"))
+    .filter(Boolean);
+}
+
+function sumSelectedInstallments(){
+  const ids = selectedInstallmentIds();
+  const total = ids
+    .map(getInstallmentById)
+    .filter(Boolean)
+    .reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+  return total;
+}
+
+function esc(s){
+  return (s ?? "").toString()
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 }
 
 /* =========================
@@ -249,37 +276,48 @@ function fillUI(){
 
   const cur = inferCurrency();
   const pending = installments.filter(x => !isSettledInstallmentStatus(x.status));
-  const options = pending.map(x => {
-    const due = x.dueDate || (x.dueMonthDay ? `${membership.season}-${x.dueMonthDay}` : "—");
-    const label = `Cuota #${x.n} • vence ${due} • ${fmtMoney(x.amount, cur)} • ${x.status || "pending"}`;
-    return `<option value="${x.id}">${label}</option>`;
-  }).join("");
 
-  installmentSelect.innerHTML =
-    `<option value="">Pago general (sin cuota específica)</option>` +
-    (options || "");
+  // ✅ render checklist
+  if (installmentList){
+    if (!pending.length){
+      installmentList.innerHTML = `<div class="text-muted p-2">No hay cuotas pendientes.</div>`;
+    } else {
+      installmentList.innerHTML = pending.map(it => {
+        const due = it.dueDate || (it.dueMonthDay ? `${membership.season}-${it.dueMonthDay}` : "—");
+        const label = `Cuota #${it.n} • vence ${due} • ${fmtMoney(it.amount, cur)}`;
+        return `
+          <label class="list-group-item d-flex justify-content-between align-items-center">
+            <span>${esc(label)}</span>
+            <input class="form-check-input" type="checkbox" data-itid="${it.id}">
+          </label>
+        `;
+      }).join("");
+
+      // cuando cambia selección, sugerimos monto (solo si el user no escribió nada)
+      installmentList.querySelectorAll('input[type="checkbox"][data-itid]').forEach(cb => {
+        cb.addEventListener("change", () => {
+          if (amount && (!amount.value || String(amount.value).trim() === "")){
+            const total = sumSelectedInstallments();
+            if (total > 0) amount.value = String(total);
+          }
+        });
+      });
+    }
+  }
 
   installmentHint.textContent = pending.length
-    ? "Podés elegir una cuota pendiente o dejarlo como pago general."
+    ? "Marcá una o varias cuotas. Si no marcás ninguna, es un pago general."
     : "No hay cuotas pendientes (o este plan es pago único). Podés enviar pago general si aplica.";
 
   const p = membership.planSnapshot || {};
   amountHint.textContent = p.allowCustomAmount
     ? "Este plan permite monto editable. Escribí el monto que pagaste."
-    : "Escribí el monto exacto del pago (si es una cuota, suele ser el monto de la cuota).";
-
-  installmentSelect.onchange = () => {
-    const iid = installmentSelect.value || "";
-    if (!iid) return;
-    const it = getInstallmentById(iid);
-    if (it && it.amount !== undefined && it.amount !== null && amount.value === ""){
-      amount.value = String(it.amount);
-    }
-  };
+    : "Tip: si marcás cuotas, podés poner el total de esas cuotas (o el monto exacto que pagaste).";
 
   btnReset.onclick = () => {
     if (membership?.payLinkEnabled === false) return;
-    installmentSelect.value = "";
+    // reset checks
+    installmentList?.querySelectorAll('input[type="checkbox"][data-itid]').forEach(cb => cb.checked = false);
     amount.value = "";
     method.value = "sinpe";
     fileInput.value = "";
@@ -298,6 +336,7 @@ async function onSubmit(e){
   e.preventDefault();
   hideAlert();
 
+  // gate extra
   if (membership?.payLinkEnabled === false){
     const reason =
       membership?.payLinkDisabledReason ||
@@ -329,6 +368,11 @@ async function onSubmit(e){
     return showAlert(`Archivo muy grande. Máximo ${MAX_MB}MB.`, "warning");
   }
 
+  // ✅ cuotas seleccionadas (0 => pago general)
+  const selectedIds = selectedInstallmentIds();
+  // compat: si es una sola, también ponemos installmentId
+  const singleInstallmentId = selectedIds.length === 1 ? selectedIds[0] : null;
+
   btnSubmit.disabled = true;
   disableForm(true);
   clearProgress();
@@ -338,11 +382,13 @@ async function onSubmit(e){
   let path = null;
 
   try{
-    const iid = installmentSelect.value || null;
-
+    // 1) Crear submission primero
     const submissionDoc = await addDoc(collection(db, COL_SUBMISSIONS), {
       membershipId: mid,
-      installmentId: iid,
+
+      // ✅ compat + multi
+      installmentId: singleInstallmentId,
+      selectedInstallmentIds: selectedIds.length ? selectedIds : null,
 
       season: membership.season || null,
       planId: membership.planId || (p.id || null),
@@ -369,6 +415,7 @@ async function onSubmit(e){
 
     sid = submissionDoc.id;
 
+    // 2) Subir a Storage
     const storage = getStorage();
     const safeName = (f.name || "comprobante").replace(/[^\w.\-()]+/g, "_");
     path = `membership_submissions/${mid}/${sid}/${Date.now()}_${safeName}`;
@@ -392,13 +439,14 @@ async function onSubmit(e){
 
     const url = await getDownloadURL(fileRef);
 
+    // 3) Guardar fileUrl + filePath en submission
     await setDoc(doc(db, COL_SUBMISSIONS, sid), {
       fileUrl: url,
       filePath: path,
       updatedAt: serverTimestamp()
     }, { merge: true });
 
-    // ✅ Bloquear link + marcar membership como "submitted" (para que en lista salga “Validando”)
+    // 4) Bloquear link + marcar membership como submitted
     try{
       const currStatus = (membership?.status || "pending").toLowerCase();
       const nextStatus =
@@ -429,7 +477,8 @@ async function onSubmit(e){
     setProgress(100, "✅ Enviado");
     showAlert("✅ Comprobante enviado. Un admin lo revisará pronto.", "success");
 
-    installmentSelect.value = "";
+    // limpiar
+    installmentList?.querySelectorAll('input[type="checkbox"][data-itid]').forEach(cb => cb.checked = false);
     amount.value = "";
     fileInput.value = "";
     note.value = "";
