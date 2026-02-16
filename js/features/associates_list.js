@@ -394,8 +394,9 @@ function progressText(membership) {
   if (!total) return "";
 
   const next = membership?.nextUnpaidDueDate;
-  const nextTxt = next ? ` • Próx: ${next}` : "";
-  return `${settled}/${total} cuotas${nextTxt}`;
+  return `${settled}/${total} cuotas`;
+  //const nextTxt = next ? ` • Próx: ${next}` : "";
+  //return `${settled}/${total} cuotas${nextTxt}`;
 }
 
 function baseDir() {
