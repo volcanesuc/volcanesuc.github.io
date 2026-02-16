@@ -107,25 +107,31 @@ function assocKeyFromMembership(membership, associateActive = true) {
   if (!membership) return "pending";
 
   const s = (membership.status || "").toLowerCase();
+
+  // si está en revisión, no es moroso
   if (s === "submitted" || s === "validating") return "validating";
 
   const total = Number(membership.installmentsTotal || 0);
   const settled = Number(membership.installmentsSettled || 0);
 
+  // Plan por cuotas
   if (total > 0) {
     if (settled <= 0) return "pending";
 
-    const dueStr = membership.nextUnpaidDueDate;
-    if (!dueStr) return "up_to_date";
+    const dueStr = membership.nextUnpaidDueDate; // "YYYY-MM-DD"
+    if (!dueStr) return "up_to_date"; // no quedan cuotas
 
     const due = new Date(dueStr + "T00:00:00");
     const now = new Date();
+
     return now > due ? "overdue" : "up_to_date";
   }
 
+  // Pago único
   if (s === "validated" || s === "paid") return "up_to_date";
   return "pending";
 }
+
 
 
 /* =========================
