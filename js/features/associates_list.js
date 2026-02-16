@@ -157,34 +157,6 @@ function typeLabel(t) {
   return map[t] || "—";
 }
 
-function assocKeyFromMembership(membership, associateActive = true) {
-  if (associateActive === false) return "inactive";
-  if (!membership) return "pending";
-
-  const s = (membership.status || "").toLowerCase();
-  const linkBlocked = membership.payLinkEnabled === false;
-
-  // si está en revisión, mostramos Validando
-  if (linkBlocked && (s === "submitted" || s === "pending" || s === "partial")) return "validating";
-
-  // ✅ si hay cuotas pendientes, definimos al día/vencido por nextUnpaidDueDate
-  const pendingCount = Number(membership.pendingInstallmentsCount || 0);
-  const nextDue = membership.nextUnpaidDueDate;
-
-  if (pendingCount > 0 && nextDue) {
-    const now = new Date();
-    const dueDate = new Date(nextDue); // si es "YYYY-MM-DD" funciona OK
-    if (now > dueDate) return "overdue";
-    return "up_to_date";
-  }
-
-  // si no debe cuotas, y está paid/validated => al día
-  if (s === "paid" || s === "validated") return "up_to_date";
-
-  // fallback
-  return "pending";
-}
-
 function assocBadge(key, membership) {
   const prog = progressText(membership);
   const suffix = prog ? ` • ${prog}` : "";
