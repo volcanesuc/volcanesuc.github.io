@@ -107,30 +107,24 @@ function assocKeyFromMembership(membership, associateActive = true) {
   if (!membership) return "pending";
 
   const s = (membership.status || "").toLowerCase();
-
-  // si está validando/en revisión, no es moroso
   if (s === "submitted" || s === "validating") return "validating";
 
-  // si no hay cuotas (pago único), usar status
   const total = Number(membership.installmentsTotal || 0);
   const settled = Number(membership.installmentsSettled || 0);
 
-  if (!total) {
-    if (s === "validated" || s === "paid") return "up_to_date";
-    return "pending";
+  if (total > 0) {
+    if (settled <= 0) return "pending";
+
+    const dueStr = membership.nextUnpaidDueDate;
+    if (!dueStr) return "up_to_date";
+
+    const due = new Date(dueStr + "T00:00:00");
+    const now = new Date();
+    return now > due ? "overdue" : "up_to_date";
   }
 
-  // con cuotas:
-  if (settled <= 0) return "pending";
-
-  // si ya no hay next unpaid => al día (pagó todo)
-  const dueStr = membership.nextUnpaidDueDate;
-  if (!dueStr) return "up_to_date";
-
-  const due = new Date(dueStr + "T00:00:00");
-  const now = new Date();
-
-  return now > due ? "overdue" : "up_to_date";
+  if (s === "validated" || s === "paid") return "up_to_date";
+  return "pending";
 }
 
 
@@ -216,6 +210,10 @@ function renderShell(container) {
           <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
         </button>
       </div>
+    </div>
+
+    div class="text-muted small" id="debugStamp" style="font-family: monospace;">
+      JS associates_list cargó: ${new Date().toISOString()}
     </div>
 
     <div class="row g-2 align-items-end mb-3">
@@ -443,7 +441,8 @@ function render() {
       const perfilBadge = isActive ? badge("Activo", "yellow") : badge("Inactivo", "gray");
 
       const m = a.membership || null;
-      const asocBadge = assocBadge(a._assocKey, m);
+      const dbg = m ? ` (${a._assocKey} | due=${m.nextUnpaidDueDate || "-"} | settled=${m.installmentsSettled || 0})` : "";
+      const asocBadge = assocBadge(a._assocKey, m) + `<div class="small text-muted">${dbg}</div>`;
 
       const contacto = [
         a.email ? `<div>${a.email}</div>` : "",
