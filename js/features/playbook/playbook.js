@@ -86,19 +86,22 @@ function setRoleUI() {
   if (canEdit) {
     badge.className = "badge text-bg-primary";
     badge.textContent = "ADMIN (EDIT)";
-    $.drillCreateCard.classList.remove("d-none");
+
+    $.openCreateDrillBtn?.classList.remove("d-none");
     $.trainingCreateBox.classList.remove("d-none");
     $.trainingDrillAddBox.classList.remove("d-none");
     $.saveTrainingBtn.classList.remove("d-none");
   } else {
     badge.className = "badge text-bg-secondary";
     badge.textContent = "VIEW ONLY";
-    $.drillCreateCard.classList.add("d-none");
+
+    $.openCreateDrillBtn?.classList.add("d-none");
     $.trainingCreateBox.classList.add("d-none");
     $.trainingDrillAddBox.classList.add("d-none");
     $.saveTrainingBtn.classList.add("d-none");
   }
 }
+
 
 /* =========================
    DOM
@@ -110,7 +113,6 @@ function cacheDom() {
     alertBox: document.getElementById("alertBox"),
 
     // Drills
-    drillCreateCard: document.getElementById("drillCreateCard"),
     drillForm: document.getElementById("drillForm"),
     drillName: document.getElementById("drillName"),
     drillAuthor: document.getElementById("drillAuthor"),
@@ -152,6 +154,10 @@ function cacheDom() {
 
     trainingDrillsList: document.getElementById("trainingDrillsList"),
     trainingDrillsEmpty: document.getElementById("trainingDrillsEmpty"),
+
+    openCreateDrillBtn: document.getElementById("openCreateDrillBtn"),
+    createDrillModal: document.getElementById("createDrillModal"),
+    saveCreateDrillBtn: document.getElementById("saveCreateDrillBtn"),
 
     saveTrainingBtn: document.getElementById("saveTrainingBtn"),
   };
@@ -588,16 +594,28 @@ async function saveTraining() {
 ========================= */
 function bindEvents() {
   // Drills
-  $.drillForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  $.openCreateDrillBtn?.addEventListener("click", () => {
     if (!canEdit) return;
+    clearAlert();
+    $.drillForm?.reset();
+    const modal = bootstrap.Modal.getOrCreateInstance($.createDrillModal);
+    modal.show();
+    });
+
+    $.saveCreateDrillBtn?.addEventListener("click", async () => {
+    if (!canEdit) return;
+
     showLoader();
     try {
-      await createDrillFromForm();
+        await createDrillFromForm();
+
+        // cerrar modal
+        const modal = bootstrap.Modal.getOrCreateInstance($.createDrillModal);
+        modal.hide();
     } finally {
-      hideLoader();
+        hideLoader();
     }
-  });
+    });
 
   $.drillSearch?.addEventListener("input", renderDrills);
 

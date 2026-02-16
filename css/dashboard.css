@@ -871,6 +871,29 @@
   pointer-events:none;
   filter:grayscale(0.3);
 }
+/* ======================================================
+   Playbook
+====================================================== */
+
+/* Playbook tabs (estilo club, no azul) */
+#playbookTabs .nav-link {
+  border-radius: 999px;
+  background: var(--club-gray);
+  color: var(--club-green);
+  border: 1px solid rgba(0,0,0,.08);
+  font-weight: 600;
+}
+
+#playbookTabs .nav-link:hover {
+  background: #fff;
+  border-color: rgba(0,0,0,.12);
+}
+
+#playbookTabs .nav-link.active {
+  background: var(--club-green);
+  color: #fff;
+  border-color: var(--club-green);
+}
 
 /* ======================================================
    RESPONSIVE (HOME + attendance)

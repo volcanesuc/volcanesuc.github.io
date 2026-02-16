@@ -64,58 +64,26 @@
       <!-- TAB DRILLS -->
       <section class="tab-pane fade show active" id="tabDrills" role="tabpanel" aria-labelledby="tabDrillsBtn">
 
-        <!-- Admin-only create -->
-        <div class="card mb-3 d-none" id="drillCreateCard">
-          <div class="card-body">
-            <h2 class="h5 mb-3">Crear drill</h2>
+        <!-- Toolbar -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <div class="input-group" style="max-width: 520px;">
+                <span class="input-group-text">🔎</span>
+                <input class="form-control" id="drillSearch" placeholder="Buscar drills…" />
+            </div>
 
-            <form id="drillForm" class="row g-3">
-              <div class="col-12 col-lg-6">
-                <label class="form-label" for="drillName">Nombre *</label>
-                <input class="form-control" id="drillName" required maxlength="120" />
-              </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="showArchivedSwitch">
+                <label class="form-check-label" for="showArchivedSwitch">Ver archivados</label>
+                </div>
 
-              <div class="col-12 col-lg-6">
-                <label class="form-label" for="drillAuthor">Autor *</label>
-                <input class="form-control" id="drillAuthor" required maxlength="80" />
-              </div>
+                <button class="btn btn-outline-secondary btn-sm" id="refreshDrillsBtn">Refrescar</button>
 
-              <div class="col-12 col-lg-6">
-                <label class="form-label" for="drillTacticalUrl">Link Tactical Board</label>
-                <input class="form-control" id="drillTacticalUrl" type="url" placeholder="https://..." />
-              </div>
-
-              <div class="col-12 col-lg-6">
-                <label class="form-label" for="drillVideoUrl">Link video del equipo (opcional)</label>
-                <input class="form-control" id="drillVideoUrl" type="url" placeholder="https://..." />
-              </div>
-
-              <div class="col-12">
-                <label class="form-label" for="drillObjective">Objetivo</label>
-                <textarea class="form-control" id="drillObjective" rows="2"></textarea>
-              </div>
-
-              <div class="col-12 col-md-4">
-                <label class="form-label" for="drillVolume">Volumen</label>
-                <input class="form-control" id="drillVolume" maxlength="60" placeholder="Ej: 6 reps / 10 min" />
-              </div>
-
-              <div class="col-12 col-md-4">
-                <label class="form-label" for="drillRest">Descanso post-drill</label>
-                <input class="form-control" id="drillRest" maxlength="60" placeholder="Ej: 90s" />
-              </div>
-
-              <div class="col-12">
-                <label class="form-label" for="drillRecs">Recomendaciones</label>
-                <textarea class="form-control" id="drillRecs" rows="3"></textarea>
-              </div>
-
-              <div class="col-12 d-flex gap-2">
-                <button class="btn btn-primary" type="submit">Guardar drill</button>
-                <button class="btn btn-outline-secondary" type="reset">Limpiar</button>
-              </div>
-            </form>
-          </div>
+                <!-- Admin only -->
+                <button class="btn btn-primary btn-sm d-none" id="openCreateDrillBtn" type="button">
+                + Crear drill
+                </button>
+            </div>
         </div>
 
         <!-- Filters -->
@@ -256,6 +224,67 @@
 
     </div>
   </main>
+
+  <!-- MODAL: Crear Drill -->
+  <div class="modal fade" id="createDrillModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Crear drill</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+
+        <div class="modal-body">
+            <form id="drillForm" class="row g-3">
+            <div class="col-12 col-lg-6">
+                <label class="form-label" for="drillName">Nombre *</label>
+                <input class="form-control" id="drillName" required maxlength="120" />
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <label class="form-label" for="drillAuthor">Autor *</label>
+                <input class="form-control" id="drillAuthor" required maxlength="80" />
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <label class="form-label" for="drillTacticalUrl">Link Tactical Board</label>
+                <input class="form-control" id="drillTacticalUrl" type="url" placeholder="https://..." />
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <label class="form-label" for="drillVideoUrl">Link video del equipo (opcional)</label>
+                <input class="form-control" id="drillVideoUrl" type="url" placeholder="https://..." />
+            </div>
+
+            <div class="col-12">
+                <label class="form-label" for="drillObjective">Objetivo</label>
+                <textarea class="form-control" id="drillObjective" rows="2"></textarea>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="drillVolume">Volumen</label>
+                <input class="form-control" id="drillVolume" maxlength="60" placeholder="Ej: 6 reps / 10 min" />
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="drillRest">Descanso post-drill</label>
+                <input class="form-control" id="drillRest" maxlength="60" placeholder="Ej: 90s" />
+            </div>
+
+            <div class="col-12">
+                <label class="form-label" for="drillRecs">Recomendaciones</label>
+                <textarea class="form-control" id="drillRecs" rows="3"></textarea>
+            </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-outline-secondary" data-bs-dismiss="modal" type="button">Cancelar</button>
+            <button class="btn btn-primary" id="saveCreateDrillBtn" type="button">Guardar drill</button>
+        </div>
+        </div>
+    </div>
+ </div>
 
   <!-- LOADER (igual que dashboard) -->
   <div id="loadingOverlay" class="loading-overlay">
