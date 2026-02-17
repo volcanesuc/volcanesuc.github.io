@@ -296,7 +296,21 @@ function renderTopPlayers(playersArr, totalTrainings) {
 /* ==========================
    CHART
 ========================== */
+function cssVar(name, fallback = "") {
+  const v = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  return v || fallback;
+}
+
 function renderChart(trainings, activeRoster = 0) {
+  const GREEN = cssVar("--club-green", "#19473f");
+  const YELLOW = cssVar("--club-yellow", "#e8ce26");
+  const GOOD = cssVar("--club-green-light", GREEN);
+  const BORDER = cssVar("--border", "#e5e7eb");
+  const TEXT = cssVar("--text", "#1f2328");
+  const TEXT_SOFT = cssVar("--text-soft", "#6b7280");
+
   const canvas = document.getElementById("attendanceChart");
   if (!canvas) return;
 
@@ -327,18 +341,22 @@ function renderChart(trainings, activeRoster = 0) {
           borderWidth: 3,
           pointRadius: 4,
           pointHoverRadius: 6,
+
+          borderColor: GREEN,
+
           pointBackgroundColor: (c) => {
             const v = c.raw ?? 0;
-            if (activeRoster > 0) return v >= threshold ? "#198754" : "#e8ce26";
-            return "#19473f";
+            if (activeRoster > 0) return v >= threshold ? GOOD : YELLOW;
+            return GREEN;
           },
+
           segment: activeRoster > 0
             ? {
                 borderColor: (seg) => {
                   const y0 = seg.p0.parsed.y ?? 0;
                   const y1 = seg.p1.parsed.y ?? 0;
                   const avg = (y0 + y1) / 2;
-                  return avg >= threshold ? "#198754" : "#e8ce26";
+                  return avg >= threshold ? GOOD : YELLOW;
                 }
               }
             : {}
@@ -350,14 +368,24 @@ function renderChart(trainings, activeRoster = 0) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          callbacks: { label: (c) => (activeRoster > 0 ? `${c.raw}%` : `${c.raw}`) }
+          callbacks: { label: (c) => (activeRoster > 0 ? `${c.raw}%` : `${c.raw}`) },
+          titleColor: TEXT,
+          bodyColor: TEXT,
+          backgroundColor: cssVar("--card", "#ffffff"),
+          borderColor: BORDER,
+          borderWidth: 1
         }
       },
       scales: {
+        x: {
+          ticks: { color: TEXT_SOFT },
+          grid: { color: BORDER }
+        },
         y: {
           beginAtZero: true,
           suggestedMax: activeRoster > 0 ? 100 : undefined,
-          ticks: { callback: (v) => (activeRoster > 0 ? `${v}%` : `${v}`) }
+          ticks: { color: TEXT_SOFT, callback: (v) => (activeRoster > 0 ? `${v}%` : `${v}`) },
+          grid: { color: BORDER }
         }
       }
     }

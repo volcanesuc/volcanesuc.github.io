@@ -1,220 +1,168 @@
 /* ======================================================
-   DASHBOARD.CSS — Volcanes Ultimate
-   (Estilos de páginas específicas: Home/Dashboard, Attendance, Roster modal, etc.)
-   Nota: Variables globales idealmente van en main.css
+   DASHBOARD.CSS — Volcanes Ultimate (theme-driven)
+   Páginas específicas: Home/Dashboard, Attendance, Roster modal, etc.
+   Colores/estilo dependen de variables CSS (config.js -> applyThemeFromConfig)
 ====================================================== */
+
+/* ======================================================
+   UTILIDADES DE TEMA (fallbacks suaves)
+====================================================== */
+:root{
+  /* Por si main.css no los trae como fallback */
+  --bg-soft: var(--bg-soft, #fafafa);
+  --text-soft: var(--text-soft, #6b7280);
+}
 
 /* ======================================================
    HOME – DASHBOARD PRINCIPAL
    (solo aplica cuando el contenedor tenga .dashboard-page)
 ====================================================== */
 
-.dashboard-page {
+.dashboard-page{
   padding-bottom: 2rem;
 }
 
 /* ===== KPIs SUPERIORES (HOME) ===== */
-.dashboard-page .kpi-row {
+.dashboard-page .kpi-row{
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   margin-bottom: 1.5rem;
 }
 
-.dashboard-page .kpi-box {
-  background: var(--club-green);
-  border-radius: 14px;
-  padding: 1.5rem;
+/* KPI estilo SaaS (gris + barra) */
+.dashboard-page .kpi-box{
+  background: var(--card);
+  border-radius: 16px;
+  padding: 1.25rem 1.25rem;
   text-align: center;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  position: relative;
+  overflow: hidden;
 }
 
-.dashboard-page .kpi-value {
+/* barrita izquierda */
+.dashboard-page .kpi-box::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: var(--club-green);
+}
+
+/* números KPI */
+.dashboard-page .kpi-value{
   font-size: 2.6rem;
-  font-weight: 800;
-  color: #ffffff;
+  font-weight: 900;
+  color: var(--club-green);
   line-height: 1;
+  letter-spacing: -1px;
 }
 
-.dashboard-page .kpi-label {
+/* label KPI */
+.dashboard-page .kpi-label{
   display: block;
-  margin-top: 0.4rem;
+  margin-top: 0.5rem;
   font-size: 0.85rem;
-  color: var(--club-yellow);
+  color: var(--text-soft);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
+  font-weight: 800;
 }
 
 /* ===== BLOQUE CENTRAL HOME ===== */
-.dashboard-page .home-main {
+.dashboard-page .home-main{
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 1.5rem;
   align-items: stretch;
 }
 
-/* ===== ALERTAS (HOME) ===== */
-.dashboard-page .alerts-card {
-  background: #ffffff;
+/* ===== CARDS PRINCIPALES HOME ===== */
+.dashboard-page .alerts-card,
+.dashboard-page .next-tournament-card,
+.dashboard-page .birthdays-card{
+  background: var(--card);
   border-radius: 16px;
-  padding: 1.2rem 1.4rem;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  padding: 1.2rem 1.25rem;
 }
 
-.dashboard-page .alerts-card h3 {
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin-bottom: 0.8rem;
+/* títulos */
+.dashboard-page .alerts-card h3,
+.dashboard-page .next-tournament-card h3,
+.dashboard-page .birthdays-card h3{
+  font-size: 1.1rem;
+  font-weight: 900;
   color: var(--club-green);
+  margin-bottom: 0.85rem;
 }
 
-.dashboard-page .alerts-card .list-group-item {
+/* ===== ALERTAS (HOME) ===== */
+.dashboard-page .alerts-card .list-group-item{
   border: none;
   padding-left: 0;
   padding-right: 0;
   font-size: 0.95rem;
 }
 
-/* ===== PRÓXIMO TORNEO (HOME) ===== */
-.dashboard-page .next-tournament-card {
+/* ===== PRÓXIMO TORNEO (HOME) — destacado club ===== */
+.dashboard-page .next-tournament-card{
   background: var(--club-green);
-  border-radius: 16px;
-  padding: 1.4rem;
-  color: white;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  color: #fff;
+  border: none;
 }
 
-.dashboard-page .next-tournament-card h3 {
-  font-size: 1.05rem;
-  margin-bottom: 0.6rem;
+.dashboard-page .next-tournament-card h3{
   color: var(--club-yellow);
 }
 
-.dashboard-page .next-tournament-card .t-date {
-  font-size: 1.4rem;
-  font-weight: 800;
+.dashboard-page .next-tournament-card .t-date{
+  font-size: 1.6rem;
+  font-weight: 900;
   margin: 0;
 }
 
-.dashboard-page .next-tournament-card .t-name {
-  font-size: 0.95rem;
-  opacity: 0.9;
+.dashboard-page .next-tournament-card .t-name{
+  opacity: 0.92;
+  margin: 0;
 }
 
 /* ===== CUMPLEAÑOS (HOME) ===== */
-.dashboard-page .birthdays-card {
-  background: var(--club-green);
-  border-radius: 16px;
-  padding: 1.4rem;
-  color: white;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-}
-
-.dashboard-page .birthdays-card h3 {
-  font-size: 1.05rem;
-  margin-bottom: 0.6rem;
-  color: var(--club-yellow);
-}
-
-.dashboard-page #birthdaysList {
+.dashboard-page #birthdaysList{
   font-size: 0.95rem;
   line-height: 1.6;
+  color: var(--text);
 }
 
-/* ======================================================
-   CUMPLEAÑOS – ITEMS (HOME)
-====================================================== */
-.birthday-item {
+.dashboard-page .birthday-item{
   padding: 6px 8px;
-  border-radius: 6px;
-  margin-bottom: 4px;
-  background: rgba(25, 71, 63, 0.05);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
 }
 
-.birthday-item.today {
+.dashboard-page .birthday-item.today{
   background: var(--club-yellow);
   color: var(--club-green);
-  font-weight: 700;
+  font-weight: 900;
+  border-color: color-mix(in srgb, var(--club-yellow) 60%, var(--border));
 }
 
-/* ======================================================
-   ASISTENCIA – KPIs
-   (solo aplica cuando el contenedor tenga .attendance-page)
-====================================================== */
-
-.attendance-page .kpi-card {
-  background: #ffffff;
-  border-left: 6px solid var(--club-green);
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-}
-
-.attendance-page .kpi-label {
-  font-size: 0.75rem;
-  color: #666;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.attendance-page .kpi-value {
-  margin-top: 6px;
-  font-size: 2.4rem;
-  font-weight: 800;
-  color: #111;
-}
-
-/* ======================================================
-   ATTENDANCE CHECKLIST (MODAL)
-====================================================== */
-
-.attendance-box {
-  max-height: 55vh;           /* scroll interno */
-  overflow-y: auto;
-  border: 1px solid #dee2e6;
-  border-radius: 14px;
-  padding: 0.5rem;
-  background: #fff;
-}
-
-.attendance-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-
-  padding: 0.9rem 1rem;
-  margin-bottom: 0.5rem;
-
-  background: #f8f9fa;
-  border-radius: 12px;
-
-  cursor: pointer;
-  user-select: none;
-}
-
-.attendance-item:active {
-  background: #e8f3f1;
-}
-
-.attendance-item input[type="checkbox"] {
-  transform: scale(1.4);
-}
-
-.attendance-name {
-  flex: 1;
-  font-size: 1rem;
-}
-
-.attendance-number {
-  font-size: 0.9rem;
-  opacity: 0.6;
+.dashboard-page .birthday-item span{
+  color: inherit;
 }
 
 /* ======================================================
    ALERTAS DASHBOARD (items)
 ====================================================== */
 
-.alert-item {
+.alert-item{
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
@@ -223,363 +171,52 @@
   margin-bottom: 0.5rem;
 
   border-radius: 12px;
-  background: #f8f9fa;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
 
   border-left: 6px solid transparent;
 }
 
-.alert-item:last-child {
+.alert-item:last-child{
   margin-bottom: 0;
 }
 
-.alert-item .alert-icon {
+.alert-item .alert-icon{
   font-size: 1.2rem;
   line-height: 1;
 }
 
-.alert-item .alert-text {
+.alert-item .alert-text{
   font-size: 0.95rem;
   line-height: 1.3;
+  color: var(--text);
 }
 
-.alert-danger {
+.alert-danger{
   border-left-color: #dc3545;
   background: #fff5f5;
 }
 
-.alert-warning {
-  border-left-color: #ffc107;
+.alert-warning{
+  border-left-color: var(--club-yellow);
   background: #fffbea;
 }
 
 /* ======================================================
-   PLAYER MODAL (ROSTER) — FULLSCREEN
-   Requiere que tu modal-content tenga class="player-modal"
+   ASISTENCIA – KPIs
+   (solo aplica cuando el contenedor tenga .attendance-page)
 ====================================================== */
 
-.player-modal {
-  background: #0f1413;
-  color: #fff;
-}
-
-.player-modal__header {
-  background: linear-gradient(90deg, var(--club-green), var(--club-green-dark));
-  border-bottom: 1px solid rgba(255,255,255,.12);
-}
-
-.player-modal__subtitle {
-  opacity: .85;
-  font-size: .85rem;
-}
-
-.player-modal__body {
-  background: #0f1413;
-}
-
-.player-modal__footer {
-  background: rgba(25,71,63,.20);
-  border-top: 1px solid rgba(255,255,255,.12);
-}
-
-.player-modal .form-label {
-  color: rgba(255,255,255,.85);
-}
-
-.player-modal .form-control,
-.player-modal .form-select {
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.14);
-  color: #fff;
-}
-
-.player-modal .form-control:focus,
-.player-modal .form-select:focus {
-  border-color: var(--club-yellow);
-  box-shadow: 0 0 0 .2rem rgba(232,206,38,.22);
-}
-
-.player-modal .btn-warning {
-  background: var(--club-yellow);
-  border-color: var(--club-yellow);
-  color: #1a1a1a;
-  font-weight: 700;
-}
-
-.player-modal .form-check-label {
-  color: rgba(255,255,255,.85);
-}
-
-/* ======================================================
-   MOBILE: Drawer modal (SOLO modales con clase .drawer-modal)
-   Esto evita que se rompa el fullscreen de playerModal
-====================================================== 
-
-@media (max-width: 768px) {
-  .drawer-modal.modal.fade .modal-dialog {
-    transform: translateY(100%);
-    transition: transform 0.25s ease-out;
-  }
-
-  .drawer-modal.modal.show .modal-dialog {
-    transform: translateY(0);
-  }
-
-  .drawer-modal.modal.modal-fullscreen-md-down {
-    --bs-modal-margin: 0;
-  }
-
-  .drawer-modal.modal.modal-fullscreen-md-down .modal-dialog {
-    margin: 0;
-  }
-
-  .drawer-modal.modal.modal-fullscreen-md-down .modal-content {
-    border-radius: 16px 16px 0 0;
-    height: 100%;
-  }
-
-  .drawer-modal.modal.modal-fullscreen-md-down .modal-header {
-    border-bottom: 1px solid #eee;
-    position: sticky;
-    top: 0;
-    background: #fff;
-    z-index: 10;
-  }
-
-  .drawer-modal.modal.modal-fullscreen-md-down .modal-footer {
-    position: sticky;
-    bottom: 0;
-    background: #fff;
-    border-top: 1px solid #eee;
-  }
-
-  .drawer-handle {
-    width: 40px;
-    height: 4px;
-    background: #ccc;
-    border-radius: 2px;
-    margin: 0 auto 8px;
-  }
-}*/
-
-/* Offcanvas (Bootstrap) style */
-.offcanvas {
-  background: var(--club-gray);
-  border-left: 1px solid rgba(0,0,0,0.08);
-}
-
-.offcanvas-header {
-  background: var(--club-green);
-  color: #fff;
-}
-
-.offcanvas-header .btn-close {
-  filter: invert(1);
-}
-
-.offcanvas-title {
-  font-family: "Recons";
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.offcanvas-body a {
-  display: block;
-  padding: 0.75rem 0;
-  font-weight: 700;
-  color: var(--club-green);
-  text-decoration: none;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-
-.offcanvas-body a:hover {
-  color: var(--club-green-dark);
-}
-
-.offcanvas-body a.active {
-  background: rgba(232,206,38,0.25);
-  border-radius: 10px;
-  padding-left: 12px;
-  padding-right: 12px;
-}
-
-/* ==============================
-   ATTENDANCE — MODERN UI
-============================== */
-
-.attendance-page .card {
+/* Cards modernas */
+.attendance-page .card{
   border-radius: 16px;
   overflow: hidden;
 }
 
-.attendance-page .card-header {
-  background: #fff !important;
-  border: 0 !important;
-  padding: 1rem 1.1rem 0.75rem 1.1rem;
-}
-
-.attendance-page .card-body {
-  padding: 1rem 1.1rem;
-}
-
-/* KPI cards más modernos */
-.attendance-page .kpi-card {
-  position: relative;
-  border-left: 0;
-  background: linear-gradient(135deg, rgba(25,71,63,.08), rgba(232,206,38,.10));
-  box-shadow: 0 10px 25px rgba(25, 71, 63, 0.12);
-}
-
-.attendance-page .kpi-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 16px;
-  border: 1px solid rgba(25,71,63,.12);
-  pointer-events: none;
-}
-
-.attendance-page .kpi-value {
-  font-size: 2.6rem;
-  letter-spacing: -1px;
-}
-
-.attendance-page .kpi-label {
-  color: rgba(25,71,63,.75);
-}
-
-/* Top 3 cards */
-.top3-card {
-  border-radius: 14px;
-  padding: 0.9rem 1rem;
-  background: rgba(25,71,63,.06);
-  border: 1px solid rgba(25,71,63,.10);
-}
-
-.top3-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  align-items: baseline;
-}
-
-.top3-name {
-  font-weight: 800;
-  color: var(--club-green);
-}
-
-.top3-meta {
-  color: rgba(0,0,0,.55);
-  font-size: .85rem;
-  margin-top: 2px;
-}
-
-.mini-bar {
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(25,71,63,.12);
-  overflow: hidden;
-  margin-top: 10px;
-}
-
-.mini-bar > div {
-  height: 100%;
-  background: var(--club-yellow);
-  border-radius: 999px;
-}
-
-/* Tables más “clean” */
-.attendance-page .table thead {
-  background: rgba(25,71,63,.95);
-  color: #fff;
-}
-
-.attendance-page .table tbody tr {
-  border-color: rgba(0,0,0,.06);
-}
-
-.attendance-page .table tbody tr:hover {
-  background: rgba(232,206,38,.10);
-}
-
-/* Pills / badges */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  padding: .25rem .55rem;
-  border-radius: 999px;
-  font-size: .82rem;
-  font-weight: 700;
-  border: 1px solid rgba(25,71,63,.15);
-  background: rgba(25,71,63,.06);
-  color: var(--club-green);
-}
-
-.pill--good {
-  background: rgba(25,71,63,.10);
-}
-
-.pill--warn {
-  background: rgba(232,206,38,.20);
-}
-
-/* Mobile cards */
-.mobile-card {
-  border-radius: 16px;
-  padding: 0.9rem 1rem;
-  border: 1px solid rgba(25,71,63,.10);
-  background: #fff;
-  box-shadow: 0 10px 25px rgba(25, 71, 63, 0.10);
-  margin-bottom: .75rem;
-}
-
-.mobile-card__title {
-  font-weight: 900;
-  color: var(--club-green);
-}
-
-.mobile-card__sub {
-  color: rgba(0,0,0,.55);
-  font-size: .9rem;
-}
-
-.mobile-card__row {
-  display: flex;
-  justify-content: space-between;
-  gap: .75rem;
-  align-items: center;
-  margin-top: .6rem;
-}
-
-.progress.slim {
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(25,71,63,.10);
-}
-
-.progress.slim .progress-bar {
-  background: var(--club-yellow);
-}
-
-/* Pequena mejora del input search */
-#playerSearch.form-control {
-  border-radius: 14px;
-  box-shadow: 0 8px 20px rgba(25,71,63,.08);
-  border: 1px solid rgba(25,71,63,.12);
-}
-
-/* ==============================
-   ATTENDANCE — CLEAN MODERN
-============================== */
-
-.attendance-page .card-modern{
-  border-radius: 16px;
-  border: 1px solid rgba(25,71,63,.12);
-  box-shadow: 0 10px 25px rgba(25,71,63,.08);
-  overflow: hidden;
-}
-
+/* Header/body coherentes con theme */
 .attendance-page .card-header{
+  background: var(--card) !important;
+  border: 0 !important;
   padding: 1rem 1.1rem 0.75rem 1.1rem;
 }
 
@@ -587,15 +224,16 @@
   padding: 1rem 1.1rem;
 }
 
-/* KPIs: SIN degradado */
+/* KPI cards (clean, sin degradado) */
 .attendance-page .kpi-card{
-  background: #fff;
-  border: 1px solid rgba(25,71,63,.12);
-  box-shadow: 0 10px 25px rgba(25,71,63,.08);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
   border-radius: 16px;
   position: relative;
 }
 
+/* barrita izquierda */
 .attendance-page .kpi-card::before{
   content:"";
   position:absolute;
@@ -609,38 +247,44 @@
 }
 
 .attendance-page .kpi-label{
-  color: rgba(25,71,63,.70);
-  font-weight: 800;
-  letter-spacing: .04em;
-  text-transform: uppercase;
   font-size: .72rem;
+  color: var(--text-soft);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 
 .attendance-page .kpi-value{
   font-size: 2.4rem;
   font-weight: 900;
-  color: #111;
+  color: var(--text);
   letter-spacing: -1px;
   margin: 0;
 }
 
 /* KPI clickable */
-.kpi-clickable { cursor: pointer; }
-.kpi-clickable:hover { transform: translateY(-1px); transition: 0.12s ease; }
+.kpi-clickable{ cursor: pointer; }
+.kpi-clickable:hover{
+  transform: translateY(-1px);
+  transition: 0.12s ease;
+}
 
 /* Search responsive */
-.player-search-wrap { min-width: 240px; }
+.player-search-wrap{ min-width: 240px; }
 @media (max-width: 576px){
-  .player-search-wrap { width: 100%; min-width: 0; }
+  .player-search-wrap{ width: 100%; min-width: 0; }
 }
 
 /* Entrenamientos: scroll interno */
 .trainings-scroll{
-  max-height: 340px; /* ajustá si querés */
+  max-height: 340px;
   overflow: auto;
 }
 
-/* Top3: ocupa el alto y distribuye mejor */
+/* ======================================================
+   TOP 3 (Attendance)
+====================================================== */
+
 .top3-fill{
   display: flex;
   flex-direction: column;
@@ -654,8 +298,8 @@
 .top3-card{
   border-radius: 14px;
   padding: .9rem 1rem;
-  background: rgba(25,71,63,.05);
-  border: 1px solid rgba(25,71,63,.10);
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
 }
 
 .top3-row{
@@ -671,7 +315,7 @@
 }
 
 .top3-meta{
-  color: rgba(0,0,0,.55);
+  color: var(--text-soft);
   font-size:.85rem;
   margin-top: 2px;
 }
@@ -679,7 +323,7 @@
 .mini-bar{
   height: 8px;
   border-radius: 999px;
-  background: rgba(25,71,63,.12);
+  background: var(--border);
   overflow:hidden;
   margin-top: 10px;
 }
@@ -690,9 +334,60 @@
   border-radius: 999px;
 }
 
-/* Tablas: menos “pesadas” */
+/* ======================================================
+   ATTENDANCE CHECKLIST (MODAL)
+====================================================== */
+
+.attendance-box{
+  max-height: 55vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.5rem;
+  background: var(--card);
+}
+
+.attendance-item{
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.5rem;
+
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  cursor: pointer;
+  user-select: none;
+}
+
+.attendance-item:active{
+  background: var(--club-gray);
+}
+
+.attendance-item input[type="checkbox"]{
+  transform: scale(1.4);
+}
+
+.attendance-name{
+  flex: 1;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.attendance-number{
+  font-size: 0.9rem;
+  color: var(--text-soft);
+}
+
+/* ======================================================
+   TABLES (Attendance) — clean
+====================================================== */
+
 .attendance-page .table thead{
-  background: rgba(25,71,63,.95);
+  background: var(--club-green);
   color: #fff;
 }
 
@@ -701,14 +396,17 @@
 }
 
 .attendance-page .table tbody tr{
-  border-color: rgba(0,0,0,.06);
+  border-color: var(--border);
 }
 
 .attendance-page .table tbody tr:hover{
-  background: rgba(232,206,38,.10);
+  background: var(--bg-soft);
 }
 
-/* Pills */
+/* ======================================================
+   Pills / Badges (Attendance)
+====================================================== */
+
 .pill{
   display:inline-flex;
   align-items:center;
@@ -717,141 +415,167 @@
   border-radius:999px;
   font-size:.82rem;
   font-weight:800;
-  border: 1px solid rgba(25,71,63,.15);
-  background: rgba(25,71,63,.06);
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
   color: var(--club-green);
 }
 
-.pill--good{ background: rgba(25,71,63,.10); }
-.pill--warn{ background: rgba(232,206,38,.18); }
+.pill--good{
+  background: var(--bg-soft);
+}
+
+.pill--warn{
+  background: color-mix(in srgb, var(--club-yellow) 22%, white);
+}
 
 /* ======================================================
-   HOME / DASHBOARD PAGE
+   Mobile cards (Attendance)
 ====================================================== */
 
-.dashboard-page {
-  padding-bottom: 2rem;
-}
-
-/* KPIs */
-.dashboard-page .kpi-box {
-  background: #fff;
+.mobile-card{
   border-radius: 16px;
-  padding: 1.25rem 1.25rem;
-  text-align: center;
-  border: 1px solid rgba(25, 71, 63, 0.12);
-  box-shadow: 0 10px 25px rgba(25, 71, 63, 0.08);
-  position: relative;
-  overflow: hidden;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  margin-bottom: .75rem;
 }
 
-/* barrita izquierda */
-.dashboard-page .kpi-box::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  background: var(--club-green);
-}
-
-/* números KPI */
-.dashboard-page .kpi-value {
-  font-size: 2.6rem;
+.mobile-card__title{
   font-weight: 900;
   color: var(--club-green);
-  line-height: 1;
-  letter-spacing: -1px;
 }
 
-/* label KPI */
-.dashboard-page .kpi-label {
-  display: block;
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: rgba(0,0,0,0.55);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.mobile-card__sub{
+  color: var(--text-soft);
+  font-size: .9rem;
+}
+
+.mobile-card__row{
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  align-items: center;
+  margin-top: .6rem;
+}
+
+.progress.slim{
+  height: 10px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.progress.slim .progress-bar{
+  background: var(--club-yellow);
+}
+
+/* Pequena mejora del input search */
+#playerSearch.form-control{
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  border: 1px solid var(--border);
+}
+
+/* ======================================================
+   PLAYER MODAL (ROSTER) — FULLSCREEN
+   (versión CLARA para dashboard SaaS)
+====================================================== */
+
+.player-modal{
+  background: var(--card);
+  color: var(--text);
+}
+
+.player-modal__header{
+  background: linear-gradient(90deg, var(--club-green), var(--club-green-dark));
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+.player-modal__subtitle{
+  opacity: .85;
+  font-size: .85rem;
+}
+
+.player-modal__body{
+  background: var(--card);
+}
+
+.player-modal__footer{
+  background: var(--bg-soft);
+  border-top: 1px solid var(--border);
+}
+
+.player-modal .form-label{
+  color: var(--text-soft);
+}
+
+.player-modal .form-control,
+.player-modal .form-select{
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.player-modal .form-control:focus,
+.player-modal .form-select:focus{
+  border-color: var(--club-yellow);
+  box-shadow: 0 0 0 .2rem rgba(232,206,38,.18);
+}
+
+.player-modal .btn-warning{
+  background: var(--club-yellow);
+  border-color: var(--club-yellow);
+  color: #1a1a1a;
   font-weight: 800;
 }
 
-/* Cards principales */
-.dashboard-page .alerts-card,
-.dashboard-page .next-tournament-card,
-.dashboard-page .birthdays-card {
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid rgba(25, 71, 63, 0.12);
-  box-shadow: 0 10px 25px rgba(25, 71, 63, 0.08);
-  padding: 1.2rem 1.25rem;
+.player-modal .form-check-label{
+  color: var(--text-soft);
 }
 
-/* títulos */
-.dashboard-page .alerts-card h3,
-.dashboard-page .next-tournament-card h3,
-.dashboard-page .birthdays-card h3 {
-  font-size: 1.1rem;
-  font-weight: 900;
-  color: var(--club-green);
-  margin-bottom: 0.85rem;
+/* ======================================================
+   Offcanvas (Bootstrap) — theme-driven
+====================================================== */
+
+.offcanvas{
+  background: var(--card);
+  border-left: 1px solid var(--border);
 }
 
-.dashboard-page .alerts-list { 
-  display: grid; gap: .6rem; 
-}
-
-/* Alertas - usa tus alert-item */
-.dashboard-page #alertsList {
-  margin: 0;
-  padding: 0;
-}
-
-/* Próximo torneo: estilo Volcanes sin degradado */
-.dashboard-page .next-tournament-card {
+.offcanvas-header{
   background: var(--club-green);
   color: #fff;
-  border: none;
 }
 
-.dashboard-page .next-tournament-card h3 {
-  color: var(--club-yellow);
+.offcanvas-header .btn-close{
+  filter: invert(1);
 }
 
-.dashboard-page .next-tournament-card .t-date {
-  font-size: 1.6rem;
-  font-weight: 900;
-  margin: 0;
+.offcanvas-title{
+  font-family: var(--font-title, system-ui, -apple-system, sans-serif);
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
-.dashboard-page .next-tournament-card .t-name {
-  opacity: 0.92;
-  margin: 0;
+.offcanvas-body a{
+  display: block;
+  padding: 0.75rem 0;
+  font-weight: 700;
+  color: var(--club-green);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
 }
 
-
-/* Cumpleaños */
-.dashboard-page #birthdaysList {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: #212529;
+.offcanvas-body a:hover{
+  color: var(--club-green-dark);
 }
 
-.dashboard-page .birthday-item {
-  padding: 6px 8px;
-  border-radius: 10px;
-  margin-bottom: 6px;
-  background: rgba(25, 71, 63, 0.06);
-}
-
-.dashboard-page .birthday-item.today {
+.offcanvas-body a.active{
   background: var(--club-yellow);
   color: var(--club-green);
-  font-weight: 900;
-}
-
-.dashboard-page .birthday-item span {
-  color: inherit;
+  border-radius: 10px;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 /* ======================================================
@@ -859,10 +583,10 @@
 ====================================================== */
 
 .card-soft{
-  background:#fff;
+  background: var(--card);
   border-radius:16px;
   box-shadow:0 6px 18px rgba(0,0,0,.06);
-  border:1px solid rgba(0,0,0,.06);
+  border:1px solid var(--border);
 }
 
 .disabled-overlay{
@@ -871,25 +595,26 @@
   pointer-events:none;
   filter:grayscale(0.3);
 }
+
 /* ======================================================
    Playbook
 ====================================================== */
 
 /* Playbook tabs (estilo club, no azul) */
-#playbookTabs .nav-link {
+#playbookTabs .nav-link{
   border-radius: 999px;
   background: var(--club-gray);
   color: var(--club-green);
-  border: 1px solid rgba(0,0,0,.08);
-  font-weight: 600;
+  border: 1px solid var(--border);
+  font-weight: 700;
 }
 
-#playbookTabs .nav-link:hover {
-  background: #fff;
-  border-color: rgba(0,0,0,.12);
+#playbookTabs .nav-link:hover{
+  background: var(--card);
+  border-color: var(--border);
 }
 
-#playbookTabs .nav-link.active {
+#playbookTabs .nav-link.active{
   background: var(--club-green);
   color: #fff;
   border-color: var(--club-green);
@@ -899,28 +624,14 @@
    RESPONSIVE (HOME + attendance)
 ====================================================== */
 
-@media (max-width: 992px) {
-  .dashboard-page .kpi-value { 
-    font-size: 2.2rem; 
-  }
-
-  .dashboard-page .kpi-row {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-page .home-main {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 992px){
+  .dashboard-page .kpi-value{ font-size: 2.2rem; }
+  .dashboard-page .kpi-row{ grid-template-columns: 1fr; }
+  .dashboard-page .home-main{ grid-template-columns: 1fr; }
 }
 
 /* mobile tuning */
-@media (max-width: 576px) {
-  .attendance-box {
-    max-height: 60vh;
-  }
-
-  .attendance-item {
-    padding: 1.1rem;
-  }
+@media (max-width: 576px){
+  .attendance-box{ max-height: 60vh; }
+  .attendance-item{ padding: 1.1rem; }
 }
-
