@@ -31,7 +31,8 @@ body {
 ========================= */
 @font-face {
   font-family: "Recons";
-  src: url("./fonts/Recons-Regular.ttf") format("truetype");
+  src: url("./fonts/Recons-Regular.woff2") format("woff2"),
+       url("./fonts/Recons-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
 }
