@@ -19,13 +19,16 @@ export async function loginWithGoogle() {
   }
 }
 
-export function watchAuth(onLoggedIn) {
-  onAuthStateChanged(auth, user => {
+export function watchAuth(onLoggedIn, opts = {}) {
+  const redirectTo = opts.redirectTo ?? "/index.html";
+
+  return onAuthStateChanged(auth, (user) => {
     if (!user) {
-      window.location.href = "index.html";
-    } else {
-      if (onLoggedIn) onLoggedIn(user);
+      //replace evita volver atrás al “pantallazo” protegido
+      window.location.replace(redirectTo);
+      return;
     }
+    onLoggedIn?.(user);
   });
 }
 
