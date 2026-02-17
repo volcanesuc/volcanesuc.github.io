@@ -16,6 +16,8 @@
   --card: #151c1a;
   --text: #ffffff;
   --border: #1f2a28;
+  --font-title: "Recons", system-ui, -apple-system, sans-serif;
+  --font-body: system-ui, -apple-system, sans-serif;
 }
 
 /* =========================
@@ -23,11 +25,11 @@
 ========================= */
 * { box-sizing: border-box; }
 
-body {
+body{
   margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  color: #222;
-  background: #fff;
+  font-family: var(--font-body, system-ui, -apple-system, sans-serif);
+  color: var(--text, #222);
+  background: var(--bg, #fff);
 }
 
 /* =========================
@@ -35,14 +37,15 @@ body {
 ========================= */
 @font-face {
   font-family: "Recons";
-  src: url("./fonts/Recons-Regular.woff2") format("woff2"),
-       url("./fonts/Recons-Regular.ttf") format("truetype");
+  src: url("/fonts/Recons-Regular.woff2") format("woff2"),
+       url("/fonts/Recons-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
 }
 
-h1 {
-  font-family: "Recons";
+.page-title,
+h1, h2, h3{
+  font-family: var(--font-title, system-ui, -apple-system, sans-serif);
   color: var(--club-green);
 }
 

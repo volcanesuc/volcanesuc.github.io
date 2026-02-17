@@ -78,7 +78,7 @@ function applyThemeFromConfig() {
   /* 🔤 FONT dinámica */
   if (t.font?.name) {
     root.style.setProperty(
-      "--font-main",
+      "--font-title",
       `"${t.font.name}", system-ui, -apple-system, sans-serif`
     );
     document.body.style.fontFamily =
