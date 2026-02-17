@@ -16,6 +16,7 @@ export const APP_CONFIG = {
       primaryLight: "#2c6b61",
       accent: "#e8ce26",
       accentSoft: "#f4e47a",
+      clubGray: "#f4f4f4",
       bg: "#0b0f0e",
       bgSoft: "#111716",
       card: "#151c1a",
