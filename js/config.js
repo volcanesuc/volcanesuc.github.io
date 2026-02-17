@@ -11,7 +11,7 @@ export const APP_CONFIG = {
 
   theme: {
     colors: {
-      primary: "#19473f",
+      primary: "#d13b27",
       primaryDark: "#12352f",
       primaryLight: "#2c6b61",
       accent: "#e8ce26",
