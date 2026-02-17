@@ -44,9 +44,11 @@ body{
 }
 
 .page-title,
-h1, h2, h3{
+.topbar .logo-link,
+#app-header .top-tab,
+.nav-tabs a,
+.offcanvas-title, h1{
   font-family: var(--font-title, system-ui, -apple-system, sans-serif);
-  color: var(--club-green);
 }
 
 /* =========================

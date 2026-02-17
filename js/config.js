@@ -22,7 +22,7 @@ export const APP_CONFIG = {
       card: "#ffffff",
       text: "#1f2328",
       textSoft: "#6b7280",
-      border: "#1f2a28"
+      border: "#e5e7eb"
     },
 
     font: {
@@ -75,14 +75,12 @@ function applyThemeFromConfig() {
     if (c[key]) root.style.setProperty(cssVar, c[key]);
   }
 
-  /* 🔤 FONT dinámica */
+  /* FONT (solo títulos) */
   if (t.font?.name) {
     root.style.setProperty(
-      "--font-main",
+      "--font-title",
       `"${t.font.name}", system-ui, -apple-system, sans-serif`
     );
-    document.body.style.fontFamily =
-      `"${t.font.name}", system-ui, -apple-system, sans-serif`;
   }
 
   /* 🖼 logo dinámico */
