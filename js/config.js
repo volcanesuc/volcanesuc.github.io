@@ -38,10 +38,62 @@ export const APP_CONFIG = {
     apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
     authDomain: "rifavolcanes.firebaseapp.com",
     projectId: "rifavolcanes",
-    apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
     storageBucket: "rifavolcanes.firebasestorage.app",
     messagingSenderId: "991215068881",
     appId: "1:991215068881:web:6fb46dab34bf1a572a47f0",
     measurementId: "G-6ZYXBJW3JY"
   }
 };
+
+/* ========================================
+   APPLY THEME AUTO (runs on import)
+======================================== */
+function applyThemeFromConfig() {
+  const t = APP_CONFIG?.theme;
+  if (!t) return;
+
+  const root = document.documentElement;
+  const c = t.colors || {};
+
+  /* 🎨 map config -> CSS variables existentes */
+  const map = {
+    primary: "--club-green",
+    primaryDark: "--club-green-dark",
+    primaryLight: "--club-green-light",
+    accent: "--club-yellow",
+    clubGray: "--club-gray",
+
+    bg: "--bg",
+    bgSoft: "--bg-soft",
+    card: "--card",
+    text: "--text",
+    textSoft: "--text-soft",
+    border: "--border"
+  };
+
+  for (const [key, cssVar] of Object.entries(map)) {
+    if (c[key]) root.style.setProperty(cssVar, c[key]);
+  }
+
+  /* 🔤 FONT dinámica */
+  if (t.font?.name) {
+    root.style.setProperty(
+      "--font-main",
+      `"${t.font.name}", system-ui, -apple-system, sans-serif`
+    );
+    document.body.style.fontFamily =
+      `"${t.font.name}", system-ui, -apple-system, sans-serif`;
+  }
+
+  /* 🖼 logo dinámico */
+  if (t.logo) {
+    document.querySelectorAll(".club-logo").forEach(img => {
+      img.src = t.logo;
+    });
+  }
+}
+
+/* auto run solo en browser */
+if (typeof window !== "undefined") {
+  applyThemeFromConfig();
+}

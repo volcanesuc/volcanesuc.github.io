@@ -1,4 +1,5 @@
 // js/index.js
+import "./config.js";
 import { loginWithGoogle } from "./auth.js";
 import { CLUB_DATA } from "./strings.js";
 
