@@ -210,14 +210,20 @@ async function loadDrills() {
 
 
 async function loadTrainings() {
-  const qy = query(
-    collection(db, COL_PLAYBOOK_TRAININGS),
-    where("clubId", "==", clubId),
-    orderBy("date", "desc")
-  );
+  const base = [where("clubId", "==", clubId)];
 
+  // Sin orderBy para evitar índice compuesto
+  const qy = query(collection(db, COL_PLAYBOOK_TRAININGS), ...base);
   const snap = await getDocs(qy);
+
   trainings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  // Orden local por date desc
+  trainings.sort((a, b) => {
+    const da = a.date?.toDate?.() ?? (a.date ? new Date(a.date) : new Date(0));
+    const dbb = b.date?.toDate?.() ?? (b.date ? new Date(b.date) : new Date(0));
+    return dbb - da;
+  });
 
   renderTrainingsList();
 
