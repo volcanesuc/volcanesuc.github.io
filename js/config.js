@@ -17,11 +17,11 @@ export const APP_CONFIG = {
       accent: "#e8ce26",
       accentSoft: "#f4e47a",
       clubGray: "#f4f4f4",
-      bg: "#0b0f0e",
-      bgSoft: "#111716",
-      card: "#151c1a",
-      text: "#ffffff",
-      textSoft: "#b7c9c5",
+      bg: "#f5f6f8",
+      bgSoft: "#fafafa",
+      card: "#ffffff",
+      text: "#1f2328",
+      textSoft: "#6b7280",
       border: "#1f2a28"
     },
 
