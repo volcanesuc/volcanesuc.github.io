@@ -7,23 +7,26 @@
   <title>Asociado</title>
 
   <style>
-    /* Ajustá a tu design system si ya tenés CSS global */
     .page {
       max-width: 900px;
       margin: 0 auto;
       padding: 16px;
-      padding-bottom: 88px; /* espacio para la barra inferior sticky */
+      padding-bottom: 88px;
     }
-    .meta { color: #666; font-size: 12px; margin-top: 4px; }
+
+    .meta { color: var(--text-soft, #666); font-size: 12px; margin-top: 4px; }
     .field { margin: 12px 0; }
-    label { display:block; font-weight: 600; margin-bottom: 6px; }
+    label { display:block; font-weight: 600; margin-bottom: 6px; color: var(--text, #111); }
+
     input, select, textarea {
       width: 100%;
       padding: 10px 12px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--border, #ddd);
       border-radius: 10px;
       font-size: 14px;
       box-sizing: border-box;
+      background: var(--card, #fff);
+      color: var(--text, #111);
     }
     textarea { min-height: 110px; resize: vertical; }
 
@@ -33,7 +36,7 @@
     .checkline { display:flex; align-items:center; gap:10px; margin-top: 8px; }
     .checkline input[type="checkbox"]{ width:auto; }
 
-    /* Barra de acciones abajo */
+    /* Barra sticky abajo */
     .form-actions{
       position: sticky;
       bottom: 0;
@@ -41,33 +44,54 @@
       align-items: center;
       gap: 10px;
       padding: 12px 16px;
-      background: #fff;
-      border-top: 1px solid #eee;
+      background: var(--bg-soft, #fff);
+      border-top: 1px solid var(--border, #eee);
       border-radius: 14px 14px 0 0;
       box-shadow: 0 -6px 18px rgba(0,0,0,.06);
       max-width: 900px;
       margin: 0 auto;
     }
+
     .spacer{ flex: 1; }
+
     button{
       padding: 10px 14px;
       border-radius: 12px;
-      border: 1px solid #ddd;
-      background: #fff;
+      border: 1px solid var(--border, #ddd);
+      background: var(--card, #fff);
+      color: var(--text, #111);
       font-weight: 600;
       cursor: pointer;
     }
-    button.primary{ background: #111; color: #fff; border-color:#111; }
-    button.danger{ background: #fff; color:#b00020; border-color:#f2c1c7; }
+
+    button.primary{
+      background: var(--club-green, #111);
+      color: #fff;
+      border-color: var(--club-green, #111);
+    }
+    button.primary:hover{ background: var(--club-green-light, #2c6b61); }
+
+    button.danger{
+      background: transparent;
+      color: #b00020;
+      border-color: #f2c1c7;
+    }
+
     button:disabled{ opacity:.6; cursor:not-allowed; }
 
-    /* Títulos */
-    h1{ margin: 6px 0 0; font-size: 22px; }
-    .subtitle{ margin: 6px 0 0; color:#555; }
+    h1{ margin: 6px 0 0; font-size: 22px; color: var(--text, #111); }
+    .subtitle{ margin: 6px 0 0; color: var(--text-soft, #555); }
 
-    /* Header placeholder (si loadHeader inyecta contenido aquí) */
     #headerMount{ margin-bottom: 10px; }
+
+    /* Si tu app es dark */
+    body{
+      background: var(--bg, #fff);
+      color: var(--text, #111);
+      font-family: var(--font-main, system-ui);
+    }
   </style>
+
 </head>
 
 <body>
