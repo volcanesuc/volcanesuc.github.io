@@ -190,10 +190,13 @@ function getSelectedInstallmentIdsFromUI(){
   if (pagePill) pagePill.textContent = "Cargando…";
   disableForm(true);
 
-  try{
+  try {
     const auth = getAuth();
-    await signInAnonymously(auth);
-  }catch(e){
+    if (!auth.currentUser) { // Si ya hay sesión, no re-auth
+      await signInAnonymously(auth);
+    }
+    console.log("auth uid:", auth.currentUser?.uid, "anon:", auth.currentUser?.isAnonymous);
+  } catch (e) {
     console.warn("Anonymous auth no disponible:", e);
   }
 
@@ -489,10 +492,17 @@ async function onSubmit(e){
     const selectedInstallmentIds = getSelectedInstallmentIdsFromUI();
     const installmentIdCompat = selectedInstallmentIds.length === 1 ? selectedInstallmentIds[0] : null;
 
+    const auth = getAuth();
+    const uid = auth.currentUser?.uid;
+
+    if (!uid) {
+      throw Object.assign(new Error("not_authenticated"), { code: "auth/not-authenticated" });
+    }
+
     // 1) Crear submission (para usar sid en path)
     const submissionDoc = await addDoc(collection(db, COL_SUBMISSIONS), {
       membershipId: mid,
-
+      userId: uid,
       // compat + multi
       installmentId: installmentIdCompat,
       selectedInstallmentIds: selectedInstallmentIds.length ? selectedInstallmentIds : [],
@@ -598,7 +608,11 @@ async function onSubmit(e){
 
     const code = err?.code || "";
     const msg =
-      code === "storage/unauthorized"
+      code === "auth/not-authenticated"
+        ? "❌ No se pudo autenticar (sesión anónima). Recargá el link e intentá de nuevo."
+      : code === "permission-denied"
+        ? "❌ Permisos insuficientes (Firestore Rules)."
+      : code === "storage/unauthorized"
         ? "❌ No tenés permiso para subir el archivo. (Revisá Storage Rules y Auth anónimo)."
       : code === "storage/retry-limit-exceeded"
         ? "❌ Falló la subida (reintentos agotados). Probá con otra red o un archivo más liviano."
