@@ -1,10 +1,36 @@
 export const APP_CONFIG = {
-  version: "0.2",
-   club: {
+  version: "0.3",
+
+  club: {
     id: "volcanes",
+    name: "Volcanes Ultimate",
     playersCollection: "club_players",
     tournamentsCollection: "tournaments",
     trainingsCollection: "trainings"
+  },
+
+  theme: {
+    colors: {
+      primary: "#19473f",
+      primaryDark: "#12352f",
+      primaryLight: "#2c6b61",
+      accent: "#e8ce26",
+      accentSoft: "#f4e47a",
+      bg: "#0b0f0e",
+      bgSoft: "#111716",
+      card: "#151c1a",
+      text: "#ffffff",
+      textSoft: "#b7c9c5",
+      border: "#1f2a28"
+    },
+
+    font: {
+      name: "Recons",
+      url: "/fonts/Recons-Regular.woff2",
+      ttf: "/fonts/Recons-Regular.ttf"
+    },
+
+    logo: "/img/logos/volcano_logo.jpg"
   },
   // Firebase (centralizado)
   firebase: {
