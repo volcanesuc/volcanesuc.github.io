@@ -11,7 +11,7 @@ export const APP_CONFIG = {
 
   theme: {
     colors: {
-      primary: "#d13b27",
+      primary: "#19473f",
       primaryDark: "#12352f",
       primaryLight: "#2c6b61",
       accent: "#e8ce26",
@@ -78,7 +78,7 @@ function applyThemeFromConfig() {
   /* 🔤 FONT dinámica */
   if (t.font?.name) {
     root.style.setProperty(
-      "--font-title",
+      "--font-main",
       `"${t.font.name}", system-ui, -apple-system, sans-serif`
     );
     document.body.style.fontFamily =
