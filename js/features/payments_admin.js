@@ -798,6 +798,14 @@ function bindEvents() {
 /* =========================
    Public API
 ========================= */
+async function ensureAdmin(user) {
+  const roleSnap = await getDoc(doc(db, "user_roles", user.uid));
+  const role = roleSnap.data()?.role;
+  const active = roleSnap.data()?.active;
+
+  return roleSnap.exists() && role === "admin" && active !== false;
+}
+
 export async function mount(container, cfg) {
   allSubs = [];
   currentSub = null;
@@ -810,6 +818,19 @@ export async function mount(container, cfg) {
 
   watchAuth(async (user) => {
     if (!user) return;
+
+    //antes de pedir submissions, confirmá admin
+    const ok = await ensureAdmin(user);
+
+    if (!ok) {
+      console.warn("[payments_admin] No es admin según user_roles");
+      $.tbody.innerHTML = `<tr><td colspan="8" class="text-danger p-3">
+        No tenés permisos de admin (user_roles/${user.uid}).
+      </td></tr>`;
+      return;
+    }
+
     await loadSubmissions();
   });
 }
+
