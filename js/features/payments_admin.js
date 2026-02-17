@@ -161,9 +161,28 @@ function getFileUrl(s) {
 /* =========================
    Installments/membership helpers
 ========================= */
-function isSettledInstallmentStatus(st) {
-  const s = (st || "pending").toString().toLowerCase();
+function isSettledInstallment(st) {
+  const s = (st || "pending").toLowerCase();
   return s === "validated" || s === "paid";
+}
+
+function computeInstallmentsSummary(installments) {
+  const total = installments.length;
+
+  const settled = installments.filter(it =>
+    isSettledInstallment(it.status)
+  ).length;
+
+  // próxima cuota no pagada
+  const next = installments
+    .filter(it => !isSettledInstallment(it.status) && it.dueDate)
+    .sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))[0];
+
+  return {
+    installmentsTotal: total,
+    installmentsSettled: settled,
+    nextUnpaidDueDate: next?.dueDate || null
+  };
 }
 
 async function loadInstallmentsForMembership(membershipId) {
@@ -579,6 +598,7 @@ async function applyDecision(sub, decision /* "validated" | "rejected" */) {
 
     // 4) Reload installments + submissions for membership (para decidir link + status)
     const inst = await loadInstallmentsForMembership(membershipId);
+    const instSummary = computeInstallmentsSummary(inst);
 
     const subsQ = query(collection(db, COL_SUBMISSIONS), where("membershipId", "==", membershipId));
     const subsSnap = await getDocs(subsQ);
@@ -610,6 +630,9 @@ async function applyDecision(sub, decision /* "validated" | "rejected" */) {
       payLinkEnabled,
       payLinkDisabledReason,
       status: nextStatus,
+      installmentsTotal: instSummary.installmentsTotal,
+      installmentsSettled: instSummary.installmentsSettled,
+      nextUnpaidDueDate: instSummary.nextUnpaidDueDate,
     };
 
     if (decision === "validated") mUpdates.validatedAt = serverTimestamp();
