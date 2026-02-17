@@ -43,12 +43,19 @@ body{
   font-style: normal;
 }
 
+/* títulos del sistema */
 .page-title,
 .topbar .logo-link,
 #app-header .top-tab,
-.nav-tabs a,
-.offcanvas-title, h1{
+.offcanvas-title{
   font-family: var(--font-title, system-ui, -apple-system, sans-serif);
+}
+
+/* 👇 tabs bootstrap pills (playbook + association) */
+.nav-pills .nav-link{
+  font-family: var(--font-title, system-ui, -apple-system, sans-serif);
+  font-weight: 700;
+  letter-spacing: .03em;
 }
 
 /* =========================
