@@ -52,7 +52,6 @@ const pageSubtitle = document.getElementById("pageSubtitle");
 const tName = document.getElementById("tName");
 const tMeta = document.getElementById("tMeta");
 const tDates = document.getElementById("tDates");
-const detailBtn = document.getElementById("detailBtn");
 const tOfficialLink = document.getElementById("tOfficialLink");
 
 const errorBox = document.getElementById("errorBox");
@@ -199,10 +198,6 @@ watchAuth(async () => {
     if (!tournament) {
       showError("No se encontró el torneo.");
       return;
-    }
-
-    if (detailBtn) {
-      detailBtn.href = `tournament_detail.html?id=${encodeURIComponent(tournamentId)}`;
     }
 
     initLegendFiltersUX();
