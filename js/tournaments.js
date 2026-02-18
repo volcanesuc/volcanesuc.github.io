@@ -117,7 +117,7 @@ function render() {
 }
 
 function rosterUrl(id) {
-  return `tournament_roster.html?id=${encodeURIComponent(id)}`;
+  return `pages/admin/tournament_roster.html?id=${encodeURIComponent(id)}`;
 }
 
 function renderTable(list) {

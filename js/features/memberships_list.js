@@ -80,7 +80,7 @@ function statusRank(st) {
 
 function payUrl(mid, code) {
   const base = `${window.location.origin}${window.location.pathname.replace(/\/[^/]+$/, "/")}`;
-  return `${base}membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code || "")}`;
+  return `${base}pages/admin/membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code || "")}`;
 }
 
 async function copyToClipboard(text) {
@@ -419,7 +419,7 @@ export async function mount(container, cfg) {
 
   $.logoutBtn?.addEventListener("click", logout);
 
-  $.btnNewMembership?.addEventListener("click", () => openModal("membership_modal.html"));
+  $.btnNewMembership?.addEventListener("click", () => openModal("partials/membership_modal.html"));
 
   if (!_msgListenerBound) {
     _msgListenerBound = true;
@@ -446,7 +446,7 @@ export async function mount(container, cfg) {
     const code = btn.dataset.code || "";
 
     if (action === "detail") {
-      window.open(`membership_detail.html?mid=${encodeURIComponent(mid)}`, "_blank", "noopener");
+      window.open(`pages/admin/membership_detail.html?mid=${encodeURIComponent(mid)}`, "_blank", "noopener");
       return;
     }
     if (action === "copyPayLink") {

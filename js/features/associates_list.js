@@ -407,7 +407,7 @@ function baseDir() {
 
 function payUrlForMembership(m) {
   if (!m?.id || !m?.payCode) return null;
-  return `${baseDir()}membership_pay.html?mid=${encodeURIComponent(m.id)}&code=${encodeURIComponent(m.payCode)}`;
+  return `${baseDir()}pages/admin/membership_pay.html?mid=${encodeURIComponent(m.id)}&code=${encodeURIComponent(m.payCode)}`;
 }
 
 function normalizePhoneForWa(phone) {
@@ -481,7 +481,7 @@ function render() {
 
   const payUrlForMembership = (m) => {
     if (!m?.id || !m?.payCode) return null;
-    return `${baseDir()}membership_pay.html?mid=${encodeURIComponent(m.id)}&code=${encodeURIComponent(m.payCode)}`;
+    return `${baseDir()}pages/admin/membership_pay.html?mid=${encodeURIComponent(m.id)}&code=${encodeURIComponent(m.payCode)}`;
   };
 
   const waMsgFor = (payLink) =>
@@ -564,7 +564,7 @@ function render() {
   $.root.querySelectorAll(".btnEdit").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.id;
-      openModal(`associate_modal.html?aid=${encodeURIComponent(id)}`);
+      openModal(`partials/associate_modal.html?aid=${encodeURIComponent(id)}`);
     });
   });
 }
@@ -586,7 +586,7 @@ export async function mount(container, cfg) {
   $.statusFilter?.addEventListener("change", render);
   $.assocFilter?.addEventListener("change", render);
 
-  $.btnNewAssociate?.addEventListener("click", () => openModal(`associate_modal.html`));
+  $.btnNewAssociate?.addEventListener("click", () => openModal(`partials/associate_modal.html`));
 
   watchAuth(async (user) => {
     if (!user) return;

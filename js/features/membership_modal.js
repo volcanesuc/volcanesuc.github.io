@@ -109,12 +109,12 @@ function planDisplay(p){
 
 function setResultLink(mid, code){
   const baseDir = window.location.href.replace(/\/[^/]+$/, "/");
-  const url = `${baseDir}membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code)}`;
+  const url = `${baseDir}pages/admin/membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code)}`;
 
   resultBox.style.display = "block";
   payLinkText.textContent = url;
   btnOpenLink.href = url;
-  btnGoDetail.href = `${baseDir}membership_detail.html?mid=${encodeURIComponent(mid)}`;
+  btnGoDetail.href = `${baseDir}pages/admin/membership_detail.html?mid=${encodeURIComponent(mid)}`;
 }
 
 function clearResultLink(){
@@ -456,7 +456,7 @@ async function createMembership(){
 
         // Abrir detalle en nueva pestaña (admin)
         const baseDir = window.location.href.replace(/\/[^/]+$/, "/");
-        window.open(`${baseDir}membership_detail.html?mid=${encodeURIComponent(existing.id)}`, "_blank", "noopener");
+        window.open(`${baseDir}pages/admin/membership_detail.html?mid=${encodeURIComponent(existing.id)}`, "_blank", "noopener");
 
         // avisar host para refrescar listas (por si quieren resaltar)
         post("membership:created", { id: existing.id, associateId: selectedAssociate.id, season, existed: true });

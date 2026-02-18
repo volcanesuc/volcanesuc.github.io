@@ -131,7 +131,7 @@ function getCurrency() {
 
 function payUrl(mid, code) {
   const base = `${window.location.origin}${window.location.pathname.replace(/\/[^/]+$/, "/")}`;
-  return `${base}membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code || "")}`;
+  return `${base}pages/admin/membership_pay.html?mid=${encodeURIComponent(mid)}&code=${encodeURIComponent(code || "")}`;
 }
 
 function getInstallmentById(id) {

@@ -218,7 +218,7 @@ function renderNextTournament(tournaments) {
 }
 
 function tournamentRosterUrl(id) {
-  return `tournament_roster.html?id=${encodeURIComponent(id)}`;
+  return `pages/admin/tournament_roster.html?id=${encodeURIComponent(id)}`;
 }
 
 function setNextTournamentCardLink(tournamentId) {
