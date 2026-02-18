@@ -8,7 +8,7 @@ import { TOURNAMENT_STRINGS } from "../strings.js";
 import { Player } from "../models/player.js";
 import { createTournamentEditor } from "./tournament_editor.js";
 import { loadPartialOnce } from "../ui/loadPartial.js";
-import { createPaymentModal, sumPayments } from "./features/payment_modal.js";
+import { createPaymentModal, sumPayments } from "./payment_modal.js";
 
 import {
   collection,
