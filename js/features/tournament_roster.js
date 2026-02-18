@@ -1,11 +1,11 @@
 // js/tournament_roster.js
-import { db } from "./firebase.js";
-import { watchAuth, logout } from "./auth.js";
-import { APP_CONFIG } from "./config.js";
-import { showLoader, hideLoader } from "./ui/loader.js";
-import { loadHeader } from "./components/header.js";
-import { TOURNAMENT_STRINGS } from "./strings.js";
-import { Player } from "./models/player.js";
+import { db } from "../firebase.js";
+import { watchAuth, logout } from "../auth.js";
+import { APP_CONFIG } from "../config.js";
+import { showLoader, hideLoader } from "../ui/loader.js";
+import { loadHeader } from "../components/header.js";
+import { TOURNAMENT_STRINGS } from "../strings.js";
+import { Player } from "../models/player.js";
 
 // edit tournament imports
 import { createTournamentEditor } from "./features/tournament_editor.js";
