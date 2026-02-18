@@ -1,4 +1,4 @@
-// js/features/playbook/playbook.js
+// /js/features/playbook/playbook.js
 import { db } from "../../firebase.js";
 import { watchAuth } from "../../auth.js";
 import { showLoader, hideLoader } from "../../ui/loader.js";
@@ -9,6 +9,9 @@ import { loadHeader } from "../../components/header.js";
 import { CLUB_DATA } from "../../strings.js";
 import { PLAYBOOK_STRINGS as S } from "../../strings/playbook_strings.js";
 
+import { loadPartialOnce } from "../../ui/loadPartial.js";
+import { createTrainingEditor } from "./training_editor.js";
+
 import {
   collection,
   getDocs,
@@ -18,7 +21,6 @@ import {
   serverTimestamp,
   query,
   where,
-  orderBy,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================
@@ -37,16 +39,14 @@ let canEdit = false;
 let drills = [];
 let trainings = [];
 
-let selectedTrainingId = null;
-let selectedTraining = null;
-let trainingWorkingRefs = []; // [{drillId, order}]
+let trainingEditor = null;
 
 /* =========================
-   INIT (igual patrón dashboard)
+   INIT
 ========================= */
 const { cfg, redirected } = await guardPage("playbook");
 if (!redirected) {
-  await loadHeader("playbook", cfg); // 👈 entry point para navegar + colores club
+  await loadHeader("playbook", cfg);
 }
 
 cacheDom();
@@ -55,11 +55,12 @@ bindEvents();
 watchAuth(async () => {
   showLoader();
   try {
-    // permisos recomendados: admin edita, otros ven
     canEdit = isAdminFromCfg(cfg);
     setRoleUI();
 
-    $.pageSubtitle.textContent = canEdit ? S.ui.subtitleAdmin : S.ui.subtitleViewer;
+    $.pageSubtitle.textContent = canEdit
+      ? (S.ui?.subtitleAdmin || "Admin")
+      : (S.ui?.subtitleViewer || "Viewer");
 
     await loadDrills();
     await loadTrainings();
@@ -81,27 +82,24 @@ function isAdminFromCfg(cfg) {
 
 function setRoleUI() {
   const badge = $.roleBadge;
-  badge.classList.remove("d-none");
+  if (badge) badge.classList.remove("d-none");
 
   if (canEdit) {
-    badge.className = "badge text-bg-primary";
-    badge.textContent = "ADMIN (EDIT)";
-
+    if (badge) {
+      badge.className = "badge text-bg-primary";
+      badge.textContent = "ADMIN (EDIT)";
+    }
     $.openCreateDrillBtn?.classList.remove("d-none");
-    $.trainingCreateBox.classList.remove("d-none");
-    $.trainingDrillAddBox.classList.remove("d-none");
-    $.saveTrainingBtn.classList.remove("d-none");
+    $.openCreateTrainingBtn?.classList.remove("d-none");
   } else {
-    badge.className = "badge text-bg-secondary";
-    badge.textContent = "VIEW ONLY";
-
+    if (badge) {
+      badge.className = "badge text-bg-secondary";
+      badge.textContent = "VIEW ONLY";
+    }
     $.openCreateDrillBtn?.classList.add("d-none");
-    $.trainingCreateBox.classList.add("d-none");
-    $.trainingDrillAddBox.classList.add("d-none");
-    $.saveTrainingBtn.classList.add("d-none");
+    $.openCreateTrainingBtn?.classList.add("d-none");
   }
 }
-
 
 /* =========================
    DOM
@@ -133,38 +131,17 @@ function cacheDom() {
     drillsList: document.getElementById("drillsList"),
     drillsEmpty: document.getElementById("drillsEmpty"),
 
-    // Trainings
-    trainingCreateBox: document.getElementById("trainingCreateBox"),
-    trainingForm: document.getElementById("trainingForm"),
-    trainingName: document.getElementById("trainingName"),
-    trainingDate: document.getElementById("trainingDate"),
-    trainingWeekHint: document.getElementById("trainingWeekHint"),
-    trainingNotes: document.getElementById("trainingNotes"),
-    trainingSearch: document.getElementById("trainingSearch"),
+    // Trainings (nuevo)
     refreshTrainingsBtn: document.getElementById("refreshTrainingsBtn"),
+    trainingSearch: document.getElementById("trainingSearch"),
     trainingsList: document.getElementById("trainingsList"),
     trainingsEmpty: document.getElementById("trainingsEmpty"),
 
-    trainingEditorTitle: document.getElementById("trainingEditorTitle"),
-    trainingEditorSubtitle: document.getElementById("trainingEditorSubtitle"),
-    trainingMetaBox: document.getElementById("trainingMetaBox"),
-    trainingMetaName: document.getElementById("trainingMetaName"),
-    trainingMetaDate: document.getElementById("trainingMetaDate"),
-    trainingMetaNotes: document.getElementById("trainingMetaNotes"),
+    // Botón nuevo (agregalo en HTML del tab trainings)
+    openCreateTrainingBtn: document.getElementById("openCreateTrainingBtn"),
 
-    trainingDrillAddBox: document.getElementById("trainingDrillAddBox"),
-    drillsDatalist: document.getElementById("drillsDatalist"),
-    trainingDrillPicker: document.getElementById("trainingDrillPicker"),
-    addDrillToTrainingBtn: document.getElementById("addDrillToTrainingBtn"),
-
-    trainingDrillsList: document.getElementById("trainingDrillsList"),
-    trainingDrillsEmpty: document.getElementById("trainingDrillsEmpty"),
-
-    openCreateDrillBtn: document.getElementById("openCreateDrillBtn"),
-    createDrillModal: document.getElementById("createDrillModal"),
-    saveCreateDrillBtn: document.getElementById("saveCreateDrillBtn"),
-
-    saveTrainingBtn: document.getElementById("saveTrainingBtn"),
+    // mount para partials/modals
+    modalMount: document.getElementById("modalMount"),
   };
 }
 
@@ -173,31 +150,30 @@ function cacheDom() {
 ========================= */
 function showAlert(msg, type = "info") {
   const el = $.alertBox;
+  if (!el) return;
   el.className = `alert alert-${type}`;
   el.textContent = msg;
   el.classList.remove("d-none");
 }
 
 function clearAlert() {
-  $.alertBox.classList.add("d-none");
+  $.alertBox?.classList.add("d-none");
 }
 
 /* =========================
-   Load Data
+   Data: Drills
 ========================= */
 async function loadDrills() {
-  const showArchived = !!$.showArchivedSwitch.checked;
+  const showArchived = !!$.showArchivedSwitch?.checked;
 
-  // Si estás filtrando por isActive, evitá orderBy para no pedir índice compuesto
   const filters = [where("clubId", "==", clubId)];
   if (!showArchived) filters.push(where("isActive", "==", true));
 
-  const qy = query(collection(db, COL_DRILLS), ...filters); // 👈 sin orderBy
+  const qy = query(collection(db, COL_DRILLS), ...filters);
   const snap = await getDocs(qy);
 
   drills = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  // Orden local (por createdAt si existe)
   drills.sort((a, b) => {
     const da = a.createdAt?.toDate?.() ?? (a.createdAt ? new Date(a.createdAt) : new Date(0));
     const dbb = b.createdAt?.toDate?.() ?? (b.createdAt ? new Date(b.createdAt) : new Date(0));
@@ -205,49 +181,42 @@ async function loadDrills() {
   });
 
   renderDrills();
-  renderDrillsDatalist();
 }
 
-
+/* =========================
+   Data: Trainings (cards)
+========================= */
 async function loadTrainings() {
-  const base = [where("clubId", "==", clubId)];
-
-  // Sin orderBy para evitar índice compuesto
-  const qy = query(collection(db, COL_PLAYBOOK_TRAININGS), ...base);
+  const filters = [where("clubId", "==", clubId)];
+  const qy = query(collection(db, COL_PLAYBOOK_TRAININGS), ...filters);
   const snap = await getDocs(qy);
 
   trainings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  // Orden local por date desc
+  // orden local por fecha desc (acepta Date o string)
   trainings.sort((a, b) => {
-    const da = a.date?.toDate?.() ?? (a.date ? new Date(a.date) : new Date(0));
-    const dbb = b.date?.toDate?.() ?? (b.date ? new Date(b.date) : new Date(0));
+    const da = toDateSafe(a.date);
+    const dbb = toDateSafe(b.date);
     return dbb - da;
   });
 
-  renderTrainingsList();
-
-  if (selectedTrainingId) {
-    const still = trainings.find(t => t.id === selectedTrainingId);
-    if (still) await selectTraining(selectedTrainingId);
-    else clearTrainingEditor();
-  }
+  renderTrainings();
 }
 
 /* =========================
-   Render Drills
+   Render: Drills
 ========================= */
 function renderDrills() {
-  const term = norm($.drillSearch.value);
+  const term = norm($.drillSearch?.value);
   const filtered = term ? drills.filter(d => drillMatches(d, term)) : drills;
 
-  $.drillsList.innerHTML = "";
+  if ($.drillsList) $.drillsList.innerHTML = "";
 
   if (!filtered.length) {
-    $.drillsEmpty.classList.remove("d-none");
+    $.drillsEmpty?.classList.remove("d-none");
     return;
   }
-  $.drillsEmpty.classList.add("d-none");
+  $.drillsEmpty?.classList.add("d-none");
 
   for (const d of filtered) {
     const card = document.createElement("div");
@@ -265,9 +234,9 @@ function renderDrills() {
               <div class="fw-semibold">${escapeHtml(d.name || "—")}</div>
               <div class="text-muted small">Autor: ${escapeHtml(d.authorName || "—")}</div>
               <div class="mt-2 small">
-                ${tactical ? `<a href="${tactical}" target="_blank" rel="noopener">Tactical</a>` : `<span class="text-muted">Sin Tactical</span>`}
+                ${tactical ? `<a href="${escapeHtml(tactical)}" target="_blank" rel="noopener">Tactical</a>` : `<span class="text-muted">Sin Tactical</span>`}
                 <span class="mx-2">•</span>
-                ${video ? `<a href="${video}" target="_blank" rel="noopener">Video</a>` : `<span class="text-muted">Sin video</span>`}
+                ${video ? `<a href="${escapeHtml(video)}" target="_blank" rel="noopener">Video</a>` : `<span class="text-muted">Sin video</span>`}
               </div>
             </div>
 
@@ -276,7 +245,7 @@ function renderDrills() {
               ${
                 canEdit
                   ? `<div class="mt-2 d-flex gap-2 justify-content-end">
-                       <button class="btn btn-outline-danger btn-sm" data-action="toggle" data-id="${d.id}">
+                       <button class="btn btn-outline-danger btn-sm" data-action="toggle" data-id="${escapeHtml(d.id)}">
                          ${active ? "Archivar" : "Reactivar"}
                        </button>
                      </div>`
@@ -309,12 +278,11 @@ function renderDrills() {
       </div>
     `;
 
-    $.drillsList.appendChild(card);
+    $.drillsList?.appendChild(card);
   }
 
-  // Actions
   if (canEdit) {
-    $.drillsList.querySelectorAll("button[data-action='toggle']").forEach(btn => {
+    $.drillsList?.querySelectorAll("button[data-action='toggle']").forEach(btn => {
       btn.addEventListener("click", async () => {
         const id = btn.getAttribute("data-id");
         if (!id) return;
@@ -329,13 +297,6 @@ function renderDrills() {
   }
 }
 
-function renderDrillsDatalist() {
-  const active = drills.filter(d => d.isActive !== false);
-  $.drillsDatalist.innerHTML = active
-    .map(d => `<option value="${escapeHtml(d.name)}"></option>`)
-    .join("");
-}
-
 function drillMatches(d, term) {
   const hay = [
     d.name, d.authorName, d.objective, d.volume, d.restAfter, d.recommendations
@@ -344,149 +305,159 @@ function drillMatches(d, term) {
 }
 
 /* =========================
-   Trainings render / select
+   Render: Trainings (cards/list)
 ========================= */
-function renderTrainingsList() {
-  const term = norm($.trainingSearch.value);
-  const filtered = term ? trainings.filter(t => norm(t.name).includes(term)) : trainings;
+function renderTrainings() {
+  const term = norm($.trainingSearch?.value);
+  const filtered = term
+    ? trainings.filter(t => norm(t.name).includes(term))
+    : trainings;
+
+  if (!$.trainingsList) return;
 
   $.trainingsList.innerHTML = "";
 
   if (!filtered.length) {
-    $.trainingsEmpty.classList.remove("d-none");
+    $.trainingsEmpty?.classList.remove("d-none");
     return;
   }
-  $.trainingsEmpty.classList.add("d-none");
+  $.trainingsEmpty?.classList.add("d-none");
 
-  for (const t of filtered) {
-    const isSelected = t.id === selectedTrainingId;
-
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = `list-group-item list-group-item-action ${isSelected ? "active" : ""}`;
-    btn.innerHTML = `
-      <div class="d-flex justify-content-between">
-        <div>
-          <div class="fw-semibold">${escapeHtml(t.name || "—")}</div>
-          <div class="small ${isSelected ? "text-white-50" : "text-muted"}">${fmtDate(t.date)}</div>
-        </div>
-        <div class="small ${isSelected ? "text-white-50" : "text-muted"}">
-          ${(t.drillRefs || []).length} drills
-        </div>
-      </div>
-    `;
-    btn.addEventListener("click", () => selectTraining(t.id));
-    $.trainingsList.appendChild(btn);
-  }
-}
-
-async function selectTraining(id) {
-  selectedTrainingId = id;
-  renderTrainingsList();
-
-  const t = trainings.find(x => x.id === id);
-  if (!t) return clearTrainingEditor();
-
-  selectedTraining = hydrateTraining(t);
-  trainingWorkingRefs = [...selectedTraining.drillRefs];
-
-  $.trainingEditorTitle.textContent = selectedTraining.name || "Entrenamiento";
-  $.trainingEditorSubtitle.textContent = `${fmtDate(selectedTraining.date)} · ${trainingWorkingRefs.length} drills`;
-
-  $.trainingMetaBox.classList.remove("d-none");
-  $.trainingMetaName.textContent = selectedTraining.name || "—";
-  $.trainingMetaDate.textContent = fmtDate(selectedTraining.date);
-  $.trainingMetaNotes.textContent = selectedTraining.notes || "—";
-
-  renderTrainingDrills();
-}
-
-function hydrateTraining(t) {
-  const refs = Array.isArray(t.drillRefs) ? t.drillRefs : [];
-  const normalized = refs
-    .map((r, idx) => ({
-      drillId: r.drillId,
-      order: Number.isFinite(r.order) ? r.order : (idx + 1),
-    }))
-    .filter(r => !!r.drillId)
-    .sort((a, b) => a.order - b.order);
-
-  return { ...t, drillRefs: normalized };
-}
-
-function renderTrainingDrills() {
-  $.trainingDrillsList.innerHTML = "";
-
-  if (!selectedTrainingId) {
-    $.trainingDrillsEmpty.classList.add("d-none");
-    return;
-  }
-
-  const ordered = [...trainingWorkingRefs].sort((a, b) => a.order - b.order);
-  if (!ordered.length) {
-    $.trainingDrillsEmpty.classList.remove("d-none");
-    return;
-  }
-  $.trainingDrillsEmpty.classList.add("d-none");
-
-  ordered.forEach((ref, idx) => {
-    const d = drills.find(x => x.id === ref.drillId);
-    const name = d?.name || "(drill eliminado)";
+  filtered.forEach(t => {
+    const dateLbl = fmtDate(t.date);
+    const drillCount = Array.isArray(t.drillIds) ? t.drillIds.length : (Array.isArray(t.drillRefs) ? t.drillRefs.length : 0);
+    const isPublic = t.isPublic === true;
 
     const item = document.createElement("div");
     item.className = "list-group-item";
+
+    const sharePath = `/training.html?id=${encodeURIComponent(t.id)}`;
+
     item.innerHTML = `
-      <div class="d-flex justify-content-between align-items-start gap-2">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
         <div>
-          <div class="fw-semibold">
-            <span class="text-muted me-2">${idx + 1}.</span>${escapeHtml(name)}
-          </div>
+          <div class="fw-semibold">${escapeHtml(t.name || "—")}</div>
+          <div class="text-muted small">${escapeHtml(dateLbl)} · ${drillCount} drill(s)</div>
+          <div class="text-muted small">${isPublic ? "🌐 Público" : "🔒 Privado (solo logueados)"}</div>
         </div>
 
-        ${
-          canEdit
-            ? `<div class="btn-group btn-group-sm">
-                 <button class="btn btn-outline-secondary" data-action="up" ${idx === 0 ? "disabled" : ""}>↑</button>
-                 <button class="btn btn-outline-secondary" data-action="down" ${idx === ordered.length - 1 ? "disabled" : ""}>↓</button>
-                 <button class="btn btn-outline-danger" data-action="remove">✕</button>
-               </div>`
-            : ``
-        }
+        <div class="d-flex gap-2 flex-wrap">
+          ${
+            isPublic
+              ? `<a class="btn btn-sm btn-outline-secondary" href="${sharePath}" target="_blank" rel="noopener">Ver</a>
+                 <button class="btn btn-sm btn-outline-primary" data-copy="${escapeHtml(sharePath)}">Copiar link</button>`
+              : `<button class="btn btn-sm btn-outline-secondary" data-view-private="${escapeHtml(t.id)}">Ver</button>`
+          }
+          ${
+            canEdit
+              ? `<button class="btn btn-sm btn-primary" data-edit="${escapeHtml(t.id)}">Editar</button>`
+              : ``
+          }
+        </div>
       </div>
     `;
 
-    if (canEdit) {
-      item.querySelector("button[data-action='up']")?.addEventListener("click", () => moveTrainingRef(idx, -1));
-      item.querySelector("button[data-action='down']")?.addEventListener("click", () => moveTrainingRef(idx, +1));
-      item.querySelector("button[data-action='remove']")?.addEventListener("click", () => removeTrainingRef(idx));
-    }
+    $.trainingsList.appendChild(item);
+  });
 
-    $.trainingDrillsList.appendChild(item);
+  // copiar link (solo públicos)
+  $.trainingsList.querySelectorAll("[data-copy]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const path = btn.getAttribute("data-copy");
+      if (!path) return;
+      const url = `${window.location.origin}${path}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        const old = btn.textContent;
+        btn.textContent = "Copiado ✅";
+        setTimeout(() => (btn.textContent = old), 1200);
+      } catch {
+        alert("No pude copiar. Link:\n" + url);
+      }
+    });
+  });
+
+  // ver privado (logueados) -> abre igual training.html, pero ahí va a bloquear si isPublic=false
+  // Si querés permitir privado en training.html para signedIn, lo hacemos luego (con auth opcional).
+  $.trainingsList.querySelectorAll("[data-view-private]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-view-private");
+      if (!id) return;
+      // por ahora lo llevamos a una vista interna (simple): abre modal de edición en read-only no lo hicimos.
+      // entonces abrimos la misma vista pública, que mostrará "privado" (por diseño).
+      window.open(`/training.html?id=${encodeURIComponent(id)}`, "_blank");
+    });
+  });
+
+  // editar
+  $.trainingsList.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-edit");
+      if (!id) return;
+      const ed = await ensureTrainingEditor();
+      ed.openEditById(id);
+    });
   });
 }
 
-function clearTrainingEditor() {
-  selectedTrainingId = null;
-  selectedTraining = null;
-  trainingWorkingRefs = [];
-
-  $.trainingEditorTitle.textContent = "Seleccioná un entrenamiento";
-  $.trainingEditorSubtitle.textContent = "—";
-  $.trainingMetaBox.classList.add("d-none");
-  $.trainingDrillsList.innerHTML = "";
-  $.trainingDrillsEmpty.classList.add("d-none");
+/* =========================
+   Training editor (modal)
+========================= */
+async function ensureTrainingEditor() {
+  // asegurate de tener <div id="modalMount"></div> en el HTML
+  await loadPartialOnce("/partials/training_editor.html", "modalMount");
+  if (!trainingEditor) trainingEditor = createTrainingEditor();
+  return trainingEditor;
 }
 
 /* =========================
-   CRUD
+   Drills editor (modal)
+========================= */
+
+async function ensureCreateDrillModal() {
+  await loadPartialOnce("/partials/drill_create_modal.html", "modalMount");
+
+  // re-cache de elementos del modal (porque ahora se inyecta)
+  $.drillForm = document.getElementById("drillForm");
+  $.drillName = document.getElementById("drillName");
+  $.drillAuthor = document.getElementById("drillAuthor");
+  $.drillTacticalUrl = document.getElementById("drillTacticalUrl");
+  $.drillVideoUrl = document.getElementById("drillVideoUrl");
+  $.drillObjective = document.getElementById("drillObjective");
+  $.drillVolume = document.getElementById("drillVolume");
+  $.drillRest = document.getElementById("drillRest");
+  $.drillRecs = document.getElementById("drillRecs");
+
+  $.createDrillModal = document.getElementById("createDrillModal");
+  $.saveCreateDrillBtn = document.getElementById("saveCreateDrillBtn");
+
+  // bind del botón guardar UNA sola vez (evitar doble bind)
+  if (!ensureCreateDrillModal._bound) {
+    $.saveCreateDrillBtn?.addEventListener("click", async () => {
+      if (!canEdit) return;
+      showLoader();
+      try {
+        await createDrillFromForm();
+        const modal = bootstrap.Modal.getOrCreateInstance($.createDrillModal);
+        modal.hide();
+      } finally {
+        hideLoader();
+      }
+    });
+    ensureCreateDrillModal._bound = true;
+  }
+}
+
+/* =========================
+   CRUD: Drills
 ========================= */
 async function createDrillFromForm() {
   clearAlert();
 
-  const name = ($.drillName.value || "").trim();
-  const authorName = ($.drillAuthor.value || "").trim();
+  const name = ($.drillName?.value || "").trim();
+  const authorName = ($.drillAuthor?.value || "").trim();
   if (!name || !authorName) {
-    showAlert(S.errors.required, "warning");
+    showAlert(S.errors?.required || "Campos requeridos.", "warning");
     return;
   }
 
@@ -494,19 +465,23 @@ async function createDrillFromForm() {
     clubId,
     name,
     authorName,
-    tacticalBoardUrl: safeUrl($.drillTacticalUrl.value) || "",
-    teamVideoUrl: safeUrl($.drillVideoUrl.value) || "",
-    objective: ($.drillObjective.value || "").trim(),
-    volume: ($.drillVolume.value || "").trim(),
-    restAfter: ($.drillRest.value || "").trim(),
-    recommendations: ($.drillRecs.value || "").trim(),
+    tacticalBoardUrl: safeUrl($.drillTacticalUrl?.value) || "",
+    teamVideoUrl: safeUrl($.drillVideoUrl?.value) || "",
+    objective: ($.drillObjective?.value || "").trim(),
+    volume: ($.drillVolume?.value || "").trim(),
+    restAfter: ($.drillRest?.value || "").trim(),
+    recommendations: ($.drillRecs?.value || "").trim(),
+
+    // nuevos flags
+    isPublic: true,         // default
     isActive: true,
+
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
-  $.drillForm.reset();
-  showAlert(S.ok.drillCreated, "success");
+  $.drillForm?.reset?.();
+  showAlert(S.ok?.drillCreated || "Drill creado.", "success");
   await loadDrills();
 }
 
@@ -520,159 +495,58 @@ async function toggleDrillActive(drillId) {
     updatedAt: serverTimestamp(),
   });
 
-  showAlert(next ? S.ok.drillReactivated : S.ok.drillArchived, "success");
+  showAlert(next ? (S.ok?.drillReactivated || "Reactivado.") : (S.ok?.drillArchived || "Archivado."), "success");
   await loadDrills();
-}
-
-async function createTrainingFromForm() {
-  clearAlert();
-  const name = ($.trainingName.value || "").trim();
-  const dateStr = ($.trainingDate.value || "").trim();
-
-  if (!name || !dateStr) {
-    showAlert(S.errors.required, "warning");
-    return;
-  }
-
-  await addDoc(collection(db, COL_PLAYBOOK_TRAININGS), {
-    clubId,
-    name,
-    notes: ($.trainingNotes.value || "").trim(),
-    date: new Date(`${dateStr}T00:00:00`),
-    drillRefs: [],
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-
-  $.trainingForm.reset();
-  $.trainingWeekHint.textContent = "—";
-
-  showAlert(S.ok.trainingCreated, "success");
-  await loadTrainings();
-}
-
-function addDrillToTraining() {
-  clearAlert();
-  if (!selectedTrainingId) return showAlert(S.errors.noTrainingSelected, "warning");
-
-  const val = ($.trainingDrillPicker.value || "").trim();
-  if (!val) return;
-
-  const drill = drills.find(d => norm(d.name) === norm(val));
-  if (!drill) return showAlert(S.errors.drillNotFound, "warning");
-
-  if (trainingWorkingRefs.some(r => r.drillId === drill.id)) {
-    return showAlert(S.errors.drillAlreadyAdded, "warning");
-  }
-
-  const maxOrder = trainingWorkingRefs.reduce((m, r) => Math.max(m, r.order || 0), 0);
-  trainingWorkingRefs.push({ drillId: drill.id, order: maxOrder + 1 });
-
-  $.trainingDrillPicker.value = "";
-  renderTrainingDrills();
-  $.trainingEditorSubtitle.textContent = `${fmtDate(selectedTraining?.date)} · ${trainingWorkingRefs.length} drills`;
-}
-
-function moveTrainingRef(index, delta) {
-  const sorted = [...trainingWorkingRefs].sort((a, b) => a.order - b.order);
-  const newIndex = index + delta;
-  if (newIndex < 0 || newIndex >= sorted.length) return;
-
-  const tmp = sorted[index];
-  sorted[index] = sorted[newIndex];
-  sorted[newIndex] = tmp;
-
-  trainingWorkingRefs = sorted.map((r, idx) => ({ drillId: r.drillId, order: idx + 1 }));
-  renderTrainingDrills();
-}
-
-function removeTrainingRef(index) {
-  const sorted = [...trainingWorkingRefs].sort((a, b) => a.order - b.order);
-  sorted.splice(index, 1);
-  trainingWorkingRefs = sorted.map((r, idx) => ({ drillId: r.drillId, order: idx + 1 }));
-  renderTrainingDrills();
-  $.trainingEditorSubtitle.textContent = `${fmtDate(selectedTraining?.date)} · ${trainingWorkingRefs.length} drills`;
-}
-
-async function saveTraining() {
-  clearAlert();
-  if (!selectedTrainingId) return;
-
-  const sorted = [...trainingWorkingRefs].sort((a, b) => a.order - b.order)
-    .map((r, idx) => ({ drillId: r.drillId, order: idx + 1 }));
-
-  await updateDoc(doc(db, COL_PLAYBOOK_TRAININGS, selectedTrainingId), {
-    drillRefs: sorted,
-    updatedAt: serverTimestamp(),
-  });
-
-  showAlert(S.ok.trainingSaved, "success");
-  await loadTrainings();
 }
 
 /* =========================
    Events
 ========================= */
 function bindEvents() {
-    // Drills
-    $.openCreateDrillBtn?.addEventListener("click", () => {
+  // Drills
+  $.openCreateDrillBtn?.addEventListener("click", async () => {
     if (!canEdit) return;
     clearAlert();
-    $.drillForm?.reset();
+    await ensureCreateDrillModal();
+    $.drillForm?.reset?.();
     const modal = bootstrap.Modal.getOrCreateInstance($.createDrillModal);
     modal.show();
-    });
-
-    $.saveCreateDrillBtn?.addEventListener("click", async () => {
-    if (!canEdit) return;
-    showLoader();
-    try {
-        await createDrillFromForm();
-        const modal = bootstrap.Modal.getOrCreateInstance($.createDrillModal);
-        modal.hide();
-    } finally {
-        hideLoader();
-    }
-    });
-
-    $.drillSearch?.addEventListener("input", renderDrills);
-
-    $.showArchivedSwitch?.addEventListener("change", async () => {
-    showLoader();
-    try {
-        await loadDrills();
-    } finally {
-        hideLoader();
-    }
-    });
-
-    $.refreshDrillsBtn?.addEventListener("click", async () => {
-    showLoader();
-    try {
-        await loadDrills();
-    } finally {
-        hideLoader();
-    }
-    });
-
-
-  // Trainings
-  $.trainingDate?.addEventListener("input", () => {
-    $.trainingWeekHint.textContent = isoWeekLabel($.trainingDate.value);
   });
 
-  $.trainingForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  $.saveCreateDrillBtn?.addEventListener("click", async () => {
     if (!canEdit) return;
     showLoader();
     try {
-      await createTrainingFromForm();
+      await createDrillFromForm();
+      const modal = bootstrap.Modal.getOrCreateInstance($.createDrillModal);
+      modal.hide();
     } finally {
       hideLoader();
     }
   });
 
-  $.trainingSearch?.addEventListener("input", renderTrainingsList);
+  $.drillSearch?.addEventListener("input", renderDrills);
+
+  $.showArchivedSwitch?.addEventListener("change", async () => {
+    showLoader();
+    try {
+      await loadDrills();
+    } finally {
+      hideLoader();
+    }
+  });
+
+  $.refreshDrillsBtn?.addEventListener("click", async () => {
+    showLoader();
+    try {
+      await loadDrills();
+    } finally {
+      hideLoader();
+    }
+  });
+
+  // Trainings
+  $.trainingSearch?.addEventListener("input", renderTrainings);
 
   $.refreshTrainingsBtn?.addEventListener("click", async () => {
     showLoader();
@@ -683,24 +557,17 @@ function bindEvents() {
     }
   });
 
-  $.addDrillToTrainingBtn?.addEventListener("click", () => {
+  $.openCreateTrainingBtn?.addEventListener("click", async () => {
     if (!canEdit) return;
-    addDrillToTraining();
+    const ed = await ensureTrainingEditor();
+    ed.openNew();
   });
 
-  $.trainingDrillPicker?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (!canEdit) return;
-      addDrillToTraining();
-    }
-  });
-
-  $.saveTrainingBtn?.addEventListener("click", async () => {
-    if (!canEdit) return;
+  // refrescar lista cuando modal guarda
+  window.addEventListener("playbookTraining:changed", async () => {
     showLoader();
     try {
-      await saveTraining();
+      await loadTrainings();
     } finally {
       hideLoader();
     }
@@ -717,27 +584,22 @@ function norm(s) {
 function safeUrl(url) {
   const u = (url || "").toString().trim();
   if (!u) return "";
+  // permite urls sin protocolo
+  if (!/^https?:\/\//i.test(u)) return `https://${u}`;
   try { return new URL(u).toString(); } catch { return ""; }
+}
+
+function toDateSafe(value) {
+  if (!value) return new Date(0);
+  const d = value?.toDate?.() ?? (value instanceof Date ? value : new Date(value));
+  return isNaN(d) ? new Date(0) : d;
 }
 
 function fmtDate(value) {
   if (!value) return "—";
-  const d = value?.toDate?.() ?? new Date(value);
+  const d = toDateSafe(value);
   if (isNaN(d)) return "—";
   return d.toLocaleDateString("es-CR", { year: "numeric", month: "short", day: "2-digit" });
-}
-
-function isoWeekLabel(dateInput) {
-  if (!dateInput) return "—";
-  const d = new Date(`${dateInput}T00:00:00`);
-  if (isNaN(d)) return "—";
-
-  const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = tmp.getUTCDay() || 7;
-  tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
-  return `Semana ${weekNo} (${tmp.getUTCFullYear()})`;
 }
 
 function escapeHtml(str) {

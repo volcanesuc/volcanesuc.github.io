@@ -26,7 +26,7 @@
   <!-- CONTENIDO -->
   <main class="container py-4">
 
-     <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 gap-3">
       <div>
         <h1 class="page-title mb-1">Playbook</h1>
         <div class="text-muted" id="pageSubtitle">Cargando…</div>
@@ -42,235 +42,99 @@
 
     <!-- Tabs -->
     <div class="card shadow-sm mb-3">
-        <div class="card-body py-3">
-            <ul class="nav nav-pills gap-2" id="playbookTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="tabDrillsBtn" data-bs-toggle="pill" data-bs-target="#tabDrills" type="button" role="tab">
-                Drills
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tabTrainingsBtn" data-bs-toggle="pill" data-bs-target="#tabTrainings" type="button" role="tab">
-                Entrenamientos
-                </button>
-            </li>
-            </ul>
-        </div>
+      <div class="card-body py-3">
+        <ul class="nav nav-pills gap-2" id="playbookTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tabDrillsBtn" data-bs-toggle="pill" data-bs-target="#tabDrills" type="button" role="tab">
+              Drills
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tabTrainingsBtn" data-bs-toggle="pill" data-bs-target="#tabTrainings" type="button" role="tab">
+              Entrenamientos
+            </button>
+          </li>
+        </ul>
+      </div>
     </div>
 
     <div class="tab-content">
 
-  <!-- TAB DRILLS -->
-  <section class="tab-pane fade show active" id="tabDrills" role="tabpanel" aria-labelledby="tabDrillsBtn">
+      <!-- TAB DRILLS -->
+      <section class="tab-pane fade show active" id="tabDrills" role="tabpanel" aria-labelledby="tabDrillsBtn">
 
-    <!-- Toolbar -->
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-      <div class="input-group" style="max-width: 520px;">
-        <span class="input-group-text">🔎</span>
-        <input class="form-control" id="drillSearch" placeholder="Buscar drills…" />
-      </div>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+          <div class="input-group" style="max-width: 520px;">
+            <span class="input-group-text">🔎</span>
+            <input class="form-control" id="drillSearch" placeholder="Buscar drills…" />
+          </div>
 
-      <div class="d-flex align-items-center gap-2">
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" role="switch" id="showArchivedSwitch">
-          <label class="form-check-label" for="showArchivedSwitch">Ver archivados</label>
+          <div class="d-flex align-items-center gap-2">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="showArchivedSwitch">
+              <label class="form-check-label" for="showArchivedSwitch">Ver archivados</label>
+            </div>
+
+            <button class="btn btn-outline-secondary btn-sm" id="refreshDrillsBtn">Refrescar</button>
+
+            <!-- Admin only (JS lo muestra si canEdit) -->
+            <button class="btn btn-primary btn-sm d-none" id="openCreateDrillBtn" type="button">
+              + Crear drill
+            </button>
+          </div>
         </div>
 
-        <button class="btn btn-outline-secondary btn-sm" id="refreshDrillsBtn">Refrescar</button>
+        <div class="row g-3" id="drillsList"></div>
+        <div class="text-muted small mt-3 d-none" id="drillsEmpty">No hay drills todavía.</div>
 
-        <!-- Admin only -->
-        <button class="btn btn-primary btn-sm d-none" id="openCreateDrillBtn" type="button">
-          + Crear drill
-        </button>
-      </div>
-    </div>
+      </section>
 
-    <div class="row g-3" id="drillsList"></div>
-    <div class="text-muted small mt-3 d-none" id="drillsEmpty">No hay drills todavía.</div>
+      <!-- TAB TRAININGS -->
+      <section class="tab-pane fade" id="tabTrainings" role="tabpanel" aria-labelledby="tabTrainingsBtn">
 
-  </section>
+        <div class="row g-3">
+          <div class="col-12">
 
-  <!-- TAB TRAININGS -->
-  <section class="tab-pane fade" id="tabTrainings" role="tabpanel" aria-labelledby="tabTrainingsBtn">
+            <div class="card">
+              <div class="card-body">
 
-    <div class="row g-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <h2 class="h5 mb-0">Entrenamientos preparados</h2>
 
-      <!-- list -->
-      <div class="col-12 col-lg-5">
-        <div class="card">
-          <div class="card-body">
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" id="refreshTrainingsBtn">Refrescar</button>
 
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h2 class="h5 mb-0">Entrenamientos preparados</h2>
-              <button class="btn btn-outline-secondary btn-sm" id="refreshTrainingsBtn">Refrescar</button>
+                    <!-- Admin only (JS lo muestra si canEdit) -->
+                    <button class="btn btn-primary btn-sm d-none" id="openCreateTrainingBtn" type="button">
+                      + Crear entrenamiento
+                    </button>
+                  </div>
+                </div>
+
+                <div class="input-group mb-2" style="max-width: 520px;">
+                  <span class="input-group-text">🔎</span>
+                  <input class="form-control" id="trainingSearch" placeholder="Buscar por nombre…" />
+                </div>
+
+                <!-- cards/list -->
+                <div class="list-group" id="trainingsList"></div>
+                <div class="text-muted small mt-3 d-none" id="trainingsEmpty">No hay entrenamientos preparados.</div>
+
+              </div>
             </div>
-
-            <!-- admin create -->
-            <div class="border rounded p-3 mb-3 d-none" id="trainingCreateBox">
-              <div class="fw-semibold mb-2">Crear entrenamiento</div>
-              <form id="trainingForm" class="row g-2">
-                <div class="col-12">
-                  <label class="form-label" for="trainingName">Nombre *</label>
-                  <input class="form-control" id="trainingName" required maxlength="120" />
-                </div>
-
-                <div class="col-12 col-md-6">
-                  <label class="form-label" for="trainingDate">Fecha *</label>
-                  <input class="form-control" id="trainingDate" type="date" required />
-                </div>
-
-                <div class="col-12 col-md-6">
-                  <label class="form-label">Semana</label>
-                  <div class="form-control-plaintext text-muted small" id="trainingWeekHint">—</div>
-                </div>
-
-                <div class="col-12">
-                  <label class="form-label" for="trainingNotes">Notas</label>
-                  <textarea class="form-control" id="trainingNotes" rows="2"></textarea>
-                </div>
-
-                <div class="col-12 d-flex gap-2">
-                  <button class="btn btn-primary" type="submit">Crear</button>
-                  <button class="btn btn-outline-secondary" type="reset">Limpiar</button>
-                </div>
-              </form>
-            </div>
-
-            <div class="input-group mb-2">
-              <span class="input-group-text">🔎</span>
-              <input class="form-control" id="trainingSearch" placeholder="Buscar por nombre…" />
-            </div>
-
-            <div class="list-group" id="trainingsList"></div>
-            <div class="text-muted small mt-3 d-none" id="trainingsEmpty">No hay entrenamientos preparados.</div>
 
           </div>
         </div>
-      </div>
 
-      <!-- editor -->
-      <div class="col-12 col-lg-7">
-        <div class="card">
-          <div class="card-body">
-
-            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-              <div>
-                <h2 class="h5 mb-1" id="trainingEditorTitle">Seleccioná un entrenamiento</h2>
-                <div class="text-muted small" id="trainingEditorSubtitle">—</div>
-              </div>
-
-              <button class="btn btn-primary btn-sm d-none" id="saveTrainingBtn">Guardar</button>
-            </div>
-
-            <div class="border rounded p-3 mb-3 d-none" id="trainingMetaBox">
-              <div class="row g-2">
-                <div class="col-12 col-md-7">
-                  <div class="small text-muted">Nombre</div>
-                  <div class="fw-semibold" id="trainingMetaName">—</div>
-                </div>
-                <div class="col-12 col-md-5">
-                  <div class="small text-muted">Fecha</div>
-                  <div class="fw-semibold" id="trainingMetaDate">—</div>
-                </div>
-                <div class="col-12">
-                  <div class="small text-muted">Notas</div>
-                  <div class="text-muted" id="trainingMetaNotes">—</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- admin add drills -->
-            <div class="border rounded p-3 mb-3 d-none" id="trainingDrillAddBox">
-              <div class="fw-semibold mb-2">Agregar drills</div>
-              <div class="row g-2 align-items-end">
-                <div class="col-12 col-md-8">
-                  <label class="form-label" for="trainingDrillPicker">Drill</label>
-                  <input class="form-control" id="trainingDrillPicker" list="drillsDatalist" placeholder="Escribí para buscar…" />
-                  <datalist id="drillsDatalist"></datalist>
-                </div>
-                <div class="col-12 col-md-4 d-grid">
-                  <button class="btn btn-outline-primary" id="addDrillToTrainingBtn" type="button">Agregar</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="fw-semibold mb-2">Lista de drills</div>
-            <div class="list-group" id="trainingDrillsList"></div>
-            <div class="text-muted small mt-3 d-none" id="trainingDrillsEmpty">Este entrenamiento no tiene drills todavía.</div>
-
-          </div>
-        </div>
-      </div>
+      </section>
 
     </div>
-  </section>
-
-</div>
-
   </main>
 
-  <!-- MODAL: Crear Drill -->
-  <div class="modal fade" id="createDrillModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title">Crear drill</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
+  <!-- ✅ MOUNT PARA PARTIALS (modales) -->
+  <div id="modalMount"></div>
 
-        <div class="modal-body">
-            <form id="drillForm" class="row g-3">
-            <div class="col-12 col-lg-6">
-                <label class="form-label" for="drillName">Nombre *</label>
-                <input class="form-control" id="drillName" required maxlength="120" />
-            </div>
-
-            <div class="col-12 col-lg-6">
-                <label class="form-label" for="drillAuthor">Autor *</label>
-                <input class="form-control" id="drillAuthor" required maxlength="80" />
-            </div>
-
-            <div class="col-12 col-lg-6">
-                <label class="form-label" for="drillTacticalUrl">Link Tactical Board</label>
-                <input class="form-control" id="drillTacticalUrl" type="url" placeholder="https://..." />
-            </div>
-
-            <div class="col-12 col-lg-6">
-                <label class="form-label" for="drillVideoUrl">Link video del equipo (opcional)</label>
-                <input class="form-control" id="drillVideoUrl" type="url" placeholder="https://..." />
-            </div>
-
-            <div class="col-12">
-                <label class="form-label" for="drillObjective">Objetivo</label>
-                <textarea class="form-control" id="drillObjective" rows="2"></textarea>
-            </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label" for="drillVolume">Volumen</label>
-                <input class="form-control" id="drillVolume" maxlength="60" placeholder="Ej: 6 reps / 10 min" />
-            </div>
-
-            <div class="col-12 col-md-4">
-                <label class="form-label" for="drillRest">Descanso post-drill</label>
-                <input class="form-control" id="drillRest" maxlength="60" placeholder="Ej: 90s" />
-            </div>
-
-            <div class="col-12">
-                <label class="form-label" for="drillRecs">Recomendaciones</label>
-                <textarea class="form-control" id="drillRecs" rows="3"></textarea>
-            </div>
-            </form>
-        </div>
-
-        <div class="modal-footer">
-            <button class="btn btn-outline-secondary" data-bs-dismiss="modal" type="button">Cancelar</button>
-            <button class="btn btn-primary" id="saveCreateDrillBtn" type="button">Guardar drill</button>
-        </div>
-        </div>
-    </div>
- </div>
-
-  <!-- LOADER (igual que dashboard) -->
+  <!-- LOADER -->
   <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner-border" role="status">
       <span class="visually-hidden">Cargando...</span>
