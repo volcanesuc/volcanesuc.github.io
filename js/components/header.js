@@ -8,7 +8,7 @@ export async function loadHeader(activeTab, cfgOverride) {
   if (!header) return;
 
   const MENU = CLUB_DATA.header.menu;
-  const HOME_HREF = CLUB_DATA.header.homeHref || "dashboard.html";
+  const HOME_HREF = toAbsHref(CLUB_DATA.header.homeHref || "dashboard.html");
 
   //usa cfgOverride si viene; si no, intenta remote config; si falla, fallback
   let cfg = cfgOverride;
@@ -26,7 +26,7 @@ export async function loadHeader(activeTab, cfgOverride) {
   const renderLinksDesktop = () =>
     VISIBLE_MENU.map(
       item => `
-        <a href="${item.href}" class="top-tab ${activeTab === item.id ? "active" : ""}">
+        <a href="${toAbsHref(item.href)}" class="top-tab ${activeTab === item.id ? "active" : ""}">
           ${item.label}
         </a>
       `
@@ -35,7 +35,7 @@ export async function loadHeader(activeTab, cfgOverride) {
   const renderLinksMobile = () =>
     VISIBLE_MENU.map(
       item => `
-        <a href="${item.href}" class="mobile-link ${activeTab === item.id ? "active" : ""}">
+        <a href="${toAbsHref(item.href)}" class="mobile-link ${activeTab === item.id ? "active" : ""}">
           ${item.label}
         </a>
       `
@@ -93,4 +93,14 @@ export async function loadHeader(activeTab, cfgOverride) {
 function bindHeaderEvents() {
   document.getElementById("logoutBtn")?.addEventListener("click", logout);
   document.getElementById("logoutBtnMobile")?.addEventListener("click", logout);
+}
+
+function toAbsHref(href) {
+  if (!href) return "#";
+  // ya es absoluta o externa
+  if (href.startsWith("/") || href.startsWith("http://") || href.startsWith("https://")) return href;
+  // hash o query “puro”
+  if (href.startsWith("#") || href.startsWith("?")) return href;
+  // convierte "roster.html" -> "/roster.html"
+  return `/${href}`;
 }
