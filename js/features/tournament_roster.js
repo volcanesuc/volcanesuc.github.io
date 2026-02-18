@@ -113,7 +113,7 @@ applyStrings();
 let tournamentEditor = null;
 
 async function ensureTournamentEditor() {
-  await loadPartialOnce("./partials/tournament_editor.html", "modalMount");
+  await loadPartialOnce("/partials/tournament_editor.html", "modalMount");
   if (!tournamentEditor) tournamentEditor = createTournamentEditor();
   return tournamentEditor;
 }
@@ -124,8 +124,7 @@ async function ensureTournamentEditor() {
 let payModal = null;
 
 async function ensurePayModal() {
-  // debes crear este partial: ./partials/payment_modal.html
-  await loadPartialOnce("./partials/payment_modal.html", "modalMount");
+  await loadPartialOnce("/partials/payment_modal.html", "modalMount");
   if (!payModal) payModal = createPaymentModal();
   return payModal;
 }
