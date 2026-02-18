@@ -2,6 +2,8 @@
 import { guardPage } from "./page-guard.js";
 import { loadHeader } from "./components/header.js";
 import { initModalHost } from "./ui/modal_host.js";
+import { showLoader, hideLoader } from "./ui/loader.js";
+
 
 const TABS = ["associates", "memberships", "payments", "plans"];
 
@@ -92,26 +94,43 @@ async function renderAssociation(cfg) {
 
 const { cfg, redirected } = await guardPage("association");
 if (!redirected) {
-  await loadHeader("association", cfg);
-  initModalHost();
+  try {
+    await loadHeader("association", cfg);
+    initModalHost();
 
-  // cuando el modal guarde, refrescamos el tab actual (Miembros)
-  window.addEventListener("associate:saved", async () => {
-    // si estás en associates, re-monta el tab (recarga lista)
-    const tab = getTabFromUrl();
-    if (tab === "associates") await renderAssociation(cfg);
-  });
-
-  document.querySelectorAll("#associationTabs .nav-link").forEach((a) => {
-    a.addEventListener("click", async (e) => {
-      e.preventDefault();
-      const tab = a.dataset.tab;
-      if (!tab) return;
-      setTabInUrl(tab);
-      await renderAssociation(cfg);
+    // listeners...
+    window.addEventListener("associate:saved", async () => {
+      const tab = getTabFromUrl();
+      if (tab === "associates") {
+        showLoader();
+        try { await renderAssociation(cfg); }
+        finally { hideLoader(); }
+      }
     });
-  });
 
-  await renderAssociation(cfg);
-  window.addEventListener("popstate", () => renderAssociation(cfg));
+    document.querySelectorAll("#associationTabs .nav-link").forEach((a) => {
+      a.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const tab = a.dataset.tab;
+        if (!tab) return;
+
+        showLoader();
+        try {
+          setTabInUrl(tab);
+          await renderAssociation(cfg);
+        } finally {
+          hideLoader();
+        }
+      });
+    });
+
+    await renderAssociation(cfg);
+    window.addEventListener("popstate", async () => {
+      showLoader();
+      try { await renderAssociation(cfg); }
+      finally { hideLoader(); }
+    });
+  } finally {
+    hideLoader();
+  }
 }
