@@ -6,12 +6,8 @@ import { showLoader, hideLoader } from "../ui/loader.js";
 import { loadHeader } from "../components/header.js";
 import { TOURNAMENT_STRINGS } from "../strings.js";
 import { Player } from "../models/player.js";
-
-// edit tournament imports
-import { createTournamentEditor } from "./features/tournament_editor.js";
-import { loadPartialOnce } from "./ui/loadPartial.js";
-
-// ✅ reusable payments modal (extraído)
+import { createTournamentEditor } from "./tournament_editor.js";
+import { loadPartialOnce } from "../ui/loadPartial.js";
 import { createPaymentModal, sumPayments } from "./features/payment_modal.js";
 
 import {
