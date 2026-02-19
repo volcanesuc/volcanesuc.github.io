@@ -187,20 +187,48 @@ async function loadDrills() {
    Data: Trainings (cards)
 ========================= */
 async function loadTrainings() {
-  const filters = [where("clubId", "==", clubId)];
-  const qy = query(collection(db, COL_PLAYBOOK_TRAININGS), ...filters);
-  const snap = await getDocs(qy);
+  try {
+    const listEl = document.getElementById("trainingsList");
+    if (!listEl) {
+      console.warn("[playbook] No existe #trainingsList en el HTML (tab trainings).");
+      trainings = [];
+      renderTrainings();
+      return;
+    }
 
-  trainings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Query principal (nuevo modelo)
+    const q1 = query(
+      collection(db, COL_PLAYBOOK_TRAININGS),
+      where("clubId", "==", clubId)
+    );
 
-  // orden local por fecha desc (acepta Date o string)
-  trainings.sort((a, b) => {
-    const da = toDateSafe(a.date);
-    const dbb = toDateSafe(b.date);
-    return dbb - da;
-  });
+    const snap1 = await getDocs(q1);
+    let rows = snap1.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  renderTrainings();
+    // ✅ Fallback migración:
+    // si no hay nada y sospechamos docs viejos sin clubId, traemos todo (solo para admins)
+    if (!rows.length && canEdit) {
+      console.warn("[playbook] 0 trainings con clubId. Intentando fallback sin filtro (migración).");
+      const snapAll = await getDocs(collection(db, COL_PLAYBOOK_TRAININGS));
+      rows = snapAll.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    trainings = rows;
+
+    trainings.sort((a, b) => {
+      const da = (a.date?.toDate?.() ?? (a.date ? new Date(a.date) : new Date(0)));
+      const dbb = (b.date?.toDate?.() ?? (b.date ? new Date(b.date) : new Date(0)));
+      return dbb - da;
+    });
+
+    console.log("[playbook] trainings loaded:", trainings.length);
+    renderTrainings();
+  } catch (err) {
+    console.error("[playbook] loadTrainings error:", err);
+    showAlert("Error cargando entrenamientos. Ver consola.", "danger");
+    trainings = [];
+    renderTrainings();
+  }
 }
 
 /* =========================
