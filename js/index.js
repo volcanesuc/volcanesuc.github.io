@@ -3,28 +3,15 @@ import "./config.js";
 import { loginWithGoogle } from "./auth.js";
 import { CLUB_DATA } from "./strings.js";
 
+import "./config.js";
+import { loadHeader } from "./components/header.js";
+import { CLUB_DATA } from "./strings.js";
+
 /* =========================================================
    HEADER
 ========================================================= */
 
-const headerTitle = document.getElementById("clubName");
-const headerCtaBtn = document.getElementById("loginBtn");
-
-// Nombre del club
-if (headerTitle) {
-  headerTitle.textContent = CLUB_DATA.header.mobileTitle;
-}
-
-// CTA del header (INGRESAR)
-if (headerCtaBtn) {
-  headerCtaBtn.textContent = CLUB_DATA.header.cta.label;
-}
-
-//LOGIN ACTION
-const loginBtn = document.getElementById("loginBtn");
-if (loginBtn) {
-  loginBtn.addEventListener("click", loginWithGoogle);
-}
+loadHeader("home");
 
 /* =========================================================
    HERO
