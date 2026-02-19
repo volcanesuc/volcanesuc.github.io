@@ -41,7 +41,6 @@ const COL_PLAYERS = "club_players";
 const COL_MEMBERSHIPS = "memberships";
 const COL_INSTALLMENTS = "membership_installments";
 const COL_SUBMISSIONS = "membership_payment_submissions";
-const COL_USER_ROLES = "user_roles";
 
 // Config doc
 const CFG_DOC = doc(db, "club_config", "public_registration");
@@ -314,37 +313,6 @@ $.planId?.addEventListener("change", () => {
    Identity linking (Associate <-> Player <-> UserRoles)
 ========================= */
 
-// 1) ensure user_roles/{uid}
-async function ensureUserRole({ uid }) {
-  if (!uid) return null;
-
-  const ref = doc(db, COL_USER_ROLES, uid);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    // opcional: asegurar clubId/active
-    const data = snap.data();
-    if (data.clubId !== CLUB_ID || data.active !== true) {
-      await setDoc(
-        ref,
-        { clubId: CLUB_ID, active: true, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
-    }
-    return { uid, ...data };
-  }
-
-  // default: member activo (ajústalo si quieres pending)
-  const payload = {
-    active: true,
-    clubId: CLUB_ID,
-    role: "member",
-    updatedAt: serverTimestamp(),
-  };
-
-  await setDoc(ref, payload, { merge: true });
-  return { uid, ...payload };
-}
-
 // 2) upsert associate by uid or email
 async function upsertAssociate({ uid, email, firstName, lastName, birthDate, idType, idNumber, phone, residence, consents }) {
   const fullName = `${firstName} ${lastName}`.trim();
@@ -429,23 +397,28 @@ async function findPlayerToLink({ uid, email, firstName, lastName, birthDate }) 
     if (found) return found;
   }
 
-  // by name + birthday (only if unique)
+  // by name + birthday (unique) — sin índice compuesto:
   if (firstName && lastName && birthDate) {
-    const q3 = query(
-      collection(db, COL_PLAYERS),
-      where("firstName", "==", firstName),
-      where("lastName", "==", lastName),
-      where("birthday", "==", birthDate),
-      limit(3)
-    );
-    const s3 = await getDocs(q3);
+    const qb = query(collection(db, COL_PLAYERS), where("birthday", "==", birthDate), limit(25));
+    const sb = await getDocs(qb);
+
+    const fn = firstName.trim().toLowerCase();
+    const ln = lastName.trim().toLowerCase();
+
     const matches = [];
-    s3.forEach((d) => matches.push({ id: d.id, ...d.data() }));
+    sb.forEach((d) => {
+      const p = d.data() || {};
+      const pfn = (p.firstName || "").toString().trim().toLowerCase();
+      const pln = (p.lastName || "").toString().trim().toLowerCase();
+      if (pfn === fn && pln === ln) matches.push({ id: d.id, ...p });
+    });
+
     if (matches.length === 1) return matches[0];
   }
 
   return null;
 }
+
 
 // 4) upsert player: if found, link. if not found, create minimal player (active + name + birthday) and link.
 async function ensureLinkedPlayer({ assocId, uid, email, firstName, lastName, birthDate }) {
@@ -638,6 +611,14 @@ $.form?.addEventListener("submit", async (ev) => {
 
   const user = auth.currentUser;
 
+  // OJO: registro público requiere estar logueado
+  if (!user?.uid) {
+    showAlert("Primero ingresa con Google para completar el registro.");
+    return;
+  }
+
+  const uid = user.uid;
+
   // Data
   const firstName = norm($.firstName?.value);
   const lastName = norm($.lastName?.value);
@@ -646,7 +627,7 @@ $.form?.addEventListener("submit", async (ev) => {
   const idType = normLower($.idType?.value);
   const idNumber = cleanIdNum($.idNumber?.value);
 
-  const email = normLower($.email?.value);
+  const email = (user.email ? String(user.email).toLowerCase() : normLower($.email?.value));
   const phone = norm($.phone?.value);
 
   const residence = {
@@ -691,8 +672,6 @@ $.form?.addEventListener("submit", async (ev) => {
     return;
   }
 
-  const uid = user?.uid || null;
-
   const consents = {
     requireInfoDeclaration: !!cfg.requireInfoDeclaration,
     infoDeclarationAccepted: cfg.requireInfoDeclaration ? true : null,
@@ -704,10 +683,7 @@ $.form?.addEventListener("submit", async (ev) => {
 
   setLoading(true);
   try {
-    // 1) user_roles (si está logueado)
-    await ensureUserRole({ uid });
-
-    // 2) Associate (master record)
+    // 1) Associate (master record) — (rules: create/update solo si uid coincide)
     const { assocId, associateSnapshot } = await upsertAssociate({
       uid,
       email,
@@ -721,8 +697,7 @@ $.form?.addEventListener("submit", async (ev) => {
       consents,
     });
 
-    // 3) Player link/create (optional but recommended)
-    // Si no hay uid, igual lo intentamos por email y nombre+cump
+    // 2) Player link/create
     const { playerId } = await ensureLinkedPlayer({
       assocId,
       uid,
@@ -732,13 +707,13 @@ $.form?.addEventListener("submit", async (ev) => {
       birthDate,
     });
 
-    // 3.1) guarda el link directo en associate
-    await setDoc(doc(db, COL_ASSOC, assocId), { playerId: playerId || null }, { merge: true });
+    // 2.1) guarda el link directo en associate
+    await setDoc(doc(db, COL_ASSOC, assocId), { playerId: playerId || null, updatedAt: serverTimestamp() }, { merge: true });
 
-    // 4) Upload proof
+    // 3) Upload proof (Storage rules aparte; si falla aquí, es Storage)
     const proof = await uploadProofFile({ uid, assocId, file });
 
-    // 5) Membership (pending)
+    // 4) Membership (pending) — (rules: create allowed)
     const season = plan.season || safeSeasonFromToday();
     const { membershipId } = await createMembership({
       assocId,
@@ -748,22 +723,13 @@ $.form?.addEventListener("submit", async (ev) => {
       consents,
     });
 
-    // 6) Installments (if plan indicates)
-    const { installmentIds } = await maybeCreateInstallments({
-      membershipId,
-      plan: { id: planId, ...plan },
-      season,
-    });
-
-    // 7) Submission (pending)
+    // 5) Submission (pending) — IMPORTANT: NO enviar decidedAt
     await addDoc(collection(db, COL_SUBMISSIONS), {
       adminNote: null,
       note: null,
 
       amountReported: planAmount(plan),
       currency: plan.currency || "CRC",
-
-      decidedAt: null,
 
       email,
       payerName: payerName || null,
@@ -774,15 +740,15 @@ $.form?.addEventListener("submit", async (ev) => {
       fileType: proof.fileType,
       fileUrl: proof.fileUrl,
 
-      installmentId: installmentIds?.[0] || null,
-      selectedInstallmentIds: installmentIds || [],
+      installmentId: null,
+      selectedInstallmentIds: [],
 
       membershipId,
       planId,
       season,
 
       status: "pending",
-      userId: uid || null,
+      userId: uid,
 
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -791,7 +757,7 @@ $.form?.addEventListener("submit", async (ev) => {
     showAlert("¡Listo! Recibimos tu registro. Queda en revisión.", "success");
     $.form?.reset();
 
-    // si está logueado por Google, dejamos email readonly
+    // deja email readonly con el del user
     if (auth.currentUser?.email && $.email) {
       $.email.value = auth.currentUser.email;
       $.email.readOnly = true;
@@ -803,3 +769,4 @@ $.form?.addEventListener("submit", async (ev) => {
     setLoading(false);
   }
 });
+
