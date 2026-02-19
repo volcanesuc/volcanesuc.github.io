@@ -7,7 +7,7 @@ import {
   collection,
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { APP_CONFIG } from "../config/config.js";
+import { APP_CONFIG } from "./config/config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 
 import { guardPage } from "./page-guard.js";
