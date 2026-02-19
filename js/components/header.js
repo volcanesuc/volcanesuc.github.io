@@ -160,7 +160,10 @@ function bindHeaderEvents() {
 
 function toAbsHref(href) {
   if (!href) return "#";
-  if (href.startsWith("/") || href.startsWith("http://") || href.startsWith("https://")) return href;
+  if (href.startsWith("http://") || href.startsWith("https://")) return href;
   if (href.startsWith("#") || href.startsWith("?")) return href;
-  return `/${href}`;
+
+  //siempre relativo al root actual del sitio (funciona en GH pages)
+  const base = document.querySelector("base")?.href || window.location.origin + window.location.pathname.replace(/[^/]*$/, "");
+  return new URL(href, base).pathname + new URL(href, base).search + new URL(href, base).hash;
 }
