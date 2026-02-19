@@ -1,4 +1,4 @@
-import { db } from "../firebase.js";
+import { db } from "../auth/firebase.js";
 import { watchAuth } from "../auth.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
 import { recomputeMembershipRollup } from "./membership_rollup.js";

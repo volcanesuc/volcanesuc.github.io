@@ -1,6 +1,6 @@
 //js/features/membership_rollup.js
 
-import { db } from "../firebase.js";
+import { db } from "../auth/firebase.js";
 import {
   collection,
   getDocs,

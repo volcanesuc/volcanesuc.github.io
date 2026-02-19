@@ -1,5 +1,5 @@
 // js/features/memberships_list.js
-import { db } from "../firebase.js";
+import { db } from "../auth/firebase.js";
 import { watchAuth, logout } from "../auth.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
 import { STR } from "../strings/membership_strings.js";

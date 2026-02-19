@@ -1,5 +1,5 @@
 // js/tournament_roster.js
-import { db } from "../firebase.js";
+import { db } from "../auth/firebase.js";
 import { watchAuth, logout } from "../auth.js";
 import { APP_CONFIG } from "../config.js";
 import { showLoader, hideLoader } from "../ui/loader.js";

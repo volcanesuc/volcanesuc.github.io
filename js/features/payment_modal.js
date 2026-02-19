@@ -1,5 +1,5 @@
 // js/features/payment_modal.js
-import { db } from "../firebase.js";
+import { db } from "../auth/firebase.js";
 import {
   doc,
   updateDoc,

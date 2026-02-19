@@ -1,5 +1,5 @@
 // /js/public/training_view.js
-import { db } from "../firebase.js";
+import { db } from "../auth/firebase.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
 
 import {

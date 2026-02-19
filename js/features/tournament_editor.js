@@ -1,5 +1,5 @@
 // js/features/tournament_editor.js
-import { db } from "../firebase.js";
+import { db } from "../auth/firebase.js";
 import {
   doc,
   getDoc,
