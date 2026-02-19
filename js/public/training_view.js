@@ -42,14 +42,53 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
+function safeUrl(url) {
+  const u = String(url || "").trim();
+  if (!u) return "";
+  if (/^https?:\/\//i.test(u)) return u;
+  return `https://${u}`;
+}
+
+function fmtDate(value) {
+  if (!value) return "—";
+  const d = value?.toDate?.() ?? new Date(value);
+  if (isNaN(d)) return "—";
+  return d.toLocaleDateString("es-CR", { year: "numeric", month: "short", day: "2-digit" });
+}
+
 function chunk(arr, size) {
   const out = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
 }
 
+function extractOrderedIds(training) {
+  // Nuevo formato: drillRefs: [{drillId, order}]
+  if (Array.isArray(training?.drillRefs) && training.drillRefs.length) {
+    return training.drillRefs
+      .map((r, idx) => ({
+        id: String(r?.drillId || "").trim(),
+        order: Number.isFinite(Number(r?.order)) ? Number(r.order) : (idx + 1),
+      }))
+      .filter(x => !!x.id)
+      .sort((a, b) => a.order - b.order)
+      .map(x => x.id);
+  }
+
+  // Viejo: drillIds: ["id1","id2"]
+  if (Array.isArray(training?.drillIds) && training.drillIds.length) {
+    return training.drillIds.map(x => String(x || "").trim()).filter(Boolean);
+  }
+
+  // Otros posibles nombres viejos
+  if (Array.isArray(training?.drills) && training.drills.length) {
+    return training.drills.map(x => String(x || "").trim()).filter(Boolean);
+  }
+
+  return [];
+}
+
 async function fetchDrillsByIds(ids) {
-  // Firestore "in" admite max 10
   const chunks = chunk(ids, 10);
   const results = new Map();
 
@@ -59,36 +98,56 @@ async function fetchDrillsByIds(ids) {
     snap.forEach(d => results.set(d.id, { id: d.id, ...d.data() }));
   }
 
-  // mantener el orden original de ids
+  // mantener el orden
   return ids.map(id => results.get(id)).filter(Boolean);
 }
 
 function drillCard(d) {
   const name = d?.name || "—";
-  const author = d?.author || "—";
-  const objective = d?.objective || "";
-  const tactical = d?.tacticalUrl || "";
-  const video = d?.videoUrl || "";
 
-  const links = [
-    tactical ? `<a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" href="${escapeHtml(tactical)}">Tactical</a>` : "",
-    video ? `<a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" href="${escapeHtml(video)}">Video</a>` : ""
-  ].filter(Boolean).join(" ");
+  // ✅ campos reales
+  const tactical = safeUrl(d?.tacticalBoardUrl || "");
+  const volume = (d?.volume || "—").toString().trim();
+  const rest = (d?.restAfter || "—").toString().trim();
 
   return `
     <div class="col-12 col-lg-6">
       <div class="card h-100 shadow-sm">
         <div class="card-body">
+
           <div class="d-flex justify-content-between align-items-start gap-2">
-            <div>
-              <div class="fw-semibold">${escapeHtml(name)}</div>
-              <div class="text-muted small">Autor: ${escapeHtml(author)}</div>
+            <div class="fw-semibold">${escapeHtml(name)}</div>
+
+            ${
+              tactical
+                ? `<a class="btn btn-sm btn-outline-primary"
+                      target="_blank"
+                      rel="noopener"
+                      href="${escapeHtml(tactical)}">Tactical</a>`
+                : ``
+            }
+          </div>
+
+          <div class="row mt-3 g-2">
+            <div class="col-6">
+              <div class="small text-muted">Volumen</div>
+              <div>${escapeHtml(volume)}</div>
+            </div>
+            <div class="col-6">
+              <div class="small text-muted">Descanso</div>
+              <div>${escapeHtml(rest)}</div>
             </div>
           </div>
 
-          ${objective ? `<div class="text-muted small mt-2">${escapeHtml(objective)}</div>` : ""}
+          ${
+            d?.objective
+              ? `<div class="mt-3">
+                   <div class="small text-muted">Objetivo</div>
+                   <div class="text-muted">${escapeHtml(d.objective)}</div>
+                 </div>`
+              : ``
+          }
 
-          ${links ? `<div class="d-flex gap-2 mt-3 flex-wrap">${links}</div>` : ""}
         </div>
       </div>
     </div>
@@ -124,6 +183,7 @@ function drillCard(d) {
 
     const t = { id: snap.id, ...snap.data() };
 
+    // Opción A: privado => requiere login (reglas), pero acá igual bloqueamos si no es público
     if (t.isPublic !== true) {
       showError("Este entrenamiento es privado.");
       return;
@@ -131,18 +191,23 @@ function drillCard(d) {
 
     if (tvTitle) tvTitle.textContent = t.name || "Entrenamiento";
     if (tvSubtitle) tvSubtitle.textContent = "Volcanes Ultimate";
-    if (tvDate) tvDate.textContent = t.date || "—";
+    if (tvDate) tvDate.textContent = fmtDate(t.date);
     if (tvNotes) tvNotes.textContent = t.notes || "—";
     if (tvPublicState) tvPublicState.textContent = "Público";
 
-    const ids = Array.isArray(t.drillIds) ? t.drillIds.filter(Boolean) : [];
+    const ids = extractOrderedIds(t);
     if (!ids.length) {
       tvEmpty?.classList.remove("d-none");
       return;
     }
 
     const drills = await fetchDrillsByIds(ids);
-    tvDrills.innerHTML = drills.length ? drills.map(drillCard).join("") : "";
+
+    // Render
+    tvDrills.innerHTML = drills.length
+      ? drills.map(drillCard).join("")
+      : "";
+
     tvEmpty?.classList.toggle("d-none", drills.length > 0);
   } catch (e) {
     console.error(e);
