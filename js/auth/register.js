@@ -602,6 +602,26 @@ async function init() {
 
 init();
 
+function firebaseErrMsg(e) {
+  const code = (e && e.code) ? String(e.code) : "";
+  if (code.includes("permission-denied")) return "Permisos insuficientes (rules).";
+  if (code.includes("unauthenticated")) return "No hay sesión (login) activa.";
+  if (code.includes("failed-precondition")) return "Falta un índice o precondición en Firestore.";
+  return (e && e.message) ? e.message : "Error desconocido.";
+}
+
+async function step(name, fn) {
+  try {
+    const r = await fn();
+    console.log(`✅ ${name}`);
+    return r;
+  } catch (e) {
+    console.error(`❌ ${name}`, e);
+    throw new Error(`${name}: ${firebaseErrMsg(e)}`);
+  }
+}
+
+
 /* =========================
    Submit
 ========================= */
@@ -683,48 +703,46 @@ $.form?.addEventListener("submit", async (ev) => {
 
   setLoading(true);
   try {
-    // 1) Associate (master record) — (rules: create/update solo si uid coincide)
-    const { assocId, associateSnapshot } = await upsertAssociate({
-      uid,
-      email,
-      firstName,
-      lastName,
-      birthDate,
-      idType,
-      idNumber,
-      phone,
-      residence,
-      consents,
-    });
+  // 0) sanity: uid siempre
+  if (!uid) throw new Error("No hay uid (login incompleto).");
 
-    // 2) Player link/create
-    const { playerId } = await ensureLinkedPlayer({
-      assocId,
-      uid,
-      email,
-      firstName,
-      lastName,
-      birthDate,
-    });
+  const { assocId, associateSnapshot } = await step("Upsert associate", () =>
+    upsertAssociate({
+      uid, email, firstName, lastName, birthDate,
+      idType, idNumber, phone, residence, consents
+    })
+  );
 
-    // 2.1) guarda el link directo en associate
-    await setDoc(doc(db, COL_ASSOC, assocId), { playerId: playerId || null, updatedAt: serverTimestamp() }, { merge: true });
+  const { playerId } = await step("Link/create club_player", () =>
+    ensureLinkedPlayer({ assocId, uid, email, firstName, lastName, birthDate })
+  );
 
-    // 3) Upload proof (Storage rules aparte; si falla aquí, es Storage)
-    const proof = await uploadProofFile({ uid, assocId, file });
+  await step("Update associate.playerId", () =>
+    setDoc(
+      doc(db, COL_ASSOC, assocId),
+      { playerId: playerId || null, updatedAt: serverTimestamp() },
+      { merge: true }
+    )
+  );
 
-    // 4) Membership (pending) — (rules: create allowed)
-    const season = plan.season || safeSeasonFromToday();
-    const { membershipId } = await createMembership({
+  const proof = await step("Upload proof (Storage)", () =>
+    uploadProofFile({ uid, assocId, file })
+  );
+
+  const season = plan.season || safeSeasonFromToday();
+
+  const { membershipId } = await step("Create membership", () =>
+    createMembership({
       assocId,
       associateSnapshot,
       plan: { id: planId, ...plan },
       season,
-      consents,
-    });
+      consents
+    })
+  );
 
-    // 5) Submission (pending) — IMPORTANT: NO enviar decidedAt
-    await addDoc(collection(db, COL_SUBMISSIONS), {
+  await step("Create payment submission", () =>
+    addDoc(collection(db, COL_SUBMISSIONS), {
       adminNote: null,
       note: null,
 
@@ -752,20 +770,21 @@ $.form?.addEventListener("submit", async (ev) => {
 
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    })
+  );
 
-    showAlert("¡Listo! Recibimos tu registro. Queda en revisión.", "success");
-    $.form?.reset();
+  showAlert("¡Listo! Recibimos tu registro. Queda en revisión.", "success");
+  $.form?.reset();
 
-    // deja email readonly con el del user
-    if (auth.currentUser?.email && $.email) {
-      $.email.value = auth.currentUser.email;
-      $.email.readOnly = true;
-    }
-  } catch (e) {
-    console.warn(e);
-    showAlert("Ocurrió un error al enviar. Revisa tu conexión e intenta de nuevo.");
-  } finally {
+  if (auth.currentUser?.email && $.email) {
+    $.email.value = auth.currentUser.email;
+    $.email.readOnly = true;
+  }
+
+} catch (e) {
+  console.warn(e);
+  showAlert(String(e.message || e), "danger");
+} finally {
     setLoading(false);
   }
 });
