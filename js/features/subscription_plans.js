@@ -1,6 +1,6 @@
 // js/features/subscription_plans.js
 import { db } from "../auth/firebase.js";
-import { watchAuth, logout } from "../auth.js";
+import { watchAuth, logout } from "../auth/auth.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
 import { loadHeader } from "../components/header.js";
 

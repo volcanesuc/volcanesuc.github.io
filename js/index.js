@@ -1,6 +1,5 @@
 // js/index.js
 import "./config/config.js";
-import { loginWithGoogle } from "./auth/auth.js";
 import { CLUB_DATA } from "./strings.js";
 import { loadHeader } from "./components/header.js";
 

@@ -1,6 +1,6 @@
 // js/features/membership_detail.js
 import { db } from "../auth/firebase.js";
-import { watchAuth, logout } from "../auth.js";
+import { watchAuth, logout } from "../auth/auth.js";
 import { loadHeader } from "../components/header.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
 import { recomputeMembershipRollup } from "./membership_rollup.js";

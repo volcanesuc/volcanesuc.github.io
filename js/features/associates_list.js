@@ -1,6 +1,6 @@
 // js/features/associates_list.js
 import { db } from "../auth/firebase.js";
-import { watchAuth, logout } from "../auth.js";
+import { watchAuth, logout } from "../auth/auth.js";
 import { showLoader, hideLoader } from "../ui/loader.js";
 import { openModal } from "../ui/modal_host.js";
 

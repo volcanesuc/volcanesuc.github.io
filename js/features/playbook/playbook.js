@@ -1,6 +1,6 @@
 // /js/features/playbook/playbook.js
 import { db } from "../../auth/firebase.js";
-import { watchAuth } from "../../auth.js";
+import { watchAuth } from "../../auth/auth.js";
 import { showLoader, hideLoader } from "../../ui/loader.js";
 
 import { guardPage } from "../../page-guard.js";
