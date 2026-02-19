@@ -1,12 +1,32 @@
 // js/auth.js
 import { auth } from "./firebase.js";
 import { db } from "./firebase.js";
-import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut,
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const provider = new GoogleAuthProvider();
 
-export async function loginWithGoogle() {
+/* =========================================================
+   Google Login (forced)
+   - Si users/{uid}.onboardingComplete === true => dashboard
+   - Si no => public/register.html?google=1
+========================================================= */
+export async function loginWithGoogle(opts = {}) {
+  const dashboardPath = opts.dashboardPath ?? "dashboard.html";
+  const registerPath = opts.registerPath ?? "public/register.html?google=1";
+
   try {
     const cred = await signInWithPopup(auth, provider);
     const user = cred.user;
@@ -16,36 +36,34 @@ export async function loginWithGoogle() {
 
     const email = (user.email || "").toLowerCase();
 
-    // Si ya existe y ya completó onboarding => dashboard
+    // siempre prefill
+    sessionStorage.setItem(
+      "prefill_register",
+      JSON.stringify({
+        fullName: user.displayName || "",
+        email: user.email || "",
+        phone: user.phoneNumber || "",
+      })
+    );
+
     if (snap.exists()) {
       const data = snap.data() || {};
-      const done = data.onboardingComplete === true;
+      const done = data.onboardingComplete === true; // si falta => false
 
-      // mantener email actualizado (sin romper nada)
+      // mantener email actualizado
       if (email && data.email !== email) {
-        await setDoc(userRef, { email, updatedAt: serverTimestamp() }, { merge: true });
+        await setDoc(
+          userRef,
+          { email, updatedAt: serverTimestamp() },
+          { merge: true }
+        );
       }
 
-      if (done) {
-        window.location.href = "dashboard.html";
-        return;
-      }
-
-      // existe pero NO está completo => mandar a register
-      sessionStorage.setItem(
-        "prefill_register",
-        JSON.stringify({
-          fullName: user.displayName || "",
-          email: user.email || "",
-          phone: user.phoneNumber || ""
-        })
-      );
-
-      window.location.href = "public/register.html?google=1";
+      window.location.href = done ? dashboardPath : registerPath;
       return;
     }
 
-    // No existe => crear doc mínimo y mandar a register
+    // no existe => crear doc mínimo y mandar a register
     await setDoc(
       userRef,
       {
@@ -57,29 +75,21 @@ export async function loginWithGoogle() {
       { merge: true }
     );
 
-    sessionStorage.setItem(
-      "prefill_register",
-      JSON.stringify({
-        fullName: user.displayName || "",
-        email: user.email || "",
-        phone: user.phoneNumber || ""
-      })
-    );
-
-    window.location.href = "public/register.html?google=1";
+    window.location.href = registerPath;
   } catch (err) {
     console.error(err);
     alert("Error al iniciar sesión");
   }
 }
 
-
+/* =========================================================
+   Guard / watchAuth
+========================================================= */
 export function watchAuth(onLoggedIn, opts = {}) {
   const redirectTo = opts.redirectTo ?? "/index.html";
 
   return onAuthStateChanged(auth, (user) => {
     if (!user) {
-      //replace evita volver atrás al “pantallazo” protegido
       window.location.replace(redirectTo);
       return;
     }
@@ -87,7 +97,11 @@ export function watchAuth(onLoggedIn, opts = {}) {
   });
 }
 
-export async function logout() {
+/* =========================================================
+   Logout
+========================================================= */
+export async function logout(opts = {}) {
+  const redirectTo = opts.redirectTo ?? "index.html";
   await signOut(auth);
-  window.location.href = "index.html";
+  window.location.href = redirectTo;
 }

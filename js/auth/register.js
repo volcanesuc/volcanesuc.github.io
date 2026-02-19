@@ -602,6 +602,40 @@ async function init() {
 
 init();
 
+/* =========================
+   Fill info from Google
+========================= */
+
+function applyPrefillFromSession() {
+  try {
+    const raw = sessionStorage.getItem("prefill_register");
+    if (!raw) return;
+    const p = JSON.parse(raw);
+
+    if ($.email && p.email) {
+      $.email.value = p.email;
+      $.email.readOnly = true;
+    }
+
+    // si tu HTML tiene firstName/lastName separados:
+    // (si viene fullName, lo partimos)
+    if ($.firstName && $.lastName && p.fullName) {
+      const parts = String(p.fullName).trim().split(/\s+/);
+      if (!$.firstName.value) $.firstName.value = parts.shift() || "";
+      if (!$.lastName.value) $.lastName.value = parts.join(" ");
+    }
+
+    if ($.phone && p.phone && !$.phone.value) {
+      $.phone.value = p.phone;
+    }
+  } catch (e) {
+    console.warn("prefill_register invalid", e);
+  }
+}
+
+applyPrefillFromSession();
+
+
 function firebaseErrMsg(e) {
   const code = (e && e.code) ? String(e.code) : "";
   if (code.includes("permission-denied")) return "Permisos insuficientes (rules).";
@@ -773,30 +807,29 @@ $.form?.addEventListener("submit", async (ev) => {
     })
   );
 
-  await step("Mark onboarding complete (users/{uid})", () =>
-      setDoc(
-        doc(db, "users", uid),
-        {
-          onboardingComplete: true,
-          associateId: assocId,
-          playerId: playerId || null,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      )
-    );
+  await step("Mark onboarding complete (users/{uid})", async () => {
+    const uref = doc(db, "users", uid);
+    const usnap = await getDoc(uref);
 
-    // ✅ listo: manda al dashboard
-    window.location.replace("/dashboard.html");
-    return;
+    const payload = {
+      email: email || auth.currentUser?.email || null,
+      onboardingComplete: true,
+      associateId: assocId,
+      playerId: playerId || null,
+      updatedAt: serverTimestamp(),
+    };
 
-  showAlert("¡Listo! Recibimos tu registro. Queda en revisión.", "success");
-  $.form?.reset();
+    if (!usnap.exists()) payload.createdAt = serverTimestamp();
 
-  if (auth.currentUser?.email && $.email) {
-    $.email.value = auth.currentUser.email;
-    $.email.readOnly = true;
-  }
+    return setDoc(uref, payload, { merge: true });
+  });
+
+  // limpieza opcional
+  sessionStorage.removeItem("prefill_register");
+
+  //dashboard (relativo)
+  window.location.replace("dashboard.html");
+  return;
 
 } catch (e) {
   console.warn(e);
