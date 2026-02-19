@@ -11,27 +11,68 @@ export async function loginWithGoogle() {
     const cred = await signInWithPopup(auth, provider);
     const user = cred.user;
 
-    const snap = await getDoc(doc(db, "users", user.uid));
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
 
+    const email = (user.email || "").toLowerCase();
+
+    // Si ya existe y ya completó onboarding => dashboard
     if (snap.exists()) {
-      window.location.href = "dashboard.html";
+      const data = snap.data() || {};
+      const done = data.onboardingComplete === true;
+
+      // mantener email actualizado (sin romper nada)
+      if (email && data.email !== email) {
+        await setDoc(userRef, { email, updatedAt: serverTimestamp() }, { merge: true });
+      }
+
+      if (done) {
+        window.location.href = "dashboard.html";
+        return;
+      }
+
+      // existe pero NO está completo => mandar a register
+      sessionStorage.setItem(
+        "prefill_register",
+        JSON.stringify({
+          fullName: user.displayName || "",
+          email: user.email || "",
+          phone: user.phoneNumber || ""
+        })
+      );
+
+      window.location.href = "public/register.html?google=1";
       return;
     }
 
-    // No tiene perfil todavía → mandar a completar registro
-    sessionStorage.setItem("prefill_register", JSON.stringify({
-      fullName: user.displayName || "",
-      email: user.email || "",
-      phone: user.phoneNumber || ""
-    }));
+    // No existe => crear doc mínimo y mandar a register
+    await setDoc(
+      userRef,
+      {
+        email: email || null,
+        onboardingComplete: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    sessionStorage.setItem(
+      "prefill_register",
+      JSON.stringify({
+        fullName: user.displayName || "",
+        email: user.email || "",
+        phone: user.phoneNumber || ""
+      })
+    );
 
     window.location.href = "public/register.html?google=1";
-
   } catch (err) {
     console.error(err);
     alert("Error al iniciar sesión");
   }
 }
+
 
 export function watchAuth(onLoggedIn, opts = {}) {
   const redirectTo = opts.redirectTo ?? "/index.html";

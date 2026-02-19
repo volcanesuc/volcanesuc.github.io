@@ -773,6 +773,23 @@ $.form?.addEventListener("submit", async (ev) => {
     })
   );
 
+  await step("Mark onboarding complete (users/{uid})", () =>
+      setDoc(
+        doc(db, "users", uid),
+        {
+          onboardingComplete: true,
+          associateId: assocId,
+          playerId: playerId || null,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      )
+    );
+
+    // ✅ listo: manda al dashboard
+    window.location.replace("/dashboard.html");
+    return;
+
   showAlert("¡Listo! Recibimos tu registro. Queda en revisión.", "success");
   $.form?.reset();
 
