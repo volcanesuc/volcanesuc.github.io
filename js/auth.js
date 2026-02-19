@@ -25,7 +25,7 @@ export async function loginWithGoogle() {
       phone: user.phoneNumber || ""
     }));
 
-    window.location.href = "public/register.html?google=1";
+    window.location.href = "pages/public/register.html?google=1";
 
   } catch (err) {
     console.error(err);
