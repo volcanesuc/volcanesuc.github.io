@@ -17,7 +17,7 @@ export const CLUB_DATA = {
       },
       register: {
         label: "Crear cuenta",
-        href: "pages/public/register.html"
+        href: "public/register.html"
       }
     },
     menu: [

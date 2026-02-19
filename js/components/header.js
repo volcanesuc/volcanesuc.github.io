@@ -108,7 +108,7 @@ export async function loadHeader(activeTab, cfgOverride) {
     const mcta = document.getElementById("mobileCta");
     if (!cta || !mcta) return;
 
-    const registerHref = toAbsHref(CLUB_DATA.header?.cta?.register?.href || "pages/public/register.html");
+    const registerHref = toAbsHref(CLUB_DATA.header?.cta?.register?.href || "public/register.html");
     const dashHref = toAbsHref(CLUB_DATA.header?.homeHref || "dashboard.html");
     const logoutLabel = CLUB_DATA.header?.logout?.label || "SALIR";
 
