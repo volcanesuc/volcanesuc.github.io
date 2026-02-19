@@ -18,6 +18,7 @@ import {
   addDoc,
   doc,
   updateDoc,
+  setDoc,
   serverTimestamp,
   query,
   where,
@@ -40,6 +41,8 @@ let drills = [];
 let trainings = [];
 
 let trainingEditor = null;
+
+let drillEditor = { id: null, bound: false };
 
 /* =========================
    INIT
@@ -254,26 +257,39 @@ function renderDrills() {
     const video = safeUrl(d.teamVideoUrl);
     const active = d.isActive !== false;
 
+    // ✅ clickable para editar (solo admin)
+    const clickable = canEdit
+      ? `data-edit-drill="${escapeHtml(d.id)}" style="cursor:pointer"`
+      : "";
+
     card.innerHTML = `
-      <div class="card h-100">
+      <div class="card h-100" ${clickable}>
         <div class="card-body">
           <div class="d-flex justify-content-between gap-2">
             <div>
               <div class="fw-semibold">${escapeHtml(d.name || "—")}</div>
-              <div class="text-muted small">Autor: ${escapeHtml(d.authorName || "—")}</div>
-              <div class="mt-2 small">
-                ${tactical ? `<a href="${escapeHtml(tactical)}" target="_blank" rel="noopener">Tactical</a>` : `<span class="text-muted">Sin Tactical</span>`}
+              <div class="text-muted small">
+                ${tactical
+                  ? `<a href="${escapeHtml(tactical)}" target="_blank" rel="noopener">Tactical</a>`
+                  : `<span class="text-muted">Sin Tactical</span>`}
                 <span class="mx-2">•</span>
-                ${video ? `<a href="${escapeHtml(video)}" target="_blank" rel="noopener">Video</a>` : `<span class="text-muted">Sin video</span>`}
+                ${video
+                  ? `<a href="${escapeHtml(video)}" target="_blank" rel="noopener">Video</a>`
+                  : `<span class="text-muted">Sin video</span>`}
               </div>
             </div>
 
             <div class="text-end">
-              <span class="badge ${active ? "text-bg-success" : "text-bg-secondary"}">${active ? "Activo" : "Archivado"}</span>
+              <span class="badge ${active ? "text-bg-success" : "text-bg-secondary"}">
+                ${active ? "Activo" : "Archivado"}
+              </span>
+
               ${
                 canEdit
                   ? `<div class="mt-2 d-flex gap-2 justify-content-end">
-                       <button class="btn btn-outline-danger btn-sm" data-action="toggle" data-id="${escapeHtml(d.id)}">
+                       <button class="btn btn-outline-danger btn-sm"
+                               data-action="toggle"
+                               data-id="${escapeHtml(d.id)}">
                          ${active ? "Archivar" : "Reactivar"}
                        </button>
                      </div>`
@@ -309,9 +325,11 @@ function renderDrills() {
     $.drillsList?.appendChild(card);
   }
 
+  // ✅ toggle archive/reactivate
   if (canEdit) {
     $.drillsList?.querySelectorAll("button[data-action='toggle']").forEach(btn => {
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation(); // ✅ no abrir editor si se clickea el botón
         const id = btn.getAttribute("data-id");
         if (!id) return;
         showLoader();
@@ -322,8 +340,23 @@ function renderDrills() {
         }
       });
     });
+
+    // ✅ click card => editar (ignorando clicks en links/botones)
+    $.drillsList?.querySelectorAll("[data-edit-drill]").forEach(el => {
+      el.addEventListener("click", async (e) => {
+        const target = e.target;
+        if (target?.closest("a,button")) return;
+
+        const id = el.getAttribute("data-edit-drill");
+        if (!id) return;
+
+        // esta función la agregaste aparte (abre modal + carga datos)
+        await openDrillEditor(id);
+      });
+    });
   }
 }
+
 
 function drillMatches(d, term) {
   const hay = [
@@ -526,6 +559,103 @@ async function toggleDrillActive(drillId) {
   showAlert(next ? (S.ok?.drillReactivated || "Reactivado.") : (S.ok?.drillArchived || "Archivado."), "success");
   await loadDrills();
 }
+
+async function ensureDrillEditorModal() {
+  await loadPartialOnce("/partials/drill_editor_modal.html", "modalMount");
+
+  const modalEl = document.getElementById("drillEditorModal");
+  const formEl = document.getElementById("drillEditorForm");
+
+  // cache fields (no los guardo en $ para no mezclar con create)
+  const fields = {
+    modalEl,
+    titleEl: document.getElementById("drillEditorTitle"),
+    name: document.getElementById("deName"),
+    author: document.getElementById("deAuthor"),
+    tactical: document.getElementById("deTactical"),
+    video: document.getElementById("deVideo"),
+    objective: document.getElementById("deObjective"),
+    volume: document.getElementById("deVolume"),
+    rest: document.getElementById("deRest"),
+    recs: document.getElementById("deRecs"),
+    isPublic: document.getElementById("deIsPublic"),
+    saveBtn: document.getElementById("saveDrillEditorBtn"),
+    formEl,
+  };
+
+  // bind una sola vez
+  if (!ensureDrillEditorModal._bound) {
+    fields.saveBtn?.addEventListener("click", async () => {
+      if (!canEdit) return;
+      showLoader();
+      try {
+        await saveDrillEdits(fields);
+        const modal = bootstrap.Modal.getOrCreateInstance(fields.modalEl);
+        modal.hide();
+        await loadDrills(); // refresca lista
+      } finally {
+        hideLoader();
+      }
+    });
+    ensureDrillEditorModal._bound = true;
+  }
+
+  return fields;
+}
+
+async function openDrillEditor(drillId) {
+  const d = drills.find(x => x.id === drillId);
+  if (!d) return;
+
+  const ui = await ensureDrillEditorModal();
+  drillEditor.id = drillId;
+
+  if (ui.titleEl) ui.titleEl.textContent = "Editar drill";
+
+  ui.name.value = d.name || "";
+  ui.author.value = d.authorName || "";
+  ui.tactical.value = d.tacticalBoardUrl || "";
+  ui.video.value = d.teamVideoUrl || "";
+  ui.objective.value = d.objective || "";
+  ui.volume.value = d.volume || "";
+  ui.rest.value = d.restAfter || "";
+  ui.recs.value = d.recommendations || "";
+  ui.isPublic.checked = d.isPublic !== false; // default true
+
+  const modal = bootstrap.Modal.getOrCreateInstance(ui.modalEl);
+  modal.show();
+}
+
+async function saveDrillEdits(ui) {
+  clearAlert();
+  const id = drillEditor.id;
+  if (!id) return;
+
+  const name = (ui.name.value || "").trim();
+  const authorName = (ui.author.value || "").trim();
+
+  if (!name || !authorName) {
+    showAlert(S.errors?.required || "Campos requeridos.", "warning");
+    return;
+  }
+
+  await setDoc(doc(db, COL_DRILLS, id), {
+    clubId,
+    name,
+    authorName,
+    tacticalBoardUrl: safeUrl(ui.tactical.value) || "",
+    teamVideoUrl: safeUrl(ui.video.value) || "",
+    objective: (ui.objective.value || "").trim(),
+    volume: (ui.volume.value || "").trim(),
+    restAfter: (ui.rest.value || "").trim(),
+    recommendations: (ui.recs.value || "").trim(),
+    isPublic: ui.isPublic.checked === true,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+
+  showAlert("Drill actualizado ✅", "success");
+}
+
 
 /* =========================
    Events
