@@ -8,7 +8,7 @@ import { loadHeader } from "./components/header.js";
    HEADER
 ========================================================= */
 
-loadHeader("home");
+loadHeader("home", { enabledTabs: {} });
 
 /* =========================================================
    HERO

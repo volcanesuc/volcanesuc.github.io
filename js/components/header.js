@@ -106,8 +106,13 @@ export async function loadHeader(activeTab, cfgOverride) {
     const dashHref = toAbsHref(CLUB_DATA.header?.homeHref || "dashboard.html");
     const logoutLabel = CLUB_DATA.header?.logout?.label || "SALIR";
 
+    const isIndex =
+      location.pathname === "/" ||
+      location.pathname.endsWith("/index.html") ||
+      location.pathname.endsWith("/");
+
     if (!user) {
-      // ✅ NO logueado: Google + Crear cuenta
+      // NO logueado: Google + Crear cuenta
       cta.innerHTML = `
         <button id="googleLoginBtn" class="btn btn-light btn-sm d-flex align-items-center gap-2">
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="16" height="16" alt="Google">
@@ -133,24 +138,25 @@ export async function loadHeader(activeTab, cfgOverride) {
       return;
     }
 
-    // ✅ Logueado: Dashboard (solo si estás en index) + Salir (tu estilo)
-    const isIndex =
-      location.pathname === "/" ||
-      location.pathname.endsWith("/index.html") ||
-      location.pathname.endsWith("/");
+    // Logueado
+    if (isIndex) {
+      // ✅ en landing: redirigir, no mostrar botón
+      location.replace(dashHref);
+      return;
+    }
 
+    // ✅ páginas internas: solo salir
     cta.innerHTML = `
-      ${isIndex ? `<a href="${dashHref}" class="btn btn-dark btn-sm">Dashboard</a>` : ""}
       <button id="logoutBtn" class="logout-btn">${logoutLabel}</button>
     `;
 
     mcta.innerHTML = `
-      ${isIndex ? `<a href="${dashHref}" class="btn btn-dark w-100">Dashboard</a>` : ""}
       <button class="btn btn-outline-primary w-100 mt-2" id="logoutBtnMobile">${logoutLabel}</button>
     `;
 
     bindHeaderEvents();
   });
+
 }
 
 function bindHeaderEvents() {
