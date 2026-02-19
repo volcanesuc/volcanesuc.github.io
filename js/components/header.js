@@ -1,6 +1,6 @@
 // js/components/header.js
 import "../firebase.js"; // ✅ asegura init de Firebase antes de getAuth()
-import { loginWithGoogle, logout } from "../auth.js";
+import { loginWithGoogle, logout } from "../auth/auth.js";
 import { CLUB_DATA } from "../strings.js";
 import { loadHeaderTabsConfig, filterMenuByConfig } from "../remote-config.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";

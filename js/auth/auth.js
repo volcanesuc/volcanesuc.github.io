@@ -1,6 +1,6 @@
 // js/auth.js
-import { auth } from "./firebase.js";
-import { db } from "./firebase.js";
+import { auth } from "../auth/firebase.js";
+import { db } from "../auth/firebase.js";
 
 import {
   GoogleAuthProvider,

@@ -2,7 +2,7 @@
 import "../firebase.js";
 import { db } from "../firebase.js";
 import { loadHeader } from "../components/header.js";
-import { loginWithGoogle, logout } from "../auth.js";
+import { loginWithGoogle, logout } from "../auth/auth.js";
 
 import {
   getAuth,
