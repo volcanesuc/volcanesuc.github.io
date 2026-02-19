@@ -141,14 +141,14 @@ export async function loadHeader(activeTab, cfgOverride) {
 
     cta.innerHTML = `
       ${isIndex ? `<a href="${dashHref}" class="btn btn-dark btn-sm">Dashboard</a>` : ""}
-      <button id="logoutBtn" class="btn btn-outline-danger btn-sm">
+      <button id="logoutBtn" class="logout-btn">
         ${CLUB_DATA.header?.logout?.label || "Salir"}
       </button>
     `;
 
     mcta.innerHTML = `
       ${isIndex ? `<a href="${dashHref}" class="btn btn-dark w-100">Dashboard</a>` : ""}
-      <button class="btn btn-outline-danger w-100" id="logoutBtnMobile">
+      <button class="btn btn-outline-primary w-100 mt-2" id="logoutBtnMobile">
         ${CLUB_DATA.header?.logout?.label || "Salir"}
       </button>
     `;
