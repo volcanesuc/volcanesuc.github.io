@@ -11,10 +11,16 @@ export const CLUB_DATA = {
     logoText: "Volcanes",
     mobileTitle: "Volcanes Ultimate",
     cta: {
-      label: "INGRESAR",
-      action: "login"
+      login: {
+        label: "Ingresar",
+        href: "login.html"
+      },
+      register: {
+        label: "Crear cuenta",
+        href: "register.html"
+      }
     },
-     menu: [
+    menu: [
       { id: "home", label: "Home", href: "/dashboard.html" },
       { id: "roster", label: "Roster", href: "/roster.html" },
       { id: "trainings", label: "Entrenamientos", href: "/trainings.html" },
@@ -23,7 +29,7 @@ export const CLUB_DATA = {
       { id: "playbook", label: "Playbook", href: "/playbook.html" },
       { id: "association", label: "Asociación", href: "/association.html" }
     ],
-     logout: {
+    logout: {
       label: "SALIR"
     }
   },
