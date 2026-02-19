@@ -2,10 +2,7 @@
 import "./config.js";
 import { loginWithGoogle } from "./auth.js";
 import { CLUB_DATA } from "./strings.js";
-
-import "./config.js";
 import { loadHeader } from "./components/header.js";
-import { CLUB_DATA } from "./strings.js";
 
 /* =========================================================
    HEADER

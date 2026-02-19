@@ -1,15 +1,16 @@
 // js/components/header.js
-import { logout } from "../auth.js";
+import "../firebase.js"; // ✅ asegura init de Firebase antes de getAuth()
+import { loginWithGoogle, logout } from "../auth.js";
 import { CLUB_DATA } from "../strings.js";
 import { loadHeaderTabsConfig, filterMenuByConfig } from "../remote-config.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 /*
   Header único (sin HTML separado):
-  - Renderiza tabs (filtrados por remote config si existe)
-  - Renderiza CTA dinámico según sesión:
-      * NO logueado: Ingresar + Crear cuenta
-      * Logueado: Salir (y opcional: Dashboard si estás en index)
+  - Tabs filtrados por remote config
+  - CTA según sesión:
+      * NO logueado: Google + Crear cuenta
+      * Logueado: (Dashboard si index) + Salir (con tu estilo)
 */
 
 export async function loadHeader(activeTab, cfgOverride) {
@@ -21,7 +22,7 @@ export async function loadHeader(activeTab, cfgOverride) {
   const MENU = CLUB_DATA.header.menu || [];
   const HOME_HREF = toAbsHref(CLUB_DATA.header.homeHref || "dashboard.html");
 
-  // usa cfgOverride si viene; si no, intenta remote config; si falla, fallback
+  // cfgOverride > remote config > fallback
   let cfg = cfgOverride;
   if (!cfg) {
     try {
@@ -52,7 +53,6 @@ export async function loadHeader(activeTab, cfgOverride) {
       `
     ).join("");
 
-  // CTA placeholders: se llena con onAuthStateChanged
   header.innerHTML = `
     <header class="topbar">
       <div class="left">
@@ -74,9 +74,7 @@ export async function loadHeader(activeTab, cfgOverride) {
         ${renderLinksDesktop()}
       </nav>
 
-      <div class="header-cta d-flex align-items-center gap-2" id="headerCta">
-        <!-- auth buttons -->
-      </div>
+      <div class="header-cta d-flex align-items-center gap-2" id="headerCta"></div>
     </header>
 
     <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
@@ -94,66 +92,64 @@ export async function loadHeader(activeTab, cfgOverride) {
 
         <hr />
 
-        <div class="d-grid gap-2" id="mobileCta">
-          <!-- auth buttons -->
-        </div>
+        <div class="d-grid gap-2" id="mobileCta"></div>
       </div>
     </div>
   `;
 
-  // Pinta botones según sesión (una sola fuente de verdad)
   onAuthStateChanged(auth, (user) => {
     const cta = document.getElementById("headerCta");
     const mcta = document.getElementById("mobileCta");
     if (!cta || !mcta) return;
 
-    const loginHref = toAbsHref(CLUB_DATA.header?.cta?.login?.href || "login.html");
     const registerHref = toAbsHref(CLUB_DATA.header?.cta?.register?.href || "register.html");
     const dashHref = toAbsHref(CLUB_DATA.header?.homeHref || "dashboard.html");
+    const logoutLabel = CLUB_DATA.header?.logout?.label || "SALIR";
 
     if (!user) {
-      // NO logueado: Ingresar + Crear cuenta
+      // ✅ NO logueado: Google + Crear cuenta
       cta.innerHTML = `
-        <a href="${loginHref}" class="btn btn-outline-dark btn-sm">
-          ${CLUB_DATA.header?.cta?.login?.label || "Ingresar"}
-        </a>
-        <a href="${registerHref}" class="btn btn-dark btn-sm">
+        <button id="googleLoginBtn" class="btn btn-light btn-sm d-flex align-items-center gap-2">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="16" height="16" alt="Google">
+          Ingresar con Google
+        </button>
+        <a href="${registerHref}" class="btn btn-outline-light btn-sm">
           ${CLUB_DATA.header?.cta?.register?.label || "Crear cuenta"}
         </a>
       `;
 
       mcta.innerHTML = `
-        <a href="${loginHref}" class="btn btn-outline-dark w-100">
-          ${CLUB_DATA.header?.cta?.login?.label || "Ingresar"}
-        </a>
-        <a href="${registerHref}" class="btn btn-dark w-100">
+        <button id="googleLoginBtnMobile" class="btn btn-light w-100 d-flex align-items-center justify-content-center gap-2">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="16" height="16" alt="Google">
+          Ingresar con Google
+        </button>
+        <a href="${registerHref}" class="btn btn-outline-light w-100 mt-2">
           ${CLUB_DATA.header?.cta?.register?.label || "Crear cuenta"}
         </a>
       `;
+
+      document.getElementById("googleLoginBtn")?.addEventListener("click", loginWithGoogle);
+      document.getElementById("googleLoginBtnMobile")?.addEventListener("click", loginWithGoogle);
       return;
     }
 
-    // Logueado: Dashboard (si estás en index) + Salir
+    // ✅ Logueado: Dashboard (solo si estás en index) + Salir (tu estilo)
     const isIndex =
-      location.pathname.endsWith("/index.html") ||
       location.pathname === "/" ||
+      location.pathname.endsWith("/index.html") ||
       location.pathname.endsWith("/");
 
     cta.innerHTML = `
       ${isIndex ? `<a href="${dashHref}" class="btn btn-dark btn-sm">Dashboard</a>` : ""}
-      <button id="logoutBtn" class="logout-btn">
-        ${CLUB_DATA.header?.logout?.label || "Salir"}
-      </button>
+      <button id="logoutBtn" class="logout-btn">${logoutLabel}</button>
     `;
 
     mcta.innerHTML = `
       ${isIndex ? `<a href="${dashHref}" class="btn btn-dark w-100">Dashboard</a>` : ""}
-      <button class="btn btn-outline-primary w-100 mt-2" id="logoutBtnMobile">
-        ${CLUB_DATA.header?.logout?.label || "Salir"}
-      </button>
+      <button class="btn btn-outline-primary w-100 mt-2" id="logoutBtnMobile">${logoutLabel}</button>
     `;
 
-    bindHeaderEvents(); // re-bindea porque el DOM de botones cambió
+    bindHeaderEvents();
   });
 }
 
@@ -164,10 +160,7 @@ function bindHeaderEvents() {
 
 function toAbsHref(href) {
   if (!href) return "#";
-  // ya es absoluta o externa
   if (href.startsWith("/") || href.startsWith("http://") || href.startsWith("https://")) return href;
-  // hash o query “puro”
   if (href.startsWith("#") || href.startsWith("?")) return href;
-  // convierte "roster.html" -> "/roster.html"
   return `/${href}`;
 }
