@@ -33,7 +33,13 @@ export async function loadHeader(activeTab, cfgOverride) {
     }
   }
 
-  const VISIBLE_MENU = filterMenuByConfig(MENU, cfg);
+  const isOverride = !!cfgOverride;
+  const VISIBLE_MENU = isOverride ? filterMenuStrict(MENU, cfg) : filterMenuByConfig(MENU, cfg);
+
+  function filterMenuStrict(menu, cfg) {
+    const enabled = cfg?.enabledTabs || {};
+    return (menu || []).filter(item => enabled[item.id] === true);
+  }
 
   const renderLinksDesktop = () =>
     VISIBLE_MENU.map(
