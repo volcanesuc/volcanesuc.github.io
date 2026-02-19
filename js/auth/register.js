@@ -585,105 +585,22 @@ async function uploadProofFile({ uid, assocId, file }) {
 /* =========================
    Init
 ========================= */
-/* =========================
-   Init + Auth gated loading
-========================= */
-
-let _bootstrapped = false;
-
-function setFormEnabled(enabled) {
-  // Bloquea todo el form hasta tener sesión y data
-  if ($.form) $.form.style.opacity = enabled ? "1" : "0.65";
-  if ($.submitBtn) $.submitBtn.disabled = !enabled;
-
-  // si quieres, bloquea selects/inputs específicos
-  [
-    $.firstName, $.lastName, $.birthDate, $.idType, $.idNumber,
-    $.phone, $.province, $.canton, $.planId, $.proofFile,
-    $.payerName, $.payMethod, $.infoDeclaration, $.termsAccepted
-  ].forEach((el) => {
-    if (!el) return;
-    el.disabled = !enabled;
-  });
-}
-
-function setPlansPlaceholderSignedOut() {
-  if ($.planId) {
-    $.planId.innerHTML = `<option value="">Ingresa con Google para ver planes…</option>`;
-    $.planId.value = "";
-  }
-  if ($.planMeta) $.planMeta.textContent = "";
-}
-
-// carga SOLO cuando hay user
-async function bootstrapAfterLogin(user) {
-  if (!user?.uid) return;
-  if (_bootstrapped) return; // evita dobles cargas
-  _bootstrapped = true;
-
+async function init() {
   setLoading(true);
   try {
-    await loadPlans();              // requiere signedIn por tus rules
-    await loadPublicRegConfig();    // requiere signedIn por tus rules
-
-    // email queda readonly si viene de Google
-    if (user.email && $.email) {
-      $.email.value = String(user.email).toLowerCase();
-      $.email.readOnly = true;
-    }
-
-    setFormEnabled(true);
-    hideAlert();
+    fillProvinceCanton();
+    await loadPlans();
+    await loadPublicRegConfig();
   } catch (e) {
     console.warn(e);
-    // si falla aquí, es real: permissions o indices o path
-    showAlert("No se pudo cargar planes/config. Verifica permisos y recarga.");
-    setFormEnabled(false);
+    showAlert("No se pudo cargar la configuración. Refresca la página.");
   } finally {
     setLoading(false);
     document.body.classList.remove("loading");
   }
 }
 
-async function init() {
-  // cosas que NO requieren Firestore:
-  fillProvinceCanton();
-
-  // arranca bloqueado hasta login
-  setFormEnabled(false);
-  setPlansPlaceholderSignedOut();
-
-  // si quieres mostrar alerta amigable:
-  showAlert("Ingresa con Google para continuar el registro.", "warning");
-
-  document.body.classList.remove("loading");
-}
-
 init();
-
-/* =========================
-   Auth UI (REEMPLAZA tu onAuthStateChanged actual)
-========================= */
-onAuthStateChanged(auth, async (user) => {
-  // Botones / email
-  if (user?.email && $.email) {
-    $.email.value = user.email;
-    $.email.readOnly = true;
-    $.logoutBtn?.classList.remove("d-none");
-  } else {
-    if ($.email) $.email.readOnly = false;
-    $.logoutBtn?.classList.add("d-none");
-    _bootstrapped = false; // si hizo logout, permitimos re-bootstrap
-    setFormEnabled(false);
-    setPlansPlaceholderSignedOut();
-  }
-
-  // 🔥 Solo aquí cargamos Firestore data
-  if (user?.uid) {
-    await bootstrapAfterLogin(user);
-  }
-});
-
 
 /* =========================
    Submit
