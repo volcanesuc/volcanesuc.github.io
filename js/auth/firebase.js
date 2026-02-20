@@ -1,6 +1,7 @@
 // js/firebase.js
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { APP_CONFIG } from "../config/config.js";
 
@@ -24,5 +25,6 @@ const app = getApps().length ? getApps()[0] : initializeApp(getFirebaseConfig())
 
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const storage = getStorage(app); // ✅ ESTA LÍNEA FALTABA
 
 export { app };
