@@ -1,8 +1,8 @@
 // dashboard.js
 // Dashboard principal: jugadores, entrenamientos, KPIs y alertas
 
-import { db } from "../auth/firebase.js";
-import { watchAuth, logout } from "../auth/auth.js";
+import { db } from "./auth/firebase.js";
+import { watchAuth, logout } from "./auth/auth.js";
 import {
   collection,
   getDocs
