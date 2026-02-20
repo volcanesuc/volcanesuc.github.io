@@ -1,6 +1,6 @@
 // js/public/register.js
-import { db, auth, storage } from "../auth/firebase.js";
-import { loginWithGoogle, logout } from "../auth/auth.js";
+import { db, auth, storage } from "./firebase.js";
+import { loginWithGoogle, logout } from "./auth.js";
 import { loadHeader } from "../components/header.js";
 import { APP_CONFIG } from "../config/config.js";
 
