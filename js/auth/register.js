@@ -863,7 +863,6 @@ $.form?.addEventListener("submit", async (ev) => {
         clubId: CLUB_ID,
         email: email || auth.currentUser?.email || null,
         onboardingComplete: true,
-        profileStatus: "complete",
         associateId: assocId,
         playerId: playerId || null,
         updatedAt: serverTimestamp(),

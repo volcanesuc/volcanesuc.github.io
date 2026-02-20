@@ -24,17 +24,13 @@ async function ensureUserDoc(firebaseUser) {
   const payload = {
     uid,
     clubId: clubId(),
-
-    // data google
     email: firebaseUser.email || null,
     displayName: firebaseUser.displayName || null,
     photoURL: firebaseUser.photoURL || null,
     phoneNumber: firebaseUser.phoneNumber || null,
     providerId: firebaseUser.providerData?.[0]?.providerId || "google",
-
-    profileStatus: "pending", // lo completa en register
+    onboardingComplete: false,
     isActive: true,
-
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   };
@@ -52,6 +48,25 @@ async function ensureUserDoc(firebaseUser) {
 export async function routeAfterGoogleLogin(firebaseUser) {
   const uid = firebaseUser.uid;
 
+  // 1) asegurar users/{uid} (o leerlo si ya existe)
+  const ensured = await ensureUserDoc(firebaseUser);
+  const createdFlag = ensured.created ? "1" : "0";
+
+  // 2) gate de onboarding / perfil
+  // soporta ambos modelos: onboardingComplete o profileStatus
+  const data = ensured.data || {};
+  const onboardingDone =
+    data.onboardingComplete === true ||
+    data.profileStatus === "complete" ||
+    data.profileStatus === "completed";
+
+  // si NO está completo -> register SIEMPRE (aunque tenga rol)
+  if (!onboardingDone) {
+    window.location.href = `/public/register.html?created=${createdFlag}`;
+    return;
+  }
+
+  // 3) ya completo -> ahora sí validar rol
   const roleRef = doc(db, "user_roles", uid);
   const roleSnap = await getDoc(roleRef);
 
@@ -63,9 +78,6 @@ export async function routeAfterGoogleLogin(firebaseUser) {
     }
   }
 
-  const ensured = await ensureUserDoc(firebaseUser);
-  const createdFlag = ensured.created ? "1" : "0";
-
-  // register en raíz
-  window.location.href = `register.html?created=${createdFlag}`;
+  // completo pero sin rol: lo mandamos a register (o "no-access.html")
+  window.location.href = `register.html?created=${createdFlag}&norole=1`;
 }

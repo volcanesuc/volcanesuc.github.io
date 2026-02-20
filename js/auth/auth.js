@@ -77,8 +77,8 @@ export async function loginWithGoogle(opts = {}) {
 
     window.location.href = registerPath;
   } catch (err) {
-    console.error(err);
-    alert("Error al iniciar sesión");
+    console.error("loginWithGoogle error:", err?.code, err?.message, err);
+    alert(`Error al iniciar sesión: ${err?.code || ""} ${err?.message || ""}`);
   }
 }
 
