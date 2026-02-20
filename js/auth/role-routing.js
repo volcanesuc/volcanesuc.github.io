@@ -19,7 +19,15 @@ async function ensureUserDoc(firebaseUser) {
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
 
-  if (snap.exists()) return { created: false, data: snap.data() };
+  if (snap.exists()) {
+    const data = snap.data() || {};
+    if (data.onboardingComplete === undefined) {
+      const patch = { onboardingComplete: false, updatedAt: serverTimestamp() };
+      await setDoc(ref, patch, { merge: true });
+      return { created: false, data: { ...data, ...patch } };
+    }
+    return { created: false, data };
+  }
 
   const payload = {
     uid,
@@ -57,7 +65,7 @@ export async function routeAfterGoogleLogin(firebaseUser) {
 
   // 2) Si NO terminó onboarding → SIEMPRE register
   if (!onboardingDone) {
-    window.location.href = `/register.html?created=${createdFlag}`;
+    window.location.href = `/public/register.html?created=${createdFlag}`;
     return;
   }
 
@@ -74,5 +82,5 @@ export async function routeAfterGoogleLogin(firebaseUser) {
   }
 
   // completo pero sin rol
-  window.location.href = `/register.html?created=${createdFlag}&norole=1`;
+  window.location.href = `/public/register.html?created=${createdFlag}&norole=1`;
 }
