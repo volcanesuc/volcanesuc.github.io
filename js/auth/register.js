@@ -716,7 +716,10 @@ $.form?.addEventListener("submit", async (ev) => {
   const idType = normLower($.idType?.value);
   const idNumber = cleanIdNum($.idNumber?.value);
 
-  const email = user.email ? String(user.email).toLowerCase() : normLower($.email?.value);
+  const email = user.email
+    ? String(user.email).toLowerCase()
+    : normLower($.email?.value);
+
   const phone = norm($.phone?.value);
 
   const residence = {
@@ -729,11 +732,17 @@ $.form?.addEventListener("submit", async (ev) => {
 
   const file = $.proofFile?.files?.[0] || null;
 
-  const payerName = norm($.payerName?.value) || `${firstName} ${lastName}`.trim();
+  const payerName =
+    norm($.payerName?.value) || `${firstName} ${lastName}`.trim();
+
   const method = normLower($.payMethod?.value) || "sinpe";
 
   // enforce config
   const cfg = await loadPublicRegConfig();
+
+  // ✅ clubId source of truth: config si viene, si no fallback
+  const CLUB_ID =
+    cfg?.clubId || cfg?.club?.id || APP_CONFIG?.clubId || APP_CONFIG?.club?.id || "volcanes";
 
   // Validate basics
   if (!firstName || !lastName || !birthDate || !idType || !idNumber || !email) {
@@ -855,6 +864,7 @@ $.form?.addEventListener("submit", async (ev) => {
       })
     );
 
+    // ✅ ÚNICO FLAG: onboardingComplete
     await step("Mark onboarding complete (users/{uid})", async () => {
       const uref = doc(db, "users", uid);
       const usnap = await getDoc(uref);
@@ -862,17 +872,30 @@ $.form?.addEventListener("submit", async (ev) => {
       const payload = {
         clubId: CLUB_ID,
         email: email || auth.currentUser?.email || null,
-        onboardingComplete: true,
+
+        onboardingComplete: true, // 🔥 aquí
+
         associateId: assocId,
         playerId: playerId || null,
+
+        // si querés guardar también lo mínimo del perfil:
+        firstName: firstName || null,
+        lastName: lastName || null,
+        birthDate: birthDate || null,
+        phone: phone || null,
+
         updatedAt: serverTimestamp(),
       };
 
       if (!usnap.exists()) payload.createdAt = serverTimestamp();
 
+      // 🧹 si existía profileStatus de antes, lo “borramos” (opcional)
+      // payload.profileStatus = deleteField(); // solo si importás deleteField
+
       return setDoc(uref, payload, { merge: true });
     });
 
+    // role (si tu modelo requiere rol para entrar al dashboard)
     await step("Ensure access role (user_roles/{uid})", () => ensureRole(uid));
 
     // limpieza opcional
