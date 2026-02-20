@@ -1,5 +1,5 @@
 // attendance.js
-import { db } from "../auth/firebase.js";
+import { db } from "./auth/firebase.js";
 import { watchAuth, logout } from "../auth/auth.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { APP_CONFIG } from "./config/config.js";
