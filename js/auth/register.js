@@ -889,9 +889,6 @@ $.form?.addEventListener("submit", async (ev) => {
 
       if (!usnap.exists()) payload.createdAt = serverTimestamp();
 
-      // 🧹 si existía profileStatus de antes, lo “borramos” (opcional)
-      // payload.profileStatus = deleteField(); // solo si importás deleteField
-
       return setDoc(uref, payload, { merge: true });
     });
 
