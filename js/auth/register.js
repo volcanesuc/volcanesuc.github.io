@@ -1,13 +1,10 @@
-// /js/public/register.js
-import "../firebase.js";
-import { db } from "../firebase.js";
-import { loadHeader } from "../components/header.js";
+// js/public/register.js
+import { db, auth, storage } from "../auth/firebase.js";
 import { loginWithGoogle, logout } from "../auth/auth.js";
+import { loadHeader } from "../components/header.js";
+import { APP_CONFIG } from "../config/config.js";
 
-import {
-  getAuth,
-  onAuthStateChanged,
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 import {
   collection,
@@ -24,7 +21,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
-  getStorage,
   ref as sRef,
   uploadBytesResumable,
   getDownloadURL,
@@ -33,7 +29,7 @@ import {
 /* =========================
    Config / Collections
 ========================= */
-const CLUB_ID = "volcanes";
+const CLUB_ID = APP_CONFIG?.clubId || APP_CONFIG?.club?.id || "volcanes";
 
 const COL_PLANS = "subscription_plans"; // (tus planes actuales)
 const COL_ASSOC = "associates";
@@ -63,7 +59,6 @@ const $ = {
   idNumber: document.getElementById("idNumber"),
   email: document.getElementById("email"),
 
-  // opcional si lo agregas en HTML:
   phone: document.getElementById("phone"),
   payerName: document.getElementById("payerName"),
   payMethod: document.getElementById("payMethod"),
@@ -83,9 +78,6 @@ const $ = {
   termsAccepted: document.getElementById("termsAccepted"),
   termsLink: document.getElementById("termsLink"),
 };
-
-const auth = getAuth();
-const storage = getStorage();
 
 /* =========================
    Helpers
@@ -137,6 +129,35 @@ function makePayCode(len = 6) {
 function safeSeasonFromToday() {
   // simple: usa año actual local del navegador
   return String(new Date().getFullYear());
+}
+
+/* =========================
+   Role / Access helpers
+========================= */
+async function hasActiveRole(uid) {
+  const roleRef = doc(db, "user_roles", uid);
+  const snap = await getDoc(roleRef);
+  if (!snap.exists()) return false;
+  const r = snap.data();
+  return r?.active === true && r?.clubId === CLUB_ID;
+}
+
+async function ensureRole(uid) {
+  const roleRef = doc(db, "user_roles", uid);
+  const snap = await getDoc(roleRef);
+  if (snap.exists()) return;
+
+  await setDoc(
+    roleRef,
+    {
+      clubId: CLUB_ID,
+      role: "viewer",
+      active: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
 
 /* =========================
@@ -200,7 +221,13 @@ loadHeader("home", { enabledTabs: {} });
 $.googleBtn?.addEventListener("click", async () => {
   hideAlert();
   try {
-    await loginWithGoogle();
+    const u = await loginWithGoogle();
+
+    // Si ya tiene rol activo, no debería estar registrándose aquí:
+    if (u?.uid && (await hasActiveRole(u.uid))) {
+      window.location.replace("../dashboard.html");
+      return;
+    }
   } catch (e) {
     console.warn(e);
     showAlert("No se pudo iniciar sesión con Google.");
@@ -211,7 +238,12 @@ $.logoutBtn?.addEventListener("click", async () => {
   await logout();
 });
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
+  if (user?.uid && (await hasActiveRole(user.uid))) {
+    window.location.replace("../dashboard.html");
+    return;
+  }
+
   if (user?.email && $.email) {
     $.email.value = user.email;
     $.email.readOnly = true;
@@ -314,7 +346,18 @@ $.planId?.addEventListener("change", () => {
 ========================= */
 
 // 2) upsert associate by uid or email
-async function upsertAssociate({ uid, email, firstName, lastName, birthDate, idType, idNumber, phone, residence, consents }) {
+async function upsertAssociate({
+  uid,
+  email,
+  firstName,
+  lastName,
+  birthDate,
+  idType,
+  idNumber,
+  phone,
+  residence,
+  consents,
+}) {
   const fullName = `${firstName} ${lastName}`.trim();
 
   let assocId = null;
@@ -419,8 +462,7 @@ async function findPlayerToLink({ uid, email, firstName, lastName, birthDate }) 
   return null;
 }
 
-
-// 4) upsert player: if found, link. if not found, create minimal player (active + name + birthday) and link.
+// 4) upsert player: if found, link. if not found, create minimal player and link.
 async function ensureLinkedPlayer({ assocId, uid, email, firstName, lastName, birthDate }) {
   let player = await findPlayerToLink({ uid, email, firstName, lastName, birthDate });
 
@@ -440,12 +482,10 @@ async function ensureLinkedPlayer({ assocId, uid, email, firstName, lastName, bi
   };
 
   if (!player) {
-    // crea player mínimo
     const ref = await addDoc(collection(db, COL_PLAYERS), payload);
     return { playerId: ref.id, created: true };
   }
 
-  // merge (NO pisa role/gender/number si existen)
   await setDoc(doc(db, COL_PLAYERS, player.id), payload, { merge: true });
   return { playerId: player.id, created: false };
 }
@@ -471,7 +511,6 @@ function buildPlanSnapshot(plan) {
 
 async function createMembership({ assocId, associateSnapshot, plan, season, consents }) {
   const payCode = makePayCode(7);
-
   const planSnap = buildPlanSnapshot(plan);
 
   const payload = {
@@ -491,14 +530,12 @@ async function createMembership({ assocId, associateSnapshot, plan, season, cons
     payLinkEnabled: false,
     payLinkDisabledReason: "Pendiente de validación.",
 
-    // si tu UI los calcula después, dejarlos en 0
     installmentsTotal: 0,
     installmentsPending: 0,
     installmentsSettled: 0,
     nextUnpaidDueDate: null,
     nextUnpaidN: null,
 
-    // auditoría
     consents: consents || null,
 
     createdAt: serverTimestamp(),
@@ -509,8 +546,7 @@ async function createMembership({ assocId, associateSnapshot, plan, season, cons
   return { membershipId: ref.id, payCode };
 }
 
-// NOTE: Como no me diste el schema exacto del plan para cuotas, hago esto:
-// - si plan.installmentsCount > 1 => crea cuotas iguales y devuelve ids
+// si plan.installmentsCount > 1 => crea cuotas iguales y devuelve ids
 async function maybeCreateInstallments({ membershipId, plan, season }) {
   const count = Number(plan.installmentsCount || 0);
   if (!count || count < 2) return { installmentIds: [] };
@@ -548,12 +584,13 @@ async function maybeCreateInstallments({ membershipId, plan, season }) {
     ids.push(instRef.id);
   }
 
-  // opcional: actualizar membership con contadores iniciales
   await updateDoc(doc(db, COL_MEMBERSHIPS, membershipId), {
     installmentsTotal: count,
     installmentsPending: count,
     installmentsSettled: 0,
-    nextUnpaidDueDate: ids.length ? `${nowYear}-${String(startMonth).padStart(2, "0")}-${String(dueDay).padStart(2, "0")}` : null,
+    nextUnpaidDueDate: ids.length
+      ? `${nowYear}-${String(startMonth).padStart(2, "0")}-${String(dueDay).padStart(2, "0")}`
+      : null,
     nextUnpaidN: ids.length ? 1 : null,
     updatedAt: serverTimestamp(),
   }).catch(() => {});
@@ -583,6 +620,36 @@ async function uploadProofFile({ uid, assocId, file }) {
 }
 
 /* =========================
+   Fill info from Google (prefill)
+========================= */
+function applyPrefillFromSession() {
+  try {
+    const raw = sessionStorage.getItem("prefill_register");
+    if (!raw) return;
+    const p = JSON.parse(raw);
+
+    if ($.email && p.email) {
+      $.email.value = p.email;
+      $.email.readOnly = true;
+    }
+
+    if ($.firstName && $.lastName && p.fullName) {
+      const parts = String(p.fullName).trim().split(/\s+/);
+      if (!$.firstName.value) $.firstName.value = parts.shift() || "";
+      if (!$.lastName.value) $.lastName.value = parts.join(" ");
+    }
+
+    if ($.phone && p.phone && !$.phone.value) {
+      $.phone.value = p.phone;
+    }
+  } catch (e) {
+    console.warn("prefill_register invalid", e);
+  }
+}
+
+applyPrefillFromSession();
+
+/* =========================
    Init
 ========================= */
 async function init() {
@@ -603,45 +670,14 @@ async function init() {
 init();
 
 /* =========================
-   Fill info from Google
+   Debug helpers
 ========================= */
-
-function applyPrefillFromSession() {
-  try {
-    const raw = sessionStorage.getItem("prefill_register");
-    if (!raw) return;
-    const p = JSON.parse(raw);
-
-    if ($.email && p.email) {
-      $.email.value = p.email;
-      $.email.readOnly = true;
-    }
-
-    // si tu HTML tiene firstName/lastName separados:
-    // (si viene fullName, lo partimos)
-    if ($.firstName && $.lastName && p.fullName) {
-      const parts = String(p.fullName).trim().split(/\s+/);
-      if (!$.firstName.value) $.firstName.value = parts.shift() || "";
-      if (!$.lastName.value) $.lastName.value = parts.join(" ");
-    }
-
-    if ($.phone && p.phone && !$.phone.value) {
-      $.phone.value = p.phone;
-    }
-  } catch (e) {
-    console.warn("prefill_register invalid", e);
-  }
-}
-
-applyPrefillFromSession();
-
-
 function firebaseErrMsg(e) {
-  const code = (e && e.code) ? String(e.code) : "";
+  const code = e?.code ? String(e.code) : "";
   if (code.includes("permission-denied")) return "Permisos insuficientes (rules).";
   if (code.includes("unauthenticated")) return "No hay sesión (login) activa.";
   if (code.includes("failed-precondition")) return "Falta un índice o precondición en Firestore.";
-  return (e && e.message) ? e.message : "Error desconocido.";
+  return e?.message ? e.message : "Error desconocido.";
 }
 
 async function step(name, fn) {
@@ -655,7 +691,6 @@ async function step(name, fn) {
   }
 }
 
-
 /* =========================
    Submit
 ========================= */
@@ -665,7 +700,7 @@ $.form?.addEventListener("submit", async (ev) => {
 
   const user = auth.currentUser;
 
-  // OJO: registro público requiere estar logueado
+  // registro público requiere estar logueado
   if (!user?.uid) {
     showAlert("Primero ingresa con Google para completar el registro.");
     return;
@@ -681,7 +716,7 @@ $.form?.addEventListener("submit", async (ev) => {
   const idType = normLower($.idType?.value);
   const idNumber = cleanIdNum($.idNumber?.value);
 
-  const email = (user.email ? String(user.email).toLowerCase() : normLower($.email?.value));
+  const email = user.email ? String(user.email).toLowerCase() : normLower($.email?.value);
   const phone = norm($.phone?.value);
 
   const residence = {
@@ -737,105 +772,120 @@ $.form?.addEventListener("submit", async (ev) => {
 
   setLoading(true);
   try {
-  // 0) sanity: uid siempre
-  if (!uid) throw new Error("No hay uid (login incompleto).");
+    // 0) sanity: uid siempre
+    if (!uid) throw new Error("No hay uid (login incompleto).");
 
-  const { assocId, associateSnapshot } = await step("Upsert associate", () =>
-    upsertAssociate({
-      uid, email, firstName, lastName, birthDate,
-      idType, idNumber, phone, residence, consents
-    })
-  );
+    const { assocId, associateSnapshot } = await step("Upsert associate", () =>
+      upsertAssociate({
+        uid,
+        email,
+        firstName,
+        lastName,
+        birthDate,
+        idType,
+        idNumber,
+        phone,
+        residence,
+        consents,
+      })
+    );
 
-  const { playerId } = await step("Link/create club_player", () =>
-    ensureLinkedPlayer({ assocId, uid, email, firstName, lastName, birthDate })
-  );
+    const { playerId } = await step("Link/create club_player", () =>
+      ensureLinkedPlayer({ assocId, uid, email, firstName, lastName, birthDate })
+    );
 
-  await step("Update associate.playerId", () =>
-    setDoc(
-      doc(db, COL_ASSOC, assocId),
-      { playerId: playerId || null, updatedAt: serverTimestamp() },
-      { merge: true }
-    )
-  );
+    await step("Update associate.playerId", () =>
+      setDoc(
+        doc(db, COL_ASSOC, assocId),
+        { playerId: playerId || null, updatedAt: serverTimestamp() },
+        { merge: true }
+      )
+    );
 
-  const proof = await step("Upload proof (Storage)", () =>
-    uploadProofFile({ uid, assocId, file })
-  );
+    const proof = await step("Upload proof (Storage)", () =>
+      uploadProofFile({ uid, assocId, file })
+    );
 
-  const season = plan.season || safeSeasonFromToday();
+    const season = plan.season || safeSeasonFromToday();
 
-  const { membershipId } = await step("Create membership", () =>
-    createMembership({
-      assocId,
-      associateSnapshot,
-      plan: { id: planId, ...plan },
-      season,
-      consents
-    })
-  );
+    const { membershipId } = await step("Create membership", () =>
+      createMembership({
+        assocId,
+        associateSnapshot,
+        plan: { id: planId, ...plan },
+        season,
+        consents,
+      })
+    );
 
-  await step("Create payment submission", () =>
-    addDoc(collection(db, COL_SUBMISSIONS), {
-      adminNote: null,
-      note: null,
+    // opcional: si querés crear installments según plan:
+    await step("Maybe create installments", () =>
+      maybeCreateInstallments({ membershipId, plan: { id: planId, ...plan }, season })
+    );
 
-      amountReported: planAmount(plan),
-      currency: plan.currency || "CRC",
+    await step("Create payment submission", () =>
+      addDoc(collection(db, COL_SUBMISSIONS), {
+        adminNote: null,
+        note: null,
 
-      email,
-      payerName: payerName || null,
-      phone: phone || null,
-      method: method || "sinpe",
+        amountReported: planAmount(plan),
+        currency: plan.currency || "CRC",
 
-      filePath: proof.filePath,
-      fileType: proof.fileType,
-      fileUrl: proof.fileUrl,
+        email,
+        payerName: payerName || null,
+        phone: phone || null,
+        method: method || "sinpe",
 
-      installmentId: null,
-      selectedInstallmentIds: [],
+        filePath: proof.filePath,
+        fileType: proof.fileType,
+        fileUrl: proof.fileUrl,
 
-      membershipId,
-      planId,
-      season,
+        installmentId: null,
+        selectedInstallmentIds: [],
 
-      status: "pending",
-      userId: uid,
+        membershipId,
+        planId,
+        season,
 
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-  );
+        status: "pending",
+        userId: uid,
 
-  await step("Mark onboarding complete (users/{uid})", async () => {
-    const uref = doc(db, "users", uid);
-    const usnap = await getDoc(uref);
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+    );
 
-    const payload = {
-      email: email || auth.currentUser?.email || null,
-      onboardingComplete: true,
-      associateId: assocId,
-      playerId: playerId || null,
-      updatedAt: serverTimestamp(),
-    };
+    await step("Mark onboarding complete (users/{uid})", async () => {
+      const uref = doc(db, "users", uid);
+      const usnap = await getDoc(uref);
 
-    if (!usnap.exists()) payload.createdAt = serverTimestamp();
+      const payload = {
+        clubId: CLUB_ID,
+        email: email || auth.currentUser?.email || null,
+        onboardingComplete: true,
+        profileStatus: "complete",
+        associateId: assocId,
+        playerId: playerId || null,
+        updatedAt: serverTimestamp(),
+      };
 
-    return setDoc(uref, payload, { merge: true });
-  });
+      if (!usnap.exists()) payload.createdAt = serverTimestamp();
 
-  // limpieza opcional
-  sessionStorage.removeItem("prefill_register");
+      return setDoc(uref, payload, { merge: true });
+    });
 
-  //dashboard (relativo)
-  window.location.replace("dashboard.html");
-  return;
+    await step("Ensure access role (user_roles/{uid})", () => ensureRole(uid));
 
-} catch (e) {
-  console.warn(e);
-  showAlert(String(e.message || e), "danger");
-} finally {
+    // limpieza opcional
+    sessionStorage.removeItem("prefill_register");
+
+    // dashboard (desde /public/)
+    window.location.replace("../dashboard.html");
+    return;
+  } catch (e) {
+    console.warn(e);
+    showAlert(String(e.message || e), "danger");
+  } finally {
     setLoading(false);
   }
 });
-

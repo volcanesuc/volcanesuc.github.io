@@ -1,23 +1,23 @@
 // js/components/header.js
-import "../auth/firebase.js";
+import { auth } from "../auth/firebase.js";
 import { loginWithGoogle, logout } from "../auth/auth.js";
+import { routeAfterGoogleLogin } from "../auth/role-routing.js";
+
 import { CLUB_DATA } from "../strings.js";
 import { loadHeaderTabsConfig, filterMenuByConfig } from "../remote-config.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 /*
   Header único (sin HTML separado):
   - Tabs filtrados por remote config
   - CTA según sesión:
-      * NO logueado: Google + Crear cuenta
-      * Logueado: (Dashboard si index) + Salir (con tu estilo)
+      * NO logueado: "Ingresar con Google" + "Crear cuenta"
+      * Logueado: "Salir" (y si estás en index, te rutea automáticamente por roles)
 */
 
 export async function loadHeader(activeTab, cfgOverride) {
   const header = document.getElementById("app-header");
   if (!header) return;
-
-  const auth = getAuth();
 
   const MENU = CLUB_DATA.header.menu || [];
   const HOME_HREF = toAbsHref(CLUB_DATA.header.homeHref || "dashboard.html");
@@ -103,13 +103,12 @@ export async function loadHeader(activeTab, cfgOverride) {
     </div>
   `;
 
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     const cta = document.getElementById("headerCta");
     const mcta = document.getElementById("mobileCta");
     if (!cta || !mcta) return;
 
     const registerHref = toAbsHref(CLUB_DATA.header?.cta?.register?.href || "public/register.html");
-    const dashHref = toAbsHref(CLUB_DATA.header?.homeHref || "dashboard.html");
     const logoutLabel = CLUB_DATA.header?.logout?.label || "SALIR";
 
     const isIndex =
@@ -139,15 +138,30 @@ export async function loadHeader(activeTab, cfgOverride) {
         </a>
       `;
 
-      document.getElementById("googleLoginBtn")?.addEventListener("click", loginWithGoogle);
-      document.getElementById("googleLoginBtnMobile")?.addEventListener("click", loginWithGoogle);
+      const doLoginAndRoute = async () => {
+        try {
+          const u = await loginWithGoogle();
+          if (!u?.uid) throw new Error("No uid from login");
+          await routeAfterGoogleLogin(u); // ✅ aquí vive todo el flow
+        } catch (e) {
+          console.error(e);
+          alert("No se pudo iniciar sesión con Google.");
+        }
+      };
+
+      document.getElementById("googleLoginBtn")?.addEventListener("click", doLoginAndRoute);
+      document.getElementById("googleLoginBtnMobile")?.addEventListener("click", doLoginAndRoute);
       return;
     }
 
-    // Logueado
+    // ✅ si ya está logueado y está en index, aplicamos flow por roles (dashboard o register)
     if (isIndex) {
-      // ✅ en landing: redirigir, no mostrar botón
-      location.replace(dashHref);
+      try {
+        await routeAfterGoogleLogin(user);
+      } catch (e) {
+        console.error(e);
+        // fallback: si algo raro pasa, al menos no lo dejamos pegado sin UI
+      }
       return;
     }
 
@@ -162,7 +176,6 @@ export async function loadHeader(activeTab, cfgOverride) {
 
     bindHeaderEvents();
   });
-
 }
 
 function bindHeaderEvents() {
@@ -175,7 +188,10 @@ function toAbsHref(href) {
   if (href.startsWith("http://") || href.startsWith("https://")) return href;
   if (href.startsWith("#") || href.startsWith("?")) return href;
 
-  //siempre relativo al root actual del sitio (funciona en GH pages)
-  const base = document.querySelector("base")?.href || window.location.origin + window.location.pathname.replace(/[^/]*$/, "");
-  return new URL(href, base).pathname + new URL(href, base).search + new URL(href, base).hash;
+  const base =
+    document.querySelector("base")?.href ||
+    window.location.origin + window.location.pathname.replace(/[^/]*$/, "");
+
+  const u = new URL(href, base);
+  return u.pathname + u.search + u.hash;
 }
