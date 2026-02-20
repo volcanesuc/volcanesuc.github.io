@@ -9,7 +9,7 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import { db } from "../auth/firebase.js";
+import { db } from "./auth/firebase.js";
 import { guardPage } from "./page-guard.js";
 import { loadHeader } from "./components/header.js";
 import { Training } from "./models/training.js";

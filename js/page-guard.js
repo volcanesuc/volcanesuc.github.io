@@ -1,7 +1,7 @@
 import { loadHeaderTabsConfig, isTabEnabled } from "./remote-config.js";
 import { PAGE_CONFIG, HOME_HREF } from "./config/page-config.js";
 
-import { db } from "../auth/firebase.js";
+import { db } from "./auth/firebase.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 

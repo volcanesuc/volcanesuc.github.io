@@ -1,6 +1,6 @@
 /* ================= IMPORTS ================= */
 
-import { db } from "../auth/firebase.js";
+import { db } from "./auth/firebase.js";
 
 import {
   collection,

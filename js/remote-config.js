@@ -1,6 +1,6 @@
 // js/remote-config.js
 import { getRemoteConfig, fetchAndActivate, getValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-remote-config.js";
-import { app } from "../auth/firebase.js";
+import { app } from "./auth/firebase.js";
 
 const PARAM_NAME = "header_tabs_config";
 
