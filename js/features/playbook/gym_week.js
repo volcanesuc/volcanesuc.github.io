@@ -32,6 +32,7 @@ import {
 const params = new URLSearchParams(window.location.search);
 const routineId = params.get("id"); // ✅ /gym_routine.html?id=...
 
+
 /* =========================
    DOM
 ========================= */
@@ -41,7 +42,10 @@ const $ = {
   badge: document.getElementById("weekBadge"),
   alertBox: document.getElementById("alertBox"),
   acc: document.getElementById("weekAccordion"),
+  shareBtn: document.getElementById("shareRoutineBtn"),
 };
+
+
 
 if (!routineId) {
   showAlert("Falta parámetro id en el link.", "warning");
@@ -51,12 +55,10 @@ if (!routineId) {
 /* =========================
    Init
 ========================= */
-const {redirected } = await guardPage("gym_routine");
+const { redirected } = await guardPage("gym_routine");
 if (!redirected) {
   await boot();
 }
-
-await boot();
 
 /* =========================
    Boot
@@ -67,7 +69,7 @@ async function boot() {
     const { routine, items } = await loadRoutineResolved({ routineId });
 
     // header normal, pero si es público escondemos botones
-    loadHeader("playbook", { enabledTabs: {} });
+    await loadHeader("playbook", { enabledTabs: {} });
     setPublicHeaderMode(routine.isPublic === true);
 
     $.title.textContent = routine.name || "Rutina de gimnasio";
@@ -83,6 +85,7 @@ async function boot() {
       showAlert("Esta rutina es privada.", "warning");
     }
 
+    wireShareButton();
     renderAccordion(items);
   } catch (e) {
     console.error("[gym_routine] boot error:", e);
@@ -172,6 +175,53 @@ async function loadRoutineResolved({ routineId }) {
 }
 
 /* =========================
+   Share
+========================= */
+
+function wireShareButton() {
+  if (!$.shareBtn) return;
+
+  $.shareBtn.addEventListener("click", async () => {
+    const url = window.location.href;
+
+    // Si el browser soporta share nativo (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: document.title || "Rutina",
+          text: $.title?.textContent || "Rutina",
+          url,
+        });
+        return;
+      } catch {
+        // si el usuario cancela, no hacemos nada
+      }
+    }
+
+    // Fallback: copiar al portapapeles
+    try {
+      await navigator.clipboard.writeText(url);
+      toastShare("Link copiado ✅");
+    } catch {
+      toastShare("No pude copiar el link.", true);
+    }
+  });
+}
+
+function toastShare(msg, isError = false) {
+  if (!$.shareBtn) return;
+  const old = $.shareBtn.textContent;
+  $.shareBtn.textContent = msg;
+  $.shareBtn.classList.toggle("btn-outline-primary", !isError);
+  $.shareBtn.classList.toggle("btn-outline-danger", isError);
+  setTimeout(() => {
+    $.shareBtn.textContent = old;
+    $.shareBtn.classList.add("btn-outline-primary");
+    $.shareBtn.classList.remove("btn-outline-danger");
+  }, 1200);
+}
+
+/* =========================
    Render
 ========================= */
 function renderAccordion(items) {
@@ -191,22 +241,23 @@ function renderAccordion(items) {
     const id = `ex_${idx}_${safeId(it.exerciseId || idx)}`;
     const title = `${it.order}. ${it.name || "—"}`;
 
-    const tags = it.bodyParts?.length
-      ? it.bodyParts
-          .map(t => `<span class="badge text-bg-light me-1 mb-1">${escapeHtml(t)}</span>`)
-          .join("")
-      : "";
-
     const seriesLine = fmtSeriesLine(it);
 
-    const videoLink = it.videoUrl
+    // ✅ Video siempre como botón (si no hay, disabled)
+    const videoBtn = it.videoUrl
       ? `<a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(it.videoUrl)}" target="_blank" rel="noopener">Video</a>`
-      : `<span class="text-muted small">Sin video</span>`;
+      : `<button class="btn btn-sm btn-outline-secondary" type="button" disabled>Sin video</button>`;
 
     const missing = it._exerciseMissing
       ? `<span class="badge text-bg-warning ms-2">Ejercicio no existe</span>`
       : "";
 
+    // ✅ partes del cuerpo SOLO al abrir
+    const bodyPartsHtml = it.bodyParts?.length
+      ? it.bodyParts.map(t => `<span class="badge text-bg-light me-1 mb-1">${escapeHtml(t)}</span>`).join("")
+      : `<span class="text-muted small">—</span>`;
+
+    // ✅ notas SOLO al abrir
     const notesHtml = it.notes
       ? `<div class="small">${escapeHtml(it.notes)}</div>`
       : `<div class="text-muted small">—</div>`;
@@ -214,75 +265,51 @@ function renderAccordion(items) {
     const itemEl = document.createElement("div");
     itemEl.className = "accordion-item";
 
-    // ✅ todos colapsados por defecto
-    const expanded = "false";
-    const showClass = ""; // no "show"
-    const collapsedClass = "collapsed";
-
+    // todos colapsados por defecto
     itemEl.innerHTML = `
       <h2 class="accordion-header d-flex align-items-stretch gap-2" id="${id}_h">
         <button
-          class="accordion-button ${collapsedClass} flex-grow-1"
+          class="accordion-button collapsed flex-grow-1"
           type="button"
           data-bs-toggle="collapse"
           data-bs-target="#${id}_c"
-          aria-expanded="${expanded}"
+          aria-expanded="false"
           aria-controls="${id}_c"
         >
           <div class="w-100">
-            <div class="d-flex justify-content-between align-items-start gap-2">
-              <div class="fw-semibold">${escapeHtml(title)}${missing}</div>
-              <div class="text-muted small text-end">${escapeHtml(seriesLine)}</div>
-            </div>
-            ${tags ? `<div class="mt-2">${tags}</div>` : ``}
+            <div class="fw-semibold">${escapeHtml(title)}${missing}</div>
+            <!-- ✅ sets/reps debajo -->
+            <div class="text-muted small mt-1">${escapeHtml(seriesLine)}</div>
           </div>
         </button>
 
-        <!-- ✅ acciones visibles SIEMPRE, sin abrir -->
+        <!-- ✅ acciones visibles sin abrir -->
         <div class="d-flex align-items-center pe-2">
-          ${videoLink}
+          ${videoBtn}
         </div>
       </h2>
 
       <div
         id="${id}_c"
-        class="accordion-collapse collapse ${showClass}"
+        class="accordion-collapse collapse"
         aria-labelledby="${id}_h"
         data-bs-parent="#weekAccordion"
       >
         <div class="accordion-body">
-          <div class="d-flex gap-2 flex-wrap mb-2">
-            <button class="btn btn-sm btn-outline-primary" data-copy-ex="${escapeHtml(it.exerciseId || "")}">
-              Copiar ID
-            </button>
+          <div class="mb-2">
+            <div class="small text-muted mb-1">Partes del cuerpo</div>
+            <div>${bodyPartsHtml}</div>
           </div>
 
-          <div class="small text-muted">Notas</div>
-          ${notesHtml}
+          <div>
+            <div class="small text-muted mb-1">Notas</div>
+            ${notesHtml}
+          </div>
         </div>
       </div>
     `;
 
     $.acc.appendChild(itemEl);
-  });
-
-  // copiar id ejercicio (debug)
-  $.acc.querySelectorAll("[data-copy-ex]").forEach(btn => {
-    btn.addEventListener("click", async (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-
-      const id = btn.getAttribute("data-copy-ex");
-      if (!id) return;
-      try {
-        await navigator.clipboard.writeText(id);
-        const old = btn.textContent;
-        btn.textContent = "Copiado ✅";
-        setTimeout(() => (btn.textContent = old), 1000);
-      } catch {
-        alert("No pude copiar el ID.");
-      }
-    });
   });
 }
 

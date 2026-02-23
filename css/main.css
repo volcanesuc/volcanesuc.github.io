@@ -362,10 +362,14 @@ th.sortable.sorted-desc::after { content: " ↓"; }
   font-weight: 800;
 }
 
-/* Alinear botón Video al header del acordeón */
-.accordion-header > .btn,
-.accordion-header .btn {
+/* Mantener consistente el espacio del botón a la derecha */
+#weekAccordion .accordion-header .btn {
   white-space: nowrap;
+}
+
+/* Evitar que el bloque derecho crezca de más */
+#weekAccordion .accordion-header > div.pe-2 {
+  flex: 0 0 auto;
 }
 
 /* Desktop tabs (clase propia, NO Bootstrap) */
