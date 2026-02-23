@@ -9,7 +9,7 @@ import { loadHeader } from "../../components/header.js";
 import { CLUB_DATA } from "../../strings.js";
 import { PLAYBOOK_STRINGS as S } from "../../strings/playbook_strings.js";
 
-import { loadPartialOnce } from "../../../ui/loadPartial.js";
+import { loadPartialOnce } from "/js/ui/loadPartial.js";
 import { createTrainingEditor } from "./training_editor.js";
 
 import { initGymTab } from "./gym/gym.js";
@@ -69,12 +69,12 @@ watchAuth(async () => {
 
     await loadDrills();
     await loadTrainings();
-    await initGymTab({
-      db,
-      clubId,
-      canEdit,
-      modalMountId: "modalMount"
-    });
+    try {
+      await initGymTab({ db, clubId, canEdit, modalMountId: "modalMount" });
+    } catch (e) {
+      console.error("[playbook] Gym init error:", e);
+      showAlert("La pestaña Gimnasio falló al cargar. Ver consola.", "warning");
+    }
   } finally {
     hideLoader();
     document.body.classList.remove("loading");
@@ -677,18 +677,6 @@ function bindEvents() {
     $.drillForm?.reset?.();
     const modal = bootstrap.Modal.getOrCreateInstance($.createDrillModal);
     modal.show();
-  });
-
-  $.saveCreateDrillBtn?.addEventListener("click", async () => {
-    if (!canEdit) return;
-    showLoader();
-    try {
-      await createDrillFromForm();
-      const modal = bootstrap.Modal.getOrCreateInstance($.createDrillModal);
-      modal.hide();
-    } finally {
-      hideLoader();
-    }
   });
 
   $.drillSearch?.addEventListener("input", renderDrills);
