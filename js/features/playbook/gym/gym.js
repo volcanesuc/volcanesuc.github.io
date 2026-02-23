@@ -220,8 +220,13 @@ function renderExercises() {
     const item = document.createElement("div");
     item.className = "list-group-item";
 
+    // clickable para editar (solo admin)
+    const clickable = _ctx.canEdit
+      ? `data-edit-exercise="${escapeHtml(ex.id)}" style="cursor:pointer"`
+      : "";
+
     item.innerHTML = `
-      <div class="d-flex justify-content-between gap-2 flex-wrap">
+      <div class="d-flex justify-content-between gap-2 flex-wrap" ${clickable}>
         <div>
           <div class="fw-semibold">${escapeHtml(ex.name || "—")}</div>
           <div class="text-muted small">
@@ -229,14 +234,64 @@ function renderExercises() {
           </div>
           ${ex.notes ? `<div class="small mt-1">${escapeHtml(ex.notes)}</div>` : ``}
         </div>
-        <div class="d-flex gap-2">
+
+        <div class="d-flex gap-2 align-items-start flex-wrap">
           ${ex.videoUrl ? `<a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(ex.videoUrl)}" target="_blank" rel="noopener">Video</a>` : ``}
+
+          ${
+            _ctx.canEdit
+              ? `<button class="btn btn-sm btn-primary" data-edit-exercise-btn="${escapeHtml(ex.id)}">Editar</button>`
+              : ``
+          }
         </div>
       </div>
     `;
 
     $.gymExercisesList.appendChild(item);
   }
+
+  // bind edit handlers
+  bindExerciseButtons();
+}
+
+function bindExerciseButtons() {
+  if (!_ctx.canEdit) return;
+
+  // 1) click en botón "Editar"
+  $.gymExercisesList?.querySelectorAll("[data-edit-exercise-btn]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute("data-edit-exercise-btn");
+      if (!id) return;
+      openExerciseEditor(id);
+    });
+  });
+
+  // 2) click en la card (pero ignorando links/botones)
+  $.gymExercisesList?.querySelectorAll("[data-edit-exercise]").forEach(row => {
+    row.addEventListener("click", (e) => {
+      const target = e.target;
+      if (target?.closest("a,button")) return;
+
+      const id = row.getAttribute("data-edit-exercise");
+      if (!id) return;
+      openExerciseEditor(id);
+    });
+  });
+}
+
+function openExerciseEditor(id) {
+  // Si tu versión anterior dejó un editor global, lo usamos
+  if (window.gymExerciseEditor?.openEditById) {
+    window.gymExerciseEditor.openEditById(id);
+    return;
+  }
+
+  // Si tenés un patrón de eventos para modales, esto lo soporta:
+  window.dispatchEvent(new CustomEvent("gym:editExercise", { detail: { id } }));
+
+  // Debug
+  console.log("[gym] edit exercise requested:", id);
 }
 
 function fmtExerciseDefaults(ex) {
