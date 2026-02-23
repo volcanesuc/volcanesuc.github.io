@@ -25,8 +25,10 @@ const TRAININGS_COL = APP_CONFIG?.club?.trainingsCollection || "trainings";
 ========================== */
 const trainingsTable = document.getElementById("trainingsTable");
 const playersTable = document.getElementById("playersTable");
-const monthFilter = document.getElementById("monthFilter");
+const startDate = document.getElementById("startDate");
+const endDate = document.getElementById("endDate");
 const clearFilterBtn = document.getElementById("clearFilter");
+const btnPdf = document.getElementById("btnPdf");
 
 const trainingsCards = document.getElementById("trainingsCards"); // optional
 const playersCards = document.getElementById("playersCards");     // optional
@@ -45,6 +47,36 @@ let attendanceChart;
 
 let filteredTrainings = [];
 let filteredPlayersArr = [];
+
+
+/* ==========================
+   FILTERS START AND END DATE
+========================== */
+
+function yyyyMmDd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function setDefaultRange() {
+  if (!startDate || !endDate) return;
+  const now = new Date();
+  const jan1 = new Date(now.getFullYear(), 0, 1);
+
+  if (!startDate.value) startDate.value = yyyyMmDd(jan1);
+  if (!endDate.value) endDate.value = yyyyMmDd(now);
+}
+
+function inRange(dateStr, startStr, endStr) {
+  if (!dateStr) return false;
+  if (startStr && dateStr < startStr) return false;
+  if (endStr && dateStr > endStr) return false;
+  return true;
+}
+
+setDefaultRange();
 
 /* ==========================
    AUTH
@@ -83,8 +115,7 @@ async function loadAttendance() {
     const data = d.data();
     allTrainings[d.id] = {
       id: d.id,
-      date: data.date,             // "YYYY-MM-DD"
-      month: data.month,           // "YYYY-MM"
+      date: data.date, // "YYYY-MM-DD"
       attendees: data.attendees ?? [],
       count: 0
     };
@@ -98,17 +129,29 @@ async function loadAttendance() {
    FILTER + COMPUTE
 ========================== */
 function applyFilter() {
-  const selectedMonth = monthFilter?.value;
+  const start = startDate?.value || "";
+  const end = endDate?.value || "";
+
+  // Validación simple (si end < start, no rompas todo)
+  if (start && end && end < start) {
+    // swap automático (más cómodo)
+    const tmp = startDate.value;
+    startDate.value = endDate.value;
+    endDate.value = tmp;
+  }
+
+  const start2 = startDate?.value || "";
+  const end2 = endDate?.value || "";
 
   filteredTrainings = Object.values(allTrainings).filter(t =>
-    selectedMonth ? t.month === selectedMonth : true
+    inRange(t.date, start2, end2)
   );
 
-  // Si hay filtro y no hay entrenos: muestra mensaje y aún así actualiza KPIs/top/chart en 0
-  if (selectedMonth && filteredTrainings.length === 0) {
+  // Si hay filtro y no hay entrenos:
+  if ((start2 || end2) && filteredTrainings.length === 0) {
     if (trainingsTable) {
       trainingsTable.innerHTML =
-        `<tr><td colspan="2" class="text-muted p-3">No hay entrenamientos registrados en este mes.</td></tr>`;
+        `<tr><td colspan="2" class="text-muted p-3">No hay entrenamientos en este rango.</td></tr>`;
     }
 
     if (playersTable) {
@@ -118,6 +161,14 @@ function applyFilter() {
 
     trainingsCards && (trainingsCards.innerHTML = "");
     playersCards && (playersCards.innerHTML = "");
+
+    updateKPIs([]);
+    renderTopPlayers([], 0);
+
+    const activeRoster = Object.values(allPlayers).filter(p => p.player.active !== false).length;
+    renderChart([], activeRoster);
+
+    return;
   }
 
   // reset counts
@@ -134,7 +185,7 @@ function applyFilter() {
 
   const totalTrainings = filteredTrainings.length;
 
-  filteredPlayersArr = Object.values(allPlayers)
+  filteredPlayersArr = Object.values(allPlayers).filter(p => p.player.active !== false)
     .map(p => ({
       ...p,
       pct: totalTrainings ? Math.round((p.count / totalTrainings) * 100) : 0
@@ -155,11 +206,74 @@ function applyFilter() {
   updateKPIs(filteredTrainings);
   renderTopPlayers(filteredPlayersArr, totalTrainings);
 
-  // roster activo (si tu modelo no tiene active, se cuenta igual)
   const activeRoster = Object.values(allPlayers).filter(p => p.player.active !== false).length;
-
   renderChart(filteredTrainings, activeRoster);
 }
+
+/* ==========================
+   PDF GENERATION
+========================== */
+
+async function generatePdf() {
+  try {
+    const start = startDate?.value || "";
+    const end = endDate?.value || "";
+
+    const trainingsInRange = Object.values(allTrainings)
+      .filter(t => inRange(t.date, start, end))
+      .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+
+    const totalTrainings = trainingsInRange.length;
+
+    const activePlayers = Object.values(allPlayers)
+      .map(p => p.player)
+      .filter(pl => pl && pl.active !== false)
+      .sort((a, b) => (a.fullName || "").localeCompare(b.fullName || ""));
+
+    const rows = activePlayers.map(pl => {
+      let count = 0;
+      for (const t of trainingsInRange) {
+        if ((t.attendees || []).includes(pl.id)) count++;
+      }
+      const pct = totalTrainings ? Math.round((count / totalTrainings) * 100) : 0;
+      return { name: pl.fullName || "—", count, total: totalTrainings, pct };
+    });
+
+    rows.sort((a, b) => (b.pct - a.pct) || (b.count - a.count) || a.name.localeCompare(b.name));
+
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) throw new Error("jsPDF no está cargado. Revisá el script CDN.");
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("Reporte de Asistencia (CACUC)", 40, 50);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(`Rango: ${start || "—"} a ${end || "—"}`, 40, 70);
+    doc.text(`Entrenamientos: ${totalTrainings} · Jugadores activos: ${rows.length}`, 40, 88);
+
+    doc.autoTable({
+      startY: 110,
+      head: [["Jugador", "Asistencias", "Total entrenos", "% participación"]],
+      body: rows.map(r => [r.name, String(r.count), String(r.total), `${r.pct}%`]),
+      styles: { font: "helvetica", fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [245, 245, 245], textColor: 20 },
+      alternateRowStyles: { fillColor: [252, 252, 252] },
+      margin: { left: 40, right: 40 }
+    });
+
+    const filename = `CACUC_Asistencia_${(start || "inicio").replaceAll("-", "")}_${(end || "hoy").replaceAll("-", "")}.pdf`;
+    doc.save(filename);
+  } catch (e) {
+    console.error(e);
+    alert(`No se pudo generar el PDF: ${e.message || e}`);
+  }
+}
+
+
 
 /* ==========================
    RENDERS
@@ -394,10 +508,15 @@ function renderChart(trainings, activeRoster = 0) {
 /* ==========================
    UI EVENTS
 ========================== */
-monthFilter && (monthFilter.onchange = applyFilter);
+startDate?.addEventListener("change", applyFilter);
+endDate?.addEventListener("change", applyFilter);
+btnPdf?.addEventListener("click", generatePdf);
 
-clearFilterBtn && (clearFilterBtn.onclick = () => {
-  monthFilter.value = "";
+clearFilterBtn?.addEventListener("click", () => {
+  // vuelve a default CACUC: Jan 1 -> hoy
+  startDate.value = "";
+  endDate.value = "";
+  setDefaultRange();
   applyFilter();
 });
 
