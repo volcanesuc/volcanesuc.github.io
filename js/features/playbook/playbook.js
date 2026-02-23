@@ -13,6 +13,7 @@ import { loadPartialOnce } from "/js/ui/loadPartial.js";
 import { createTrainingEditor } from "./training_editor.js";
 
 import { initGymTab } from "./gym/gym.js";
+import "./gym/gym_editors.js";
 
 import {
   collection,

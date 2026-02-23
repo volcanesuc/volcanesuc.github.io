@@ -122,6 +122,22 @@ function bindEvents() {
   window.addEventListener("gym:routinesChanged", loadRoutinesAndRender);
   window.addEventListener("gym:exercisesChanged", loadExercisesAndRender);
   window.addEventListener("gym:weeksChanged", loadWeeksAndRender);
+
+  // Admin CTAs: disparar eventos para que el "editor" abra modales
+ $.openCreateGymExerciseBtn?.addEventListener("click", () => {
+  if (!_ctx.canEdit) return;
+    window.dispatchEvent(new CustomEvent("gym:exercise:new"));
+ });
+
+ $.openCreateGymRoutineBtn?.addEventListener("click", () => {
+    if (!_ctx.canEdit) return;
+    window.dispatchEvent(new CustomEvent("gym:routine:new"));
+ });
+
+ $.openCreateGymWeekBtn?.addEventListener("click", () => {
+    if (!_ctx.canEdit) return;
+    window.dispatchEvent(new CustomEvent("gym:week:new"));
+ });
 }
 
 /* =========================
@@ -281,16 +297,8 @@ function bindExerciseButtons() {
 }
 
 function openExerciseEditor(id) {
-  // Si tu versión anterior dejó un editor global, lo usamos
-  if (window.gymExerciseEditor?.openEditById) {
-    window.gymExerciseEditor.openEditById(id);
-    return;
-  }
-
-  // Si tenés un patrón de eventos para modales, esto lo soporta:
-  window.dispatchEvent(new CustomEvent("gym:editExercise", { detail: { id } }));
-
-  // Debug
+  if (!_ctx.canEdit) return;
+  window.dispatchEvent(new CustomEvent("gym:exercise:edit", { detail: { id } }));
   console.log("[gym] edit exercise requested:", id);
 }
 
