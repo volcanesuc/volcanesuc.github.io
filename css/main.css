@@ -362,6 +362,12 @@ th.sortable.sorted-desc::after { content: " ↓"; }
   font-weight: 800;
 }
 
+/* Alinear botón Video al header del acordeón */
+.accordion-header > .btn,
+.accordion-header .btn {
+  white-space: nowrap;
+}
+
 /* Desktop tabs (clase propia, NO Bootstrap) */
 #app-header .top-tabs{
   display: none; /* mobile */
@@ -419,3 +425,4 @@ th.sortable.sorted-desc::after { content: " ↓"; }
   color: var(--club-green);
   opacity: 0.7;
 }
+
