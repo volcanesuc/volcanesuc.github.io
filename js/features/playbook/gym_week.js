@@ -51,9 +51,9 @@ if (!routineId) {
 /* =========================
    Init
 ========================= */
-const { cfg, redirected } = await guardPage("gym_routine");
+const {redirected } = await guardPage("gym_routine");
 if (!redirected) {
-  await boot(cfg);
+  await boot();
 }
 
 await boot();
@@ -61,13 +61,13 @@ await boot();
 /* =========================
    Boot
 ========================= */
-async function boot(cfg) {
+async function boot() {
   showLoaderSafe();
   try {
     const { routine, items } = await loadRoutineResolved({ routineId });
 
     // header normal, pero si es público escondemos botones
-    await loadHeader("playbook", cfg);
+    loadHeader("playbook", { enabledTabs: {} });
     setPublicHeaderMode(routine.isPublic === true);
 
     $.title.textContent = routine.name || "Rutina de gimnasio";
