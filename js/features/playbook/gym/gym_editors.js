@@ -29,25 +29,31 @@ const MOUNT_ID = "modalMount";
 const EXERCISE_MODAL_ID = "gymExerciseModal";
 const EXERCISE_FORM_ID  = "gymExerciseForm";
 
-window.addEventListener("gym:exercise:new", async () => {
+window.addEventListener("gymUI:exercise:new", async () => {
   await openExerciseModal({ mode: "new" });
 });
 
-window.addEventListener("gym:exercise:edit", async (e) => {
+window.addEventListener("gymUI:exercise:edit", async (e) => {
   const id = e.detail?.id;
   if (!id) return;
   await openExerciseModal({ mode: "edit", id });
 });
 
-window.addEventListener("gym:routine:new", async () => {
+window.addEventListener("gymUI:routine:new", async () => {
   await openRoutineModal();
 });
 
-window.addEventListener("gym:week:new", async () => {
+window.addEventListener("gymUI:week:new", async () => {
   await openWeekModal();
 });
 
 // ----------------------------
+
+function fmtMaybeText(v) {
+  if (v === null || v === undefined) return "—";
+  const s = String(v).trim();
+  return s ? s : "—";
+}
 
 async function openExerciseModal({ mode, id }) {
   showLoader();
@@ -73,7 +79,7 @@ async function openExerciseModal({ mode, id }) {
       // Ejemplo (cambiá los IDs):
       document.getElementById("geName") && (document.getElementById("geName").value = ex.name || "");
       document.getElementById("geSets") && (document.getElementById("geSets").value = ex.sets ?? "");
-      document.getElementById("geReps") && (document.getElementById("geReps").value = ex.reps ?? "");
+      document.getElementById("geReps") && (document.getElementById("geReps").value = fmtMaybeText(ex.reps));
       document.getElementById("geRest") && (document.getElementById("geRest").value = ex.restSec ?? "");
       document.getElementById("geNotes") && (document.getElementById("geNotes").value = ex.notes || "");
       document.getElementById("geVideoUrl") && (document.getElementById("geVideoUrl").value = ex.videoUrl || "");
@@ -81,11 +87,17 @@ async function openExerciseModal({ mode, id }) {
       // guardá el id en el modal para que el submit haga update
       modalEl.setAttribute("data-edit-id", id);
     } else {
-      modalEl.removeAttribute("data-edit-id");
-      // reset si querés
-      document.getElementById(EXERCISE_FORM_ID)?.reset?.();
-    }
+    modalEl.removeAttribute("data-edit-id");
 
+    // reset si existe form
+    document.getElementById(EXERCISE_FORM_ID)?.reset?.();
+
+    // hard reset por si inputs quedan fuera del form
+    ["geName","geSets","geReps","geRest","geNotes","geVideoUrl"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+    }
     // abrir modal bootstrap
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     modal.show();

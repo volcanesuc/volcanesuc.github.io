@@ -100,6 +100,12 @@ async function boot() {
 /* =========================
    Data: load + resolve defaults
 ========================= */
+function fmtToStringOrNull(v) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
 async function loadRoutineResolved({ routineId }) {
   // 1) rutina
   const rSnap = await getDoc(doc(db, "gym_routines", routineId));
@@ -140,7 +146,7 @@ async function loadRoutineResolved({ routineId }) {
 
       seriesType: pick(it.seriesType, ex?.seriesType ?? "reps"),
       sets: pick(it.sets, ex?.sets ?? null),
-      reps: pick(it.reps, ex?.reps ?? null),
+      reps: fmtToStringOrNull(pick(it.reps, ex?.reps ?? null)),
       restSec: pick(it.restSec, ex?.restSec ?? null),
       distance: pick(it.distance, ex?.distance ?? null),
       distanceUnit: pick(it.distanceUnit, ex?.distanceUnit ?? null),

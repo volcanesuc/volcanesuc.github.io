@@ -24,6 +24,10 @@
 //    * gymUI:week:new
 //
 // Asegurate que gym_editors.js escuche esos eventos gymUI:*.
+//
+// ✅ FIX reps string:
+// - Display: siempre convierte reps a string para mostrar.
+// - Resolver defaults: normaliza reps a string o null (soporta docs viejos con reps number).
 
 import {
   collection,
@@ -155,7 +159,6 @@ function emitGymUI(name, detail) {
 
 /* =========================
    Modal cleanup (evita “form pegado” / estado edit)
-   - No asume que existen, si no existen no pasa nada
 ========================= */
 function cleanupExerciseModalState() {
   const modalEl =
@@ -172,8 +175,7 @@ function cleanupExerciseModalState() {
 
   formEl?.reset?.();
 
-  // Si el form.reset() no limpia todo (inputs fuera del form), limpiamos conocidos.
-  // Si tus IDs son otros, agregalos aquí sin miedo.
+  // hard reset de campos típicos (por si están fuera del form)
   const ids = ["geName", "geSets", "geReps", "geRest", "geNotes", "geVideoUrl", "geDistance", "geDistanceUnit"];
   ids.forEach((id) => {
     const el = document.getElementById(id);
@@ -184,30 +186,20 @@ function cleanupExerciseModalState() {
 }
 
 function cleanupRoutineModalState() {
-  const modalEl =
-    document.getElementById("gymRoutineModal") ||
-    document.getElementById("gymRoutineEditorModal");
-
+  const modalEl = document.getElementById("gymRoutineModal") || document.getElementById("gymRoutineEditorModal");
   modalEl?.removeAttribute("data-edit-id");
   modalEl?.removeAttribute("data-mode");
 
-  const formEl =
-    document.getElementById("gymRoutineForm") ||
-    document.getElementById("gymRoutineEditorForm");
+  const formEl = document.getElementById("gymRoutineForm") || document.getElementById("gymRoutineEditorForm");
   formEl?.reset?.();
 }
 
 function cleanupWeekModalState() {
-  const modalEl =
-    document.getElementById("gymWeekModal") ||
-    document.getElementById("gymWeekEditorModal");
-
+  const modalEl = document.getElementById("gymWeekModal") || document.getElementById("gymWeekEditorModal");
   modalEl?.removeAttribute("data-edit-id");
   modalEl?.removeAttribute("data-mode");
 
-  const formEl =
-    document.getElementById("gymWeekForm") ||
-    document.getElementById("gymWeekEditorForm");
+  const formEl = document.getElementById("gymWeekForm") || document.getElementById("gymWeekEditorForm");
   formEl?.reset?.();
 }
 
@@ -348,7 +340,8 @@ function fmtExerciseDefaults(ex) {
     parts.push(`Distancia: ${escapeHtml(ex.distance ?? "—")} ${escapeHtml(ex.distanceUnit ?? "")}`.trim());
   } else {
     parts.push(`Sets: ${escapeHtml(ex.sets ?? "—")}`);
-    parts.push(`Reps: ${escapeHtml(ex.reps ?? "—")}`);
+    // ✅ reps string safe (soporta number viejo -> string)
+    parts.push(`Reps: ${escapeHtml(fmtMaybeText(ex.reps))}`);
   }
 
   if (ex.restSec !== null && ex.restSec !== undefined) {
@@ -356,6 +349,20 @@ function fmtExerciseDefaults(ex) {
   }
 
   return parts.join(" · ");
+}
+
+// UI text: devuelve "—" si null/empty; si number -> "12"; si "6-10" -> "6-10"
+function fmtMaybeText(v) {
+  if (v === null || v === undefined) return "—";
+  const s = String(v).trim();
+  return s ? s : "—";
+}
+
+// Normaliza a string o null (para mantener consistencia en resolved items)
+function toStringOrNull(v) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s ? s : null;
 }
 
 /* =========================
@@ -487,13 +494,12 @@ function bindRoutineButtons() {
     });
   });
 
-  // Edit routine (emit event para tu editor real)
   $.gymRoutinesList?.querySelectorAll("[data-edit-routine]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-edit-routine");
       if (!id) return;
       if (!_ctx.canEdit) return;
-      emitGymUI("gymUI:routine:edit", { id }); // si no lo usás, no pasa nada
+      emitGymUI("gymUI:routine:edit", { id });
     });
   });
 }
@@ -560,7 +566,10 @@ export async function loadRoutineResolved({ db, routineId }) {
 
       seriesType: pick(it.seriesType, ex?.seriesType ?? "reps"),
       sets: pick(it.sets, ex?.sets ?? null),
-      reps: pick(it.reps, ex?.reps ?? null),
+
+      // ✅ reps como string o null (soporta docs viejos con number)
+      reps: toStringOrNull(pick(it.reps, ex?.reps ?? null)),
+
       restSec: pick(it.restSec, ex?.restSec ?? null),
       distance: pick(it.distance, ex?.distance ?? null),
       distanceUnit: pick(it.distanceUnit, ex?.distanceUnit ?? null),
@@ -582,7 +591,8 @@ function fmtItemSeries(it) {
     parts.push(`Distancia: ${it.distance ?? "—"} ${it.distanceUnit ?? ""}`.trim());
   } else {
     parts.push(`Sets: ${it.sets ?? "—"}`);
-    parts.push(`Reps: ${it.reps ?? "—"}`);
+    // ✅ reps string safe
+    parts.push(`Reps: ${fmtMaybeText(it.reps)}`);
   }
 
   if (it.restSec !== null && it.restSec !== undefined) {
@@ -632,7 +642,6 @@ function renderWeeks() {
     $.gymWeeksList.appendChild(item);
   }
 
-  // si querés editar semana: emit evento (no rompe si nadie lo escucha)
   if (_ctx.canEdit) {
     $.gymWeeksList?.querySelectorAll("[data-edit-week]").forEach((btn) => {
       btn.addEventListener("click", () => {
