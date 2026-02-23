@@ -1,150 +1,199 @@
-// js/features/playbook/gym/gym.js
-import { loadPartialOnce } from "../../../ui/loadPartial.js";
+// /js/features/playbook/gym/gym.js
+// ✅ Gym tab (Playbook): lista ejercicios / rutinas / semanas + share rutina pública
+// ✅ Si routine.exerciseItems trae null en sets/reps/rest/distance -> usa defaults del gym_exercises
+//
+// Requiere en HTML (tu tab Gym):
+// - #refreshGymBtn
+// - #gymExerciseSearch, #gymExercisesList, #gymExercisesEmpty
+// - #gymRoutineSearch, #gymRoutinesList, #gymRoutinesEmpty
+// - #gymWeekSearch, #gymWeeksList, #gymWeeksEmpty
+//
+// Botones admin (opcional):
+// - #openCreateGymExerciseBtn, #openCreateGymRoutineBtn, #openCreateGymWeekBtn
+//
+// Importante:
+// - Este módulo NO crea/edita (eso lo tenés en tus modales).
+// - Solo lista y agrega share public + copy link, y expone helper para "resolved items".
 
 import {
   collection,
   getDocs,
-  addDoc,
-  doc,
   getDoc,
-  setDoc,
-  serverTimestamp,
+  doc,
   query,
   where,
+  updateDoc,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================
-   Collections
+   Collections (reales)
 ========================= */
-const COL_EX = "gym_exercises";
-const COL_ROUT = "gym_routines";
-const COL_WEEK = "gym_weeks";
+const COL_EXERCISES = "gym_exercises";
+const COL_ROUTINES = "gym_routines";
+const COL_WEEKS = "gym_weeks"; // si no existe, igual no revienta (maneja vacío)
 
 /* =========================
    State
 ========================= */
-let S = {
+let $ = {};
+let _ctx = {
   db: null,
   clubId: "volcanes",
   canEdit: false,
-  modalMountId: "modalMount",
-  $: {},
-  exercises: [],
-  routines: [],
-  weeks: [],
 };
+
+let exercises = [];
+let routines = [];
+let weeks = [];
 
 /* =========================
    Public API
 ========================= */
-export async function initGymTab({ db, clubId, canEdit, modalMountId = "modalMount" }) {
-  S.db = db;
-  S.clubId = clubId || "volcanes";
-  S.canEdit = !!canEdit;
-  S.modalMountId = modalMountId;
+export async function initGymTab({ db, clubId, canEdit, modalMountId }) {
+  _ctx = { db, clubId, canEdit };
 
   cacheDom();
   bindEvents();
 
-  await reloadAll();
-  renderAll();
+  // show/hide admin CTAs
+  toggleAdminButtons(canEdit);
+
+  // initial load
+  await refreshAll();
 }
 
 /* =========================
    DOM
 ========================= */
 function cacheDom() {
-  S.$ = {
+  $ = {
     refreshGymBtn: document.getElementById("refreshGymBtn"),
 
+    // Exercises
+    gymExerciseSearch: document.getElementById("gymExerciseSearch"),
+    gymExercisesList: document.getElementById("gymExercisesList"),
+    gymExercisesEmpty: document.getElementById("gymExercisesEmpty"),
+
+    // Routines
+    gymRoutineSearch: document.getElementById("gymRoutineSearch"),
+    gymRoutinesList: document.getElementById("gymRoutinesList"),
+    gymRoutinesEmpty: document.getElementById("gymRoutinesEmpty"),
+
+    // Weeks
+    gymWeekSearch: document.getElementById("gymWeekSearch"),
+    gymWeeksList: document.getElementById("gymWeeksList"),
+    gymWeeksEmpty: document.getElementById("gymWeeksEmpty"),
+
+    // Admin CTAs (optional)
     openCreateGymExerciseBtn: document.getElementById("openCreateGymExerciseBtn"),
     openCreateGymRoutineBtn: document.getElementById("openCreateGymRoutineBtn"),
     openCreateGymWeekBtn: document.getElementById("openCreateGymWeekBtn"),
-
-    gymExerciseSearch: document.getElementById("gymExerciseSearch"),
-    gymRoutineSearch: document.getElementById("gymRoutineSearch"),
-    gymWeekSearch: document.getElementById("gymWeekSearch"),
-
-    gymExercisesList: document.getElementById("gymExercisesList"),
-    gymRoutinesList: document.getElementById("gymRoutinesList"),
-    gymWeeksList: document.getElementById("gymWeeksList"),
-
-    gymExercisesEmpty: document.getElementById("gymExercisesEmpty"),
-    gymRoutinesEmpty: document.getElementById("gymRoutinesEmpty"),
-    gymWeeksEmpty: document.getElementById("gymWeeksEmpty"),
   };
+}
 
-  // botones admin
-  if (S.canEdit) {
-    S.$.openCreateGymExerciseBtn?.classList.remove("d-none");
-    S.$.openCreateGymRoutineBtn?.classList.remove("d-none");
-    S.$.openCreateGymWeekBtn?.classList.remove("d-none");
+function toggleAdminButtons(canEdit) {
+  // si no existen, no pasa nada
+  if (canEdit) {
+    $.openCreateGymExerciseBtn?.classList.remove("d-none");
+    $.openCreateGymRoutineBtn?.classList.remove("d-none");
+    $.openCreateGymWeekBtn?.classList.remove("d-none");
   } else {
-    S.$.openCreateGymExerciseBtn?.classList.add("d-none");
-    S.$.openCreateGymRoutineBtn?.classList.add("d-none");
-    S.$.openCreateGymWeekBtn?.classList.add("d-none");
+    $.openCreateGymExerciseBtn?.classList.add("d-none");
+    $.openCreateGymRoutineBtn?.classList.add("d-none");
+    $.openCreateGymWeekBtn?.classList.add("d-none");
   }
 }
 
+/* =========================
+   Events
+========================= */
 function bindEvents() {
-  S.$.refreshGymBtn?.addEventListener("click", async () => {
-    await reloadAll();
-    renderAll();
-  });
+  // refresh all
+  $.refreshGymBtn?.addEventListener("click", refreshAll);
 
-  S.$.gymExerciseSearch?.addEventListener("input", renderExercises);
-  S.$.gymRoutineSearch?.addEventListener("input", renderRoutines);
-  S.$.gymWeekSearch?.addEventListener("input", renderWeeks);
+  // search inputs
+  $.gymExerciseSearch?.addEventListener("input", renderExercises);
+  $.gymRoutineSearch?.addEventListener("input", renderRoutines);
+  $.gymWeekSearch?.addEventListener("input", renderWeeks);
 
-  S.$.openCreateGymExerciseBtn?.addEventListener("click", () => openExerciseModal(null));
-  S.$.openCreateGymRoutineBtn?.addEventListener("click", () => openRoutineModal(null));
-  S.$.openCreateGymWeekBtn?.addEventListener("click", () => openWeekModal(null));
+  // listeners externos (si tus modales disparan eventos)
+  window.addEventListener("gym:changed", refreshAll);
+  window.addEventListener("gym:routinesChanged", loadRoutinesAndRender);
+  window.addEventListener("gym:exercisesChanged", loadExercisesAndRender);
+  window.addEventListener("gym:weeksChanged", loadWeeksAndRender);
 }
 
 /* =========================
-   Load
+   Loaders
 ========================= */
-async function reloadAll() {
-  await Promise.all([loadExercises(), loadRoutines(), loadWeeks()]);
+async function refreshAll() {
+  await Promise.all([
+    loadExercises(),
+    loadRoutines(),
+    loadWeeks(),
+  ]);
+  renderExercises();
+  renderRoutines();
+  renderWeeks();
 }
 
 async function loadExercises() {
+  if (!_ctx.db) return;
   const qy = query(
-    collection(S.db, COL_EX),
-    where("clubId", "==", S.clubId),
-    where("isActive", "==", true)
+    collection(_ctx.db, COL_EXERCISES),
+    where("clubId", "==", _ctx.clubId)
   );
   const snap = await getDocs(qy);
-  S.exercises = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  S.exercises.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  exercises = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(x => x.isActive !== false);
+
+  exercises.sort((a, b) => norm(a.name).localeCompare(norm(b.name)));
 }
 
 async function loadRoutines() {
+  if (!_ctx.db) return;
   const qy = query(
-    collection(S.db, COL_ROUT),
-    where("clubId", "==", S.clubId),
-    where("isActive", "==", true)
+    collection(_ctx.db, COL_ROUTINES),
+    where("clubId", "==", _ctx.clubId)
   );
   const snap = await getDocs(qy);
-  S.routines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  S.routines.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  routines = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(x => x.isActive !== false);
+
+  // newest first
+  routines.sort((a, b) => toDateSafe(b.updatedAt) - toDateSafe(a.updatedAt));
 }
 
 async function loadWeeks() {
+  // si no existe la colección, Firestore igual responde vacío si no hay docs
+  if (!_ctx.db) return;
   const qy = query(
-    collection(S.db, COL_WEEK),
-    where("clubId", "==", S.clubId),
-    where("isActive", "==", true)
+    collection(_ctx.db, COL_WEEKS),
+    where("clubId", "==", _ctx.clubId)
   );
   const snap = await getDocs(qy);
-  S.weeks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  // latest first by startDate
-  S.weeks.sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
+  weeks = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(x => x.isActive !== false);
+
+  weeks.sort((a, b) => toDateSafe(b.updatedAt) - toDateSafe(a.updatedAt));
 }
 
-function renderAll() {
+async function loadExercisesAndRender() {
+  await loadExercises();
   renderExercises();
+}
+
+async function loadRoutinesAndRender() {
+  await loadRoutines();
   renderRoutines();
+}
+
+async function loadWeeksAndRender() {
+  await loadWeeks();
   renderWeeks();
 }
 
@@ -152,747 +201,353 @@ function renderAll() {
    Render: Exercises
 ========================= */
 function renderExercises() {
-  const term = norm(S.$.gymExerciseSearch?.value);
-  const list = term
-    ? S.exercises.filter(x => norm(x.name).includes(term))
-    : S.exercises;
+  if (!$.gymExercisesList) return;
 
-  if (!S.$.gymExercisesList) return;
-  S.$.gymExercisesList.innerHTML = "";
+  const term = norm($.gymExerciseSearch?.value);
+  const filtered = term
+    ? exercises.filter(e => norm(e.name).includes(term))
+    : exercises;
 
-  if (!list.length) {
-    S.$.gymExercisesEmpty?.classList.remove("d-none");
+  $.gymExercisesList.innerHTML = "";
+
+  if (!filtered.length) {
+    $.gymExercisesEmpty?.classList.remove("d-none");
     return;
   }
-  S.$.gymExercisesEmpty?.classList.add("d-none");
+  $.gymExercisesEmpty?.classList.add("d-none");
 
-  list.forEach(ex => {
-    const parts = Array.isArray(ex.bodyParts) ? ex.bodyParts.join(", ") : "—";
-    const hasVideo = !!(ex.videoUrl || "").trim();
-    const pub = ex.isPublic === true;
-
+  for (const ex of filtered) {
     const item = document.createElement("div");
     item.className = "list-group-item";
 
     item.innerHTML = `
-      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+      <div class="d-flex justify-content-between gap-2 flex-wrap">
         <div>
           <div class="fw-semibold">${escapeHtml(ex.name || "—")}</div>
-          <div class="text-muted small">${escapeHtml(parts)}</div>
-          <div class="text-muted small">${pub ? "🌐 Público" : "🔒 Privado"}</div>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-          ${hasVideo ? `<a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(ex.videoUrl)}" target="_blank" rel="noopener">Video</a>` : ``}
-          ${S.canEdit ? `<button class="btn btn-sm btn-primary" data-edit-ex="${escapeHtml(ex.id)}">Editar</button>` : ``}
-        </div>
-      </div>
-    `;
-
-    S.$.gymExercisesList.appendChild(item);
-  });
-
-  if (S.canEdit) {
-    S.$.gymExercisesList.querySelectorAll("[data-edit-ex]").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const id = btn.getAttribute("data-edit-ex");
-        if (!id) return;
-        await openExerciseModal(id);
-      });
-    });
-  }
-}
-
-/* =========================
-   Render: Routines
-========================= */
-function renderRoutines() {
-  const term = norm(S.$.gymRoutineSearch?.value);
-  const list = term
-    ? S.routines.filter(x => norm(x.name).includes(term))
-    : S.routines;
-
-  if (!S.$.gymRoutinesList) return;
-  S.$.gymRoutinesList.innerHTML = "";
-
-  if (!list.length) {
-    S.$.gymRoutinesEmpty?.classList.remove("d-none");
-    return;
-  }
-  S.$.gymRoutinesEmpty?.classList.add("d-none");
-
-  list.forEach(r => {
-    const count = Array.isArray(r.exerciseItems) ? r.exerciseItems.length : 0;
-    const pub = r.isPublic === true;
-
-    const item = document.createElement("div");
-    item.className = "list-group-item";
-
-    item.innerHTML = `
-      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-        <div>
-          <div class="fw-semibold">${escapeHtml(r.name || "—")}</div>
-          <div class="text-muted small">${count} ejercicio(s) · ${pub ? "🌐 Pública" : "🔒 Privada"}</div>
+          <div class="text-muted small">
+            ${fmtExerciseDefaults(ex)}
+          </div>
+          ${ex.notes ? `<div class="small mt-1">${escapeHtml(ex.notes)}</div>` : ``}
         </div>
         <div class="d-flex gap-2">
-          ${S.canEdit ? `<button class="btn btn-sm btn-primary" data-edit-r="${escapeHtml(r.id)}">Editar</button>` : ``}
+          ${ex.videoUrl ? `<a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(ex.videoUrl)}" target="_blank" rel="noopener">Video</a>` : ``}
         </div>
       </div>
     `;
 
-    S.$.gymRoutinesList.appendChild(item);
-  });
-
-  if (S.canEdit) {
-    S.$.gymRoutinesList.querySelectorAll("[data-edit-r]").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const id = btn.getAttribute("data-edit-r");
-        if (!id) return;
-        await openRoutineModal(id);
-      });
-    });
+    $.gymExercisesList.appendChild(item);
   }
 }
 
+function fmtExerciseDefaults(ex) {
+  // seriesType: "reps" o "distance" (según tu doc)
+  const st = (ex.seriesType || "reps").toString();
+  const parts = [];
+
+  if (st === "distance") {
+    parts.push(`Distancia: ${escapeHtml(ex.distance ?? "—")} ${escapeHtml(ex.distanceUnit ?? "")}`.trim());
+  } else {
+    parts.push(`Sets: ${escapeHtml(ex.sets ?? "—")}`);
+    parts.push(`Reps: ${escapeHtml(ex.reps ?? "—")}`);
+  }
+
+  if (ex.restSec !== null && ex.restSec !== undefined) {
+    parts.push(`Descanso: ${escapeHtml(ex.restSec)}s`);
+  }
+
+  return parts.join(" · ");
+}
+
 /* =========================
-   Render: Weeks (share link)
+   Render: Routines + Share
 ========================= */
-function renderWeeks() {
-  const term = norm(S.$.gymWeekSearch?.value);
-  const list = term
-    ? S.weeks.filter(x => norm(x.name).includes(term))
-    : S.weeks;
+function renderRoutines() {
+  if (!$.gymRoutinesList) return;
 
-  if (!S.$.gymWeeksList) return;
-  S.$.gymWeeksList.innerHTML = "";
+  const term = norm($.gymRoutineSearch?.value);
+  const filtered = term
+    ? routines.filter(r => norm(r.name).includes(term))
+    : routines;
 
-  if (!list.length) {
-    S.$.gymWeeksEmpty?.classList.remove("d-none");
+  $.gymRoutinesList.innerHTML = "";
+
+  if (!filtered.length) {
+    $.gymRoutinesEmpty?.classList.remove("d-none");
     return;
   }
-  S.$.gymWeeksEmpty?.classList.add("d-none");
+  $.gymRoutinesEmpty?.classList.add("d-none");
 
-  list.forEach(w => {
-    const slotCount = Array.isArray(w.slots) ? w.slots.length : 0;
-    const pub = w.isPublic === true;
-    const sharePath = `/gym_week.html?id=${encodeURIComponent(w.id)}`;
+  for (const r of filtered) {
+    const isPublic = r.isPublic === true;
 
-    const item = document.createElement("div");
-    item.className = "list-group-item";
+    const row = document.createElement("div");
+    row.className = "list-group-item";
 
-    item.innerHTML = `
-      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+    row.innerHTML = `
+      <div class="d-flex justify-content-between gap-2 flex-wrap">
         <div>
-          <div class="fw-semibold">${escapeHtml(w.name || "—")}</div>
-          <div class="text-muted small">${escapeHtml(w.startDate || "—")} → ${escapeHtml(w.endDate || "—")} · ${slotCount} rutina(s)</div>
-          <div class="text-muted small">${pub ? "🌐 Compartible" : "🔒 Privada"}</div>
+          <div class="fw-semibold">${escapeHtml(r.name || "—")}</div>
+          <div class="text-muted small">${isPublic ? "🌐 Pública" : "🔒 Privada"}</div>
+          ${r.description ? `<div class="small mt-1">${escapeHtml(r.description)}</div>` : ``}
         </div>
+
         <div class="d-flex gap-2 flex-wrap">
-          ${pub ? `<a class="btn btn-sm btn-outline-secondary" href="${sharePath}" target="_blank" rel="noopener">Ver</a>` : ``}
-          ${pub ? `<button class="btn btn-sm btn-outline-primary" data-copy-week="${escapeHtml(sharePath)}">Copiar link</button>` : ``}
-          ${S.canEdit ? `<button class="btn btn-sm btn-primary" data-edit-w="${escapeHtml(w.id)}">Editar</button>` : ``}
+          ${
+            isPublic
+              ? `
+                <a class="btn btn-sm btn-outline-secondary" href="${routineSharePath(r.id)}" target="_blank" rel="noopener">Ver</a>
+                <button class="btn btn-sm btn-outline-primary" data-copy-routine="${escapeHtml(r.id)}">Copiar link</button>
+              `
+              : `
+                ${_ctx.canEdit ? `<button class="btn btn-sm btn-outline-primary" data-make-public="${escapeHtml(r.id)}">Hacer pública</button>` : ``}
+              `
+          }
+
+          <button class="btn btn-sm btn-outline-secondary" data-preview-routine="${escapeHtml(r.id)}">Preview</button>
+
+          ${
+            _ctx.canEdit
+              ? `<button class="btn btn-sm btn-primary" data-edit-routine="${escapeHtml(r.id)}">Editar</button>`
+              : ``
+          }
         </div>
       </div>
+
+      <div class="mt-2 d-none" id="routinePreview_${escapeHtml(r.id)}"></div>
     `;
 
-    S.$.gymWeeksList.appendChild(item);
-  });
+    $.gymRoutinesList.appendChild(row);
+  }
 
-  // copy link
-  S.$.gymWeeksList.querySelectorAll("[data-copy-week]").forEach(btn => {
+  bindRoutineButtons();
+}
+
+function bindRoutineButtons() {
+  // copiar link
+  $.gymRoutinesList?.querySelectorAll("[data-copy-routine]").forEach(btn => {
     btn.addEventListener("click", async () => {
-      const path = btn.getAttribute("data-copy-week");
-      if (!path) return;
-      const url = `${window.location.origin}${path}`;
+      const id = btn.getAttribute("data-copy-routine");
+      if (!id) return;
       try {
-        await navigator.clipboard.writeText(url);
+        await copyRoutineLink(id);
         const old = btn.textContent;
         btn.textContent = "Copiado ✅";
         setTimeout(() => (btn.textContent = old), 1200);
-      } catch {
-        alert("No pude copiar. Link:\n" + url);
+      } catch (e) {
+        console.error(e);
+        alert("No pude copiar el link.");
       }
     });
   });
 
-  if (S.canEdit) {
-    S.$.gymWeeksList.querySelectorAll("[data-edit-w]").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const id = btn.getAttribute("data-edit-w");
-        if (!id) return;
-        await openWeekModal(id);
-      });
+  // hacer pública
+  $.gymRoutinesList?.querySelectorAll("[data-make-public]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-make-public");
+      if (!id) return;
+      if (!_ctx.canEdit) return;
+
+      btn.disabled = true;
+      try {
+        await updateDoc(doc(_ctx.db, COL_ROUTINES, id), {
+          isPublic: true,
+          updatedAt: serverTimestamp(),
+        });
+        await loadRoutinesAndRender();
+      } catch (e) {
+        console.error(e);
+        alert("Error haciendo la rutina pública.");
+      } finally {
+        btn.disabled = false;
+      }
     });
+  });
+
+  // preview (resuelto con defaults)
+  $.gymRoutinesList?.querySelectorAll("[data-preview-routine]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-preview-routine");
+      if (!id) return;
+
+      const box = document.getElementById(`routinePreview_${id}`);
+      if (!box) return;
+
+      // toggle
+      const isHidden = box.classList.contains("d-none");
+      if (!isHidden) {
+        box.classList.add("d-none");
+        box.innerHTML = "";
+        return;
+      }
+
+      try {
+        box.classList.remove("d-none");
+        box.innerHTML = `<div class="text-muted small">Cargando preview…</div>`;
+
+        const { routine, resolvedItems } = await loadRoutineResolved({ db: _ctx.db, routineId: id });
+        box.innerHTML = renderRoutinePreview(routine, resolvedItems);
+      } catch (e) {
+        console.error(e);
+        box.innerHTML = `<div class="text-danger small">Error cargando preview.</div>`;
+      }
+    });
+  });
+
+  // editar: lo dejás conectado a tu modal/editor (si ya lo tenés)
+  $.gymRoutinesList?.querySelectorAll("[data-edit-routine]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-edit-routine");
+      if (!id) return;
+      // 🔧 Acá conectás tu editor real:
+      // window.dispatchEvent(new CustomEvent("gym:editRoutine", { detail: { id } }));
+      console.log("[gym] edit routine:", id);
+    });
+  });
+}
+
+function renderRoutinePreview(routine, items) {
+  const rows = items.map(it => `
+    <div class="border rounded p-2 mb-2">
+      <div class="fw-semibold">${escapeHtml(it.order)}. ${escapeHtml(it.name)}</div>
+      <div class="text-muted small">${escapeHtml(fmtItemSeries(it))}</div>
+      ${it.notes ? `<div class="small mt-1">${escapeHtml(it.notes)}</div>` : ``}
+      ${it.videoUrl ? `<a class="small" href="${escapeHtml(it.videoUrl)}" target="_blank" rel="noopener">Video</a>` : ``}
+    </div>
+  `).join("");
+
+  return `
+    <div class="mt-2">
+      <div class="text-muted small mb-2">
+        Preview usando defaults del ejercicio cuando el item trae null.
+      </div>
+      ${rows || `<div class="text-muted small">Sin ejercicios.</div>`}
+    </div>
+  `;
+}
+
+/* =========================
+   Resolver: routine.exerciseItems + defaults from gym_exercises
+========================= */
+export async function loadRoutineResolved({ db, routineId }) {
+  const rSnap = await getDoc(doc(db, COL_ROUTINES, routineId));
+  if (!rSnap.exists()) throw new Error("Rutina no existe");
+
+  const routine = { id: rSnap.id, ...rSnap.data() };
+
+  const items = Array.isArray(routine.exerciseItems) ? routine.exerciseItems.slice() : [];
+  items.sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
+
+  const exerciseSnaps = await Promise.all(
+    items.map(it => it?.exerciseId ? getDoc(doc(db, COL_EXERCISES, it.exerciseId)) : Promise.resolve(null))
+  );
+
+  const resolvedItems = items.map((it, idx) => {
+    const exSnap = exerciseSnaps[idx];
+    const ex = exSnap && exSnap.exists() ? { id: exSnap.id, ...exSnap.data() } : null;
+
+    const pick = (overrideVal, baseVal) =>
+      (overrideVal === null || overrideVal === undefined) ? baseVal : overrideVal;
+
+    const pickNotes = (overrideNotes, baseNotes) => {
+      const o = (overrideNotes ?? "").toString().trim();
+      if (o) return o;
+      return (baseNotes ?? "").toString().trim();
+    };
+
+    return {
+      order: it.order ?? (idx + 1),
+      exerciseId: it.exerciseId || null,
+
+      name: ex?.name || "—",
+      videoUrl: ex?.videoUrl || "",
+      bodyParts: ex?.bodyParts || [],
+
+      // series fields: si item trae null -> defaults del exercise
+      seriesType: pick(it.seriesType, ex?.seriesType ?? "reps"),
+      sets: pick(it.sets, ex?.sets ?? null),
+      reps: pick(it.reps, ex?.reps ?? null),
+      restSec: pick(it.restSec, ex?.restSec ?? null),
+      distance: pick(it.distance, ex?.distance ?? null),
+      distanceUnit: pick(it.distanceUnit, ex?.distanceUnit ?? null),
+
+      // notes: si item.notes == "" usa ex.notes
+      notes: pickNotes(it.notes, ex?.notes),
+
+      _exerciseMissing: !ex,
+    };
+  });
+
+  return { routine, resolvedItems };
+}
+
+function fmtItemSeries(it) {
+  const parts = [];
+  const st = (it.seriesType || "reps").toString();
+
+  if (st === "distance") {
+    parts.push(`Distancia: ${it.distance ?? "—"} ${it.distanceUnit ?? ""}`.trim());
+  } else {
+    parts.push(`Sets: ${it.sets ?? "—"}`);
+    parts.push(`Reps: ${it.reps ?? "—"}`);
+  }
+
+  if (it.restSec !== null && it.restSec !== undefined) {
+    parts.push(`Descanso: ${it.restSec}s`);
+  }
+
+  return parts.join(" · ");
+}
+
+/* =========================
+   Render: Weeks (simple placeholder)
+========================= */
+function renderWeeks() {
+  if (!$.gymWeeksList) return;
+
+  const term = norm($.gymWeekSearch?.value);
+  const filtered = term
+    ? weeks.filter(w => norm(w.name).includes(term))
+    : weeks;
+
+  $.gymWeeksList.innerHTML = "";
+
+  if (!filtered.length) {
+    $.gymWeeksEmpty?.classList.remove("d-none");
+    return;
+  }
+  $.gymWeeksEmpty?.classList.add("d-none");
+
+  for (const w of filtered) {
+    const item = document.createElement("div");
+    item.className = "list-group-item";
+
+    item.innerHTML = `
+      <div class="d-flex justify-content-between gap-2 flex-wrap">
+        <div>
+          <div class="fw-semibold">${escapeHtml(w.name || "—")}</div>
+          <div class="text-muted small">${escapeHtml(w.description || "")}</div>
+        </div>
+        <div class="d-flex gap-2">
+          ${_ctx.canEdit ? `<button class="btn btn-sm btn-primary" data-edit-week="${escapeHtml(w.id)}">Editar</button>` : ``}
+        </div>
+      </div>
+    `;
+
+    $.gymWeeksList.appendChild(item);
   }
 }
 
 /* =========================
-   MODAL: Exercise
+   Share helpers
 ========================= */
-async function openExerciseModal(editId) {
-  if (!S.canEdit) return;
-
-  await loadPartialOnce("/partials/gym_exercise_modal.html", S.modalMountId);
-
-  const modalEl = document.getElementById("gymExerciseModal");
-  const titleEl = document.getElementById("gymExerciseModalTitle");
-  const alertEl = document.getElementById("gymExerciseAlert");
-
-  const geName = document.getElementById("geName");
-  const geSeriesType = document.getElementById("geSeriesType");
-  const geSets = document.getElementById("geSets");
-  const geReps = document.getElementById("geReps");
-  const geDistance = document.getElementById("geDistance");
-  const geDistanceUnit = document.getElementById("geDistanceUnit");
-  const geBodyParts = document.getElementById("geBodyParts");
-  const geVideoUrl = document.getElementById("geVideoUrl");
-  const geNotes = document.getElementById("geNotes");
-  const geIsPublic = document.getElementById("geIsPublic");
-
-  const repsWrap = document.getElementById("geRepsWrap");
-  const distWrap = document.getElementById("geDistanceWrap");
-
-  const saveBtn = document.getElementById("saveGymExerciseBtn");
-  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-
-  const showAlert = (msg, type = "warning") => {
-    if (!alertEl) return;
-    alertEl.className = `alert alert-${type}`;
-    alertEl.textContent = msg;
-    alertEl.classList.remove("d-none");
-  };
-  const clearAlert = () => alertEl?.classList.add("d-none");
-
-  const syncSeriesUi = () => {
-    const t = geSeriesType?.value || "reps";
-    if (t === "distance") {
-      repsWrap?.classList.add("d-none");
-      distWrap?.classList.remove("d-none");
-    } else {
-      repsWrap?.classList.remove("d-none");
-      distWrap?.classList.add("d-none");
-    }
-  };
-
-  // bind change (solo una vez por apertura)
-  geSeriesType?.addEventListener("change", syncSeriesUi);
-
-  clearAlert();
-
-  // preload
-  if (editId) {
-    titleEl && (titleEl.textContent = "Editar ejercicio");
-
-    const snap = await getDoc(doc(S.db, COL_EX, editId));
-    const ex = snap.exists() ? snap.data() : null;
-    if (!ex) {
-      showAlert("No encontré el ejercicio.", "danger");
-      return;
-    }
-
-    geName.value = ex.name || "";
-    geSeriesType.value = ex.seriesType || "reps";
-    geSets.value = ex.sets ?? "";
-    geReps.value = ex.reps ?? "";
-    geDistance.value = ex.distance ?? "";
-    geDistanceUnit.value = ex.distanceUnit || "m";
-    geBodyParts.value = Array.isArray(ex.bodyParts) ? ex.bodyParts.join(", ") : "";
-    geVideoUrl.value = ex.videoUrl || "";
-    geNotes.value = ex.notes || "";
-    geIsPublic.checked = ex.isPublic === true;
-  } else {
-    titleEl && (titleEl.textContent = "Crear ejercicio");
-    geName.value = "";
-    geSeriesType.value = "reps";
-    geSets.value = "";
-    geReps.value = "";
-    geDistance.value = "";
-    geDistanceUnit.value = "m";
-    geBodyParts.value = "";
-    geVideoUrl.value = "";
-    geNotes.value = "";
-    geIsPublic.checked = true;
-  }
-
-  syncSeriesUi();
-
-  // bind save (evitar doble bind)
-  if (!openExerciseModal._bound) {
-    saveBtn?.addEventListener("click", async () => {
-      clearAlert();
-
-      const name = (geName?.value || "").trim();
-      if (!name) return showAlert("Nombre requerido.");
-
-      const seriesType = geSeriesType?.value || "reps";
-      const sets = numOrNull(geSets?.value);
-
-      const reps = seriesType === "reps" ? numOrNull(geReps?.value) : null;
-      const distance = seriesType === "distance" ? numOrNull(geDistance?.value) : null;
-      const distanceUnit = seriesType === "distance" ? (geDistanceUnit?.value || "m") : null;
-
-      const bodyParts = (geBodyParts?.value || "")
-        .split(",")
-        .map(s => s.trim())
-        .filter(Boolean);
-
-      const payload = {
-        clubId: S.clubId,
-        name,
-        seriesType,
-        sets: sets ?? null,
-        reps: reps ?? null,
-        distance: distance ?? null,
-        distanceUnit,
-        bodyParts,
-        videoUrl: (geVideoUrl?.value || "").trim(),
-        notes: (geNotes?.value || "").trim(),
-        isPublic: geIsPublic?.checked === true,
-        isActive: true,
-        updatedAt: serverTimestamp(),
-      };
-
-      try {
-        if (openExerciseModal._editId) {
-          await setDoc(doc(S.db, COL_EX, openExerciseModal._editId), payload, { merge: true });
-        } else {
-          payload.createdAt = serverTimestamp();
-          await addDoc(collection(S.db, COL_EX), payload);
-        }
-
-        modal.hide();
-        await reloadAll();
-        renderAll();
-      } catch (e) {
-        console.error(e);
-        showAlert("Error guardando ejercicio. Ver consola.", "danger");
-      }
-    });
-
-    openExerciseModal._bound = true;
-  }
-
-  openExerciseModal._editId = editId || null;
-  modal.show();
+function routineSharePath(id) {
+  return `/gym_routine.html?id=${encodeURIComponent(id)}`;
 }
 
-/* =========================
-   MODAL: Routine
-========================= */
-async function openRoutineModal(editId) {
-  if (!S.canEdit) return;
-
-  await loadPartialOnce("/partials/gym_routine_editor.html", S.modalMountId);
-
-  const modalEl = document.getElementById("gymRoutineModal");
-  const titleEl = document.getElementById("gymRoutineModalTitle");
-  const alertEl = document.getElementById("gymRoutineAlert");
-
-  const grName = document.getElementById("grName");
-  const grDescription = document.getElementById("grDescription");
-  const grIsPublic = document.getElementById("grIsPublic");
-
-  const addSelect = document.getElementById("grAddExerciseSelect");
-  const addBtn = document.getElementById("grAddExerciseBtn");
-  const tbody = document.getElementById("grItemsTbody");
-  const saveBtn = document.getElementById("saveGymRoutineBtn");
-
-  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-
-  const showAlert = (msg, type = "warning") => {
-    alertEl.className = `alert alert-${type}`;
-    alertEl.textContent = msg;
-    alertEl.classList.remove("d-none");
-  };
-  const clearAlert = () => alertEl?.classList.add("d-none");
-
-  // local state
-  let items = []; // {exerciseId, order, sets, reps, distance, restSec, notes}
-
-  const byId = Object.fromEntries(S.exercises.map(x => [x.id, x]));
-
-  function fillExerciseSelect() {
-    if (!addSelect) return;
-    addSelect.innerHTML = S.exercises
-      .map(ex => `<option value="${escapeHtml(ex.id)}">${escapeHtml(ex.name || "—")}</option>`)
-      .join("");
-  }
-
-  function renderItems() {
-    if (!tbody) return;
-    tbody.innerHTML = "";
-
-    items
-      .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .forEach((it, idx) => {
-        const ex = byId[it.exerciseId];
-        const exName = ex?.name || "—";
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${idx + 1}</td>
-          <td>
-            <div class="fw-semibold">${escapeHtml(exName)}</div>
-            <div class="text-muted small">${escapeHtml((ex?.bodyParts || []).join(", ") || "")}</div>
-          </td>
-          <td><input class="form-control form-control-sm" data-k="sets" value="${it.sets ?? ""}"></td>
-          <td><input class="form-control form-control-sm" data-k="reps" value="${it.reps ?? ""}"></td>
-          <td><input class="form-control form-control-sm" data-k="distance" value="${escapeHtml(it.distance ?? "")}" placeholder="400m"></td>
-          <td><input class="form-control form-control-sm" data-k="restSec" value="${it.restSec ?? ""}"></td>
-          <td><input class="form-control form-control-sm" data-k="notes" value="${escapeHtml(it.notes ?? "")}"></td>
-          <td class="text-end">
-            <button class="btn btn-sm btn-outline-secondary" data-act="up">↑</button>
-            <button class="btn btn-sm btn-outline-secondary" data-act="down">↓</button>
-            <button class="btn btn-sm btn-outline-danger" data-act="del">Quitar</button>
-          </td>
-        `;
-
-        // inputs
-        tr.querySelectorAll("input[data-k]").forEach(inp => {
-          inp.addEventListener("input", () => {
-            const k = inp.getAttribute("data-k");
-            const v = inp.value;
-
-            if (k === "notes") it.notes = v;
-            else if (k === "sets") it.sets = numOrNull(v);
-            else if (k === "reps") it.reps = numOrNull(v);
-            else if (k === "restSec") it.restSec = numOrNull(v);
-            else if (k === "distance") it.distance = v.trim() ? v.trim() : null;
-          });
-        });
-
-        tr.querySelectorAll("button[data-act]").forEach(btn => {
-          btn.addEventListener("click", () => {
-            const act = btn.getAttribute("data-act");
-            if (act === "del") {
-              items = items.filter(x => x !== it);
-              items.forEach((x, i) => (x.order = i + 1));
-              renderItems();
-            }
-            if (act === "up" && idx > 0) {
-              const tmp = items[idx - 1];
-              items[idx - 1] = items[idx];
-              items[idx] = tmp;
-              items.forEach((x, i) => (x.order = i + 1));
-              renderItems();
-            }
-            if (act === "down" && idx < items.length - 1) {
-              const tmp = items[idx + 1];
-              items[idx + 1] = items[idx];
-              items[idx] = tmp;
-              items.forEach((x, i) => (x.order = i + 1));
-              renderItems();
-            }
-          });
-        });
-
-        tbody.appendChild(tr);
-      });
-  }
-
-  fillExerciseSelect();
-  clearAlert();
-
-  if (editId) {
-    titleEl && (titleEl.textContent = "Editar rutina");
-    const snap = await getDoc(doc(S.db, COL_ROUT, editId));
-    const data = snap.exists() ? snap.data() : null;
-    if (!data) return showAlert("No encontré la rutina.", "danger");
-
-    grName.value = data.name || "";
-    grDescription.value = data.description || "";
-    grIsPublic.checked = data.isPublic === true;
-
-    items = Array.isArray(data.exerciseItems)
-      ? data.exerciseItems.map((x, i) => ({
-          exerciseId: x.exerciseId,
-          order: x.order ?? (i + 1),
-          sets: x.sets ?? null,
-          reps: x.reps ?? null,
-          distance: x.distance ?? null,
-          restSec: x.restSec ?? null,
-          notes: x.notes ?? "",
-        }))
-      : [];
-    items.sort((a, b) => (a.order || 0) - (b.order || 0));
-  } else {
-    titleEl && (titleEl.textContent = "Crear rutina");
-    grName.value = "";
-    grDescription.value = "";
-    grIsPublic.checked = true;
-    items = [];
-  }
-
-  renderItems();
-
-  if (!openRoutineModal._bound) {
-    addBtn?.addEventListener("click", () => {
-      const exId = addSelect?.value;
-      if (!exId) return;
-      items.push({
-        exerciseId: exId,
-        order: items.length + 1,
-        sets: null,
-        reps: null,
-        distance: null,
-        restSec: null,
-        notes: "",
-      });
-      renderItems();
-    });
-
-    saveBtn?.addEventListener("click", async () => {
-      clearAlert();
-      const name = (grName?.value || "").trim();
-      if (!name) return showAlert("Nombre requerido.");
-
-      const payload = {
-        clubId: S.clubId,
-        name,
-        description: (grDescription?.value || "").trim(),
-        exerciseItems: items
-          .map((x, i) => ({ ...x, order: i + 1 }))
-          .filter(x => !!x.exerciseId),
-        isPublic: grIsPublic?.checked === true,
-        isActive: true,
-        updatedAt: serverTimestamp(),
-      };
-
-      try {
-        if (openRoutineModal._editId) {
-          await setDoc(doc(S.db, COL_ROUT, openRoutineModal._editId), payload, { merge: true });
-        } else {
-          payload.createdAt = serverTimestamp();
-          await addDoc(collection(S.db, COL_ROUT), payload);
-        }
-
-        modal.hide();
-        await reloadAll();
-        renderAll();
-      } catch (e) {
-        console.error(e);
-        showAlert("Error guardando rutina. Ver consola.", "danger");
-      }
-    });
-
-    openRoutineModal._bound = true;
-  }
-
-  openRoutineModal._editId = editId || null;
-  modal.show();
-}
-
-/* =========================
-   MODAL: Week
-========================= */
-async function openWeekModal(editId) {
-  if (!S.canEdit) return;
-
-  await loadPartialOnce("/partials/gym_week_editor.html", S.modalMountId);
-
-  const modalEl = document.getElementById("gymWeekModal");
-  const titleEl = document.getElementById("gymWeekModalTitle");
-  const alertEl = document.getElementById("gymWeekAlert");
-
-  const gwName = document.getElementById("gwName");
-  const gwStartDate = document.getElementById("gwStartDate");
-  const gwEndDate = document.getElementById("gwEndDate");
-  const gwIsPublic = document.getElementById("gwIsPublic");
-
-  const slotLabel = document.getElementById("gwSlotLabel");
-  const slotRoutineSelect = document.getElementById("gwSlotRoutineSelect");
-  const addSlotBtn = document.getElementById("gwAddSlotBtn");
-  const tbody = document.getElementById("gwSlotsTbody");
-  const saveBtn = document.getElementById("saveGymWeekBtn");
-
-  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-
-  const showAlert = (msg, type = "warning") => {
-    alertEl.className = `alert alert-${type}`;
-    alertEl.textContent = msg;
-    alertEl.classList.remove("d-none");
-  };
-  const clearAlert = () => alertEl?.classList.add("d-none");
-
-  let slots = []; // {label, routineId, order}
-
-  function fillRoutineSelect() {
-    if (!slotRoutineSelect) return;
-
-    const wantsPublic = gwIsPublic?.checked === true;
-    const list = wantsPublic ? S.routines.filter(r => r.isPublic === true) : S.routines;
-
-    slotRoutineSelect.innerHTML = list
-      .map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.name || "—")}</option>`)
-      .join("");
-  }
-
-  function routineName(id) {
-    const r = S.routines.find(x => x.id === id);
-    return r?.name || "—";
-  }
-
-  function renderSlots() {
-    if (!tbody) return;
-    tbody.innerHTML = "";
-
-    slots
-      .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .forEach((s, idx) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${idx + 1}</td>
-          <td><input class="form-control form-control-sm" data-k="label" value="${escapeHtml(s.label || "")}"></td>
-          <td>${escapeHtml(routineName(s.routineId))}</td>
-          <td class="text-end">
-            <button class="btn btn-sm btn-outline-secondary" data-act="up">↑</button>
-            <button class="btn btn-sm btn-outline-secondary" data-act="down">↓</button>
-            <button class="btn btn-sm btn-outline-danger" data-act="del">Quitar</button>
-          </td>
-        `;
-
-        tr.querySelector("input[data-k='label']")?.addEventListener("input", (e) => {
-          s.label = e.target.value;
-        });
-
-        tr.querySelectorAll("button[data-act]").forEach(btn => {
-          btn.addEventListener("click", () => {
-            const act = btn.getAttribute("data-act");
-
-            if (act === "del") {
-              slots = slots.filter(x => x !== s);
-              slots.forEach((x, i) => (x.order = i + 1));
-              renderSlots();
-            }
-
-            if (act === "up" && idx > 0) {
-              const tmp = slots[idx - 1];
-              slots[idx - 1] = slots[idx];
-              slots[idx] = tmp;
-              slots.forEach((x, i) => (x.order = i + 1));
-              renderSlots();
-            }
-
-            if (act === "down" && idx < slots.length - 1) {
-              const tmp = slots[idx + 1];
-              slots[idx + 1] = slots[idx];
-              slots[idx] = tmp;
-              slots.forEach((x, i) => (x.order = i + 1));
-              renderSlots();
-            }
-          });
-        });
-
-        tbody.appendChild(tr);
-      });
-  }
-
-  clearAlert();
-
-  if (editId) {
-    titleEl && (titleEl.textContent = "Editar semana");
-    const snap = await getDoc(doc(S.db, COL_WEEK, editId));
-    const data = snap.exists() ? snap.data() : null;
-    if (!data) return showAlert("No encontré la semana.", "danger");
-
-    gwName.value = data.name || "";
-    gwStartDate.value = data.startDate || "";
-    gwEndDate.value = data.endDate || "";
-    gwIsPublic.checked = data.isPublic === true;
-
-    slots = Array.isArray(data.slots)
-      ? data.slots.map((x, i) => ({
-          label: x.label || "",
-          routineId: x.routineId || "",
-          order: x.order ?? (i + 1),
-        }))
-      : [];
-    slots.sort((a, b) => (a.order || 0) - (b.order || 0));
-  } else {
-    titleEl && (titleEl.textContent = "Crear semana");
-    gwName.value = "";
-    gwStartDate.value = "";
-    gwEndDate.value = "";
-    gwIsPublic.checked = true;
-    slots = [];
-  }
-
-  fillRoutineSelect();
-  renderSlots();
-
-  // si cambia a pública/privada, refresca selector
-  gwIsPublic?.addEventListener("change", fillRoutineSelect);
-
-  if (!openWeekModal._bound) {
-    addSlotBtn?.addEventListener("click", () => {
-      const label = (slotLabel?.value || "").trim();
-      const routineId = slotRoutineSelect?.value || "";
-
-      if (!label) return showAlert("Etiqueta requerida (ej: Lunes AM).");
-      if (!routineId) return showAlert("Seleccioná una rutina.");
-
-      slots.push({ label, routineId, order: slots.length + 1 });
-      slotLabel.value = "";
-      renderSlots();
-    });
-
-    saveBtn?.addEventListener("click", async () => {
-      clearAlert();
-
-      const name = (gwName?.value || "").trim();
-      if (!name) return showAlert("Nombre requerido.");
-
-      const startDate = gwStartDate?.value || "";
-      const endDate = gwEndDate?.value || "";
-      if (startDate && endDate && endDate < startDate) {
-        return showAlert("La fecha fin no puede ser menor que la fecha inicio.");
-      }
-
-      const wantsPublic = gwIsPublic?.checked === true;
-
-      // si semana es pública, valida que rutinas referenciadas sean públicas
-      if (wantsPublic) {
-        const bad = slots.find(s => {
-          const r = S.routines.find(x => x.id === s.routineId);
-          return r && r.isPublic !== true;
-        });
-        if (bad) {
-          return showAlert("La semana es pública pero incluye una rutina privada. Publicá la rutina o quitála.", "danger");
-        }
-      }
-
-      const payload = {
-        clubId: S.clubId,
-        name,
-        startDate,
-        endDate,
-        slots: slots.map((x, i) => ({ ...x, order: i + 1 })),
-        isPublic: wantsPublic,
-        isActive: true,
-        updatedAt: serverTimestamp(),
-      };
-
-      try {
-        if (openWeekModal._editId) {
-          await setDoc(doc(S.db, COL_WEEK, openWeekModal._editId), payload, { merge: true });
-        } else {
-          payload.createdAt = serverTimestamp();
-          await addDoc(collection(S.db, COL_WEEK), payload);
-        }
-
-        modal.hide();
-        await reloadAll();
-        renderAll();
-      } catch (e) {
-        console.error(e);
-        showAlert("Error guardando semana. Ver consola.", "danger");
-      }
-    });
-
-    openWeekModal._bound = true;
-  }
-
-  openWeekModal._editId = editId || null;
-  modal.show();
+async function copyRoutineLink(routineId) {
+  const url = `${window.location.origin}${routineSharePath(routineId)}`;
+  await navigator.clipboard.writeText(url);
+  return url;
 }
 
 /* =========================
@@ -902,6 +557,11 @@ function norm(s) {
   return (s || "").toString().toLowerCase().trim();
 }
 
+function toDateSafe(v) {
+  const d = v?.toDate?.() ?? (v instanceof Date ? v : new Date(v || 0));
+  return isNaN(d) ? new Date(0) : d;
+}
+
 function escapeHtml(str) {
   return String(str ?? "")
     .replaceAll("&", "&amp;")
@@ -909,10 +569,4 @@ function escapeHtml(str) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-function numOrNull(v) {
-  if (v === "" || v === null || v === undefined) return null;
-  const n = Number(v);
-  return Number.isNaN(n) ? null : n;
 }
