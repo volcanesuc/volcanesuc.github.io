@@ -1,11 +1,10 @@
 // attendance.js
 import { db } from "./auth/firebase.js";
-import { watchAuth, logout } from "../auth/auth.js";
+import { watchAuth, logout } from "./auth/auth.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { APP_CONFIG } from "./config/config.js";
 import { showLoader, hideLoader } from "./ui/loader.js";
 import { Player } from "./models/player.js";
-
 import { guardPage } from "./page-guard.js";
 import { loadHeader } from "./components/header.js";
 
