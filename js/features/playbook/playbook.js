@@ -9,7 +9,7 @@ import { loadHeader } from "../../components/header.js";
 import { CLUB_DATA } from "../../strings.js";
 import { PLAYBOOK_STRINGS as S } from "../../strings/playbook_strings.js";
 
-import { loadPartialOnce } from "../../ui/loadPartial.js";
+import { loadPartialOnce } from "../../../ui/loadPartial.js";
 import { createTrainingEditor } from "./training_editor.js";
 
 import { initGymTab } from "./gym/gym.js";
