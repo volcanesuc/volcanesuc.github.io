@@ -54,6 +54,11 @@
               Entrenamientos
             </button>
           </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tabGymBtn" data-bs-toggle="pill" data-bs-target="#tabGym" type="button" role="tab">
+              Gimnasio
+            </button>
+          </li>
         </ul>
       </div>
     </div>
@@ -123,6 +128,72 @@
               </div>
             </div>
 
+          </div>
+        </div>
+
+      </section>
+       <!-- TAB GYM -->
+      <section class="tab-pane fade" id="tabGym" role="tabpanel" aria-labelledby="tabGymBtn">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+          <div>
+            <h2 class="h5 mb-0">Gimnasio</h2>
+            <div class="text-muted small">Ejercicios, rutinas y semanas</div>
+          </div>
+
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary btn-sm" id="refreshGymBtn">Refrescar</button>
+
+            <!-- admin only -->
+            <button class="btn btn-outline-primary btn-sm d-none" id="openCreateGymExerciseBtn" type="button">+ Ejercicio</button>
+            <button class="btn btn-outline-primary btn-sm d-none" id="openCreateGymRoutineBtn" type="button">+ Rutina</button>
+            <button class="btn btn-primary btn-sm d-none" id="openCreateGymWeekBtn" type="button">+ Semana</button>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <!-- Ejercicios -->
+          <div class="col-12 col-lg-4">
+            <div class="card">
+              <div class="card-body">
+                <div class="fw-semibold mb-2">Ejercicios</div>
+                <div class="input-group mb-2">
+                  <span class="input-group-text">🔎</span>
+                  <input class="form-control" id="gymExerciseSearch" placeholder="Buscar ejercicio…" />
+                </div>
+                <div class="list-group" id="gymExercisesList"></div>
+                <div class="text-muted small mt-2 d-none" id="gymExercisesEmpty">No hay ejercicios.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rutinas -->
+          <div class="col-12 col-lg-4">
+            <div class="card">
+              <div class="card-body">
+                <div class="fw-semibold mb-2">Rutinas</div>
+                <div class="input-group mb-2">
+                  <span class="input-group-text">🔎</span>
+                  <input class="form-control" id="gymRoutineSearch" placeholder="Buscar rutina…" />
+                </div>
+                <div class="list-group" id="gymRoutinesList"></div>
+                <div class="text-muted small mt-2 d-none" id="gymRoutinesEmpty">No hay rutinas.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Semanas -->
+          <div class="col-12 col-lg-4">
+            <div class="card">
+              <div class="card-body">
+                <div class="fw-semibold mb-2">Semanas</div>
+                <div class="input-group mb-2">
+                  <span class="input-group-text">🔎</span>
+                  <input class="form-control" id="gymWeekSearch" placeholder="Buscar semana…" />
+                </div>
+                <div class="list-group" id="gymWeeksList"></div>
+                <div class="text-muted small mt-2 d-none" id="gymWeeksEmpty">No hay semanas.</div>
+              </div>
+            </div>
           </div>
         </div>
 

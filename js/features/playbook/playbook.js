@@ -12,6 +12,8 @@ import { PLAYBOOK_STRINGS as S } from "../../strings/playbook_strings.js";
 import { loadPartialOnce } from "../../ui/loadPartial.js";
 import { createTrainingEditor } from "./training_editor.js";
 
+import { initGymTab } from "./gym/gym.js";
+
 import {
   collection,
   getDocs,
@@ -67,6 +69,12 @@ watchAuth(async () => {
 
     await loadDrills();
     await loadTrainings();
+    await initGymTab({
+      db,
+      clubId,
+      canEdit,
+      modalMountId: "modalMount"
+    });
   } finally {
     hideLoader();
     document.body.classList.remove("loading");
