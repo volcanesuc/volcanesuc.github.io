@@ -1,8 +1,11 @@
 // /js/features/playbook/gym/gym.js
-// ✅ Gym tab (Playbook): lista ejercicios / rutinas / semanas + share rutina pública
-// ✅ Si routine.exerciseItems trae null en sets/reps/rest/distance -> usa defaults del gym_exercises
+// Gym tab (Playbook): lista ejercicios / rutinas / semanas + share rutina pública
+// - Ejercicios: lista + botón Editar (emite evento) + limpia estado al crear
+// - Rutinas: lista + share + preview + hacer pública
+// - Semanas: lista placeholder
+// - Resuelve defaults de ejercicios para preview de rutinas cuando exerciseItems trae null
 //
-// Requiere en HTML (tu tab Gym):
+// Requiere en HTML (tab Gym):
 // - #refreshGymBtn
 // - #gymExerciseSearch, #gymExercisesList, #gymExercisesEmpty
 // - #gymRoutineSearch, #gymRoutinesList, #gymRoutinesEmpty
@@ -12,8 +15,15 @@
 // - #openCreateGymExerciseBtn, #openCreateGymRoutineBtn, #openCreateGymWeekBtn
 //
 // Importante:
-// - Este módulo NO crea/edita (eso lo tenés en tus modales).
-// - Solo lista y agrega share public + copy link, y expone helper para "resolved items".
+// - Este módulo NO crea/edita docs: solo emite eventos para que gym_editors.js abra modales.
+// - Para evitar parpadeos y “form pegado”, los botones limpian estado antes de emitir.
+// - Eventos emitidos (consistentes):
+//    * gymUI:exercise:new
+//    * gymUI:exercise:edit  { id }
+//    * gymUI:routine:new
+//    * gymUI:week:new
+//
+// Asegurate que gym_editors.js escuche esos eventos gymUI:*.
 
 import {
   collection,
@@ -27,11 +37,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================
-   Collections (reales)
+   Collections
 ========================= */
 const COL_EXERCISES = "gym_exercises";
 const COL_ROUTINES = "gym_routines";
-const COL_WEEKS = "gym_weeks"; // si no existe, igual no revienta (maneja vacío)
+const COL_WEEKS = "gym_weeks";
 
 /* =========================
    State
@@ -56,10 +66,8 @@ export async function initGymTab({ db, clubId, canEdit, modalMountId }) {
   cacheDom();
   bindEvents();
 
-  // show/hide admin CTAs
   toggleAdminButtons(canEdit);
 
-  // initial load
   await refreshAll();
 }
 
@@ -85,7 +93,7 @@ function cacheDom() {
     gymWeeksList: document.getElementById("gymWeeksList"),
     gymWeeksEmpty: document.getElementById("gymWeeksEmpty"),
 
-    // Admin CTAs (optional)
+    // Admin CTAs
     openCreateGymExerciseBtn: document.getElementById("openCreateGymExerciseBtn"),
     openCreateGymRoutineBtn: document.getElementById("openCreateGymRoutineBtn"),
     openCreateGymWeekBtn: document.getElementById("openCreateGymWeekBtn"),
@@ -93,7 +101,6 @@ function cacheDom() {
 }
 
 function toggleAdminButtons(canEdit) {
-  // si no existen, no pasa nada
   if (canEdit) {
     $.openCreateGymExerciseBtn?.classList.remove("d-none");
     $.openCreateGymRoutineBtn?.classList.remove("d-none");
@@ -109,46 +116,106 @@ function toggleAdminButtons(canEdit) {
    Events
 ========================= */
 function bindEvents() {
-  // refresh all
   $.refreshGymBtn?.addEventListener("click", refreshAll);
 
-  // search inputs
   $.gymExerciseSearch?.addEventListener("input", renderExercises);
   $.gymRoutineSearch?.addEventListener("input", renderRoutines);
   $.gymWeekSearch?.addEventListener("input", renderWeeks);
 
-  // listeners externos (si tus modales disparan eventos)
+  // externos (si tus modales disparan eventos de refresh)
   window.addEventListener("gym:changed", refreshAll);
   window.addEventListener("gym:routinesChanged", loadRoutinesAndRender);
   window.addEventListener("gym:exercisesChanged", loadExercisesAndRender);
   window.addEventListener("gym:weeksChanged", loadWeeksAndRender);
 
-  // Admin CTAs: disparar eventos para que el "editor" abra modales
- $.openCreateGymExerciseBtn?.addEventListener("click", () => {
-  if (!_ctx.canEdit) return;
-    window.dispatchEvent(new CustomEvent("gym:exercise:new"));
- });
-
- $.openCreateGymRoutineBtn?.addEventListener("click", () => {
+  // Admin CTAs: limpiar estado + emitir eventos "gymUI:*"
+  $.openCreateGymExerciseBtn?.addEventListener("click", () => {
     if (!_ctx.canEdit) return;
-    window.dispatchEvent(new CustomEvent("gym:routine:new"));
- });
+    cleanupExerciseModalState();
+    emitGymUI("gymUI:exercise:new");
+  });
 
- $.openCreateGymWeekBtn?.addEventListener("click", () => {
+  $.openCreateGymRoutineBtn?.addEventListener("click", () => {
     if (!_ctx.canEdit) return;
-    window.dispatchEvent(new CustomEvent("gym:week:new"));
- });
+    cleanupRoutineModalState();
+    emitGymUI("gymUI:routine:new");
+  });
+
+  $.openCreateGymWeekBtn?.addEventListener("click", () => {
+    if (!_ctx.canEdit) return;
+    cleanupWeekModalState();
+    emitGymUI("gymUI:week:new");
+  });
+}
+
+function emitGymUI(name, detail) {
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+  console.log("[gym] emitted:", name, detail || "");
 }
 
 /* =========================
-   Loaders
+   Modal cleanup (evita “form pegado” / estado edit)
+   - No asume que existen, si no existen no pasa nada
+========================= */
+function cleanupExerciseModalState() {
+  const modalEl =
+    document.getElementById("gymExerciseModal") ||
+    document.getElementById("gymExerciseEditorModal") ||
+    document.getElementById("editGymExerciseModal");
+
+  modalEl?.removeAttribute("data-edit-id");
+  modalEl?.removeAttribute("data-mode");
+
+  const formEl =
+    document.getElementById("gymExerciseForm") ||
+    document.getElementById("gymExerciseEditorForm");
+
+  formEl?.reset?.();
+
+  // Si el form.reset() no limpia todo (inputs fuera del form), limpiamos conocidos.
+  // Si tus IDs son otros, agregalos aquí sin miedo.
+  const ids = ["geName", "geSets", "geReps", "geRest", "geNotes", "geVideoUrl", "geDistance", "geDistanceUnit"];
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === "checkbox") el.checked = false;
+    else el.value = "";
+  });
+}
+
+function cleanupRoutineModalState() {
+  const modalEl =
+    document.getElementById("gymRoutineModal") ||
+    document.getElementById("gymRoutineEditorModal");
+
+  modalEl?.removeAttribute("data-edit-id");
+  modalEl?.removeAttribute("data-mode");
+
+  const formEl =
+    document.getElementById("gymRoutineForm") ||
+    document.getElementById("gymRoutineEditorForm");
+  formEl?.reset?.();
+}
+
+function cleanupWeekModalState() {
+  const modalEl =
+    document.getElementById("gymWeekModal") ||
+    document.getElementById("gymWeekEditorModal");
+
+  modalEl?.removeAttribute("data-edit-id");
+  modalEl?.removeAttribute("data-mode");
+
+  const formEl =
+    document.getElementById("gymWeekForm") ||
+    document.getElementById("gymWeekEditorForm");
+  formEl?.reset?.();
+}
+
+/* =========================
+   Load
 ========================= */
 async function refreshAll() {
-  await Promise.all([
-    loadExercises(),
-    loadRoutines(),
-    loadWeeks(),
-  ]);
+  await Promise.all([loadExercises(), loadRoutines(), loadWeeks()]);
   renderExercises();
   renderRoutines();
   renderWeeks();
@@ -156,45 +223,25 @@ async function refreshAll() {
 
 async function loadExercises() {
   if (!_ctx.db) return;
-  const qy = query(
-    collection(_ctx.db, COL_EXERCISES),
-    where("clubId", "==", _ctx.clubId)
-  );
+  const qy = query(collection(_ctx.db, COL_EXERCISES), where("clubId", "==", _ctx.clubId));
   const snap = await getDocs(qy);
-  exercises = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(x => x.isActive !== false);
-
+  exercises = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => x.isActive !== false);
   exercises.sort((a, b) => norm(a.name).localeCompare(norm(b.name)));
 }
 
 async function loadRoutines() {
   if (!_ctx.db) return;
-  const qy = query(
-    collection(_ctx.db, COL_ROUTINES),
-    where("clubId", "==", _ctx.clubId)
-  );
+  const qy = query(collection(_ctx.db, COL_ROUTINES), where("clubId", "==", _ctx.clubId));
   const snap = await getDocs(qy);
-  routines = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(x => x.isActive !== false);
-
-  // newest first
+  routines = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => x.isActive !== false);
   routines.sort((a, b) => toDateSafe(b.updatedAt) - toDateSafe(a.updatedAt));
 }
 
 async function loadWeeks() {
-  // si no existe la colección, Firestore igual responde vacío si no hay docs
   if (!_ctx.db) return;
-  const qy = query(
-    collection(_ctx.db, COL_WEEKS),
-    where("clubId", "==", _ctx.clubId)
-  );
+  const qy = query(collection(_ctx.db, COL_WEEKS), where("clubId", "==", _ctx.clubId));
   const snap = await getDocs(qy);
-  weeks = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(x => x.isActive !== false);
-
+  weeks = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => x.isActive !== false);
   weeks.sort((a, b) => toDateSafe(b.updatedAt) - toDateSafe(a.updatedAt));
 }
 
@@ -220,9 +267,7 @@ function renderExercises() {
   if (!$.gymExercisesList) return;
 
   const term = norm($.gymExerciseSearch?.value);
-  const filtered = term
-    ? exercises.filter(e => norm(e.name).includes(term))
-    : exercises;
+  const filtered = term ? exercises.filter((e) => norm(e.name).includes(term)) : exercises;
 
   $.gymExercisesList.innerHTML = "";
 
@@ -236,24 +281,18 @@ function renderExercises() {
     const item = document.createElement("div");
     item.className = "list-group-item";
 
-    // clickable para editar (solo admin)
-    const clickable = _ctx.canEdit
-      ? `data-edit-exercise="${escapeHtml(ex.id)}" style="cursor:pointer"`
-      : "";
+    const clickable = _ctx.canEdit ? `data-edit-exercise="${escapeHtml(ex.id)}" style="cursor:pointer"` : "";
 
     item.innerHTML = `
       <div class="d-flex justify-content-between gap-2 flex-wrap" ${clickable}>
         <div>
           <div class="fw-semibold">${escapeHtml(ex.name || "—")}</div>
-          <div class="text-muted small">
-            ${fmtExerciseDefaults(ex)}
-          </div>
+          <div class="text-muted small">${fmtExerciseDefaults(ex)}</div>
           ${ex.notes ? `<div class="small mt-1">${escapeHtml(ex.notes)}</div>` : ``}
         </div>
 
         <div class="d-flex gap-2 align-items-start flex-wrap">
           ${ex.videoUrl ? `<a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(ex.videoUrl)}" target="_blank" rel="noopener">Video</a>` : ``}
-
           ${
             _ctx.canEdit
               ? `<button class="btn btn-sm btn-primary" data-edit-exercise-btn="${escapeHtml(ex.id)}">Editar</button>`
@@ -266,15 +305,13 @@ function renderExercises() {
     $.gymExercisesList.appendChild(item);
   }
 
-  // bind edit handlers
   bindExerciseButtons();
 }
 
 function bindExerciseButtons() {
   if (!_ctx.canEdit) return;
 
-  // 1) click en botón "Editar"
-  $.gymExercisesList?.querySelectorAll("[data-edit-exercise-btn]").forEach(btn => {
+  $.gymExercisesList?.querySelectorAll("[data-edit-exercise-btn]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const id = btn.getAttribute("data-edit-exercise-btn");
@@ -283,8 +320,7 @@ function bindExerciseButtons() {
     });
   });
 
-  // 2) click en la card (pero ignorando links/botones)
-  $.gymExercisesList?.querySelectorAll("[data-edit-exercise]").forEach(row => {
+  $.gymExercisesList?.querySelectorAll("[data-edit-exercise]").forEach((row) => {
     row.addEventListener("click", (e) => {
       const target = e.target;
       if (target?.closest("a,button")) return;
@@ -298,12 +334,13 @@ function bindExerciseButtons() {
 
 function openExerciseEditor(id) {
   if (!_ctx.canEdit) return;
-  window.dispatchEvent(new CustomEvent("gym:exercise:edit", { detail: { id } }));
-  console.log("[gym] edit exercise requested:", id);
+  emitGymUI("gymUI:exercise:edit", { id });
 }
 
+/* =========================
+   Exercise defaults line
+========================= */
 function fmtExerciseDefaults(ex) {
-  // seriesType: "reps" o "distance" (según tu doc)
   const st = (ex.seriesType || "reps").toString();
   const parts = [];
 
@@ -328,9 +365,7 @@ function renderRoutines() {
   if (!$.gymRoutinesList) return;
 
   const term = norm($.gymRoutineSearch?.value);
-  const filtered = term
-    ? routines.filter(r => norm(r.name).includes(term))
-    : routines;
+  const filtered = term ? routines.filter((r) => norm(r.name).includes(term)) : routines;
 
   $.gymRoutinesList.innerHTML = "";
 
@@ -386,8 +421,7 @@ function renderRoutines() {
 }
 
 function bindRoutineButtons() {
-  // copiar link
-  $.gymRoutinesList?.querySelectorAll("[data-copy-routine]").forEach(btn => {
+  $.gymRoutinesList?.querySelectorAll("[data-copy-routine]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-copy-routine");
       if (!id) return;
@@ -403,8 +437,7 @@ function bindRoutineButtons() {
     });
   });
 
-  // hacer pública
-  $.gymRoutinesList?.querySelectorAll("[data-make-public]").forEach(btn => {
+  $.gymRoutinesList?.querySelectorAll("[data-make-public]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-make-public");
       if (!id) return;
@@ -426,8 +459,7 @@ function bindRoutineButtons() {
     });
   });
 
-  // preview (resuelto con defaults)
-  $.gymRoutinesList?.querySelectorAll("[data-preview-routine]").forEach(btn => {
+  $.gymRoutinesList?.querySelectorAll("[data-preview-routine]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-preview-routine");
       if (!id) return;
@@ -435,7 +467,6 @@ function bindRoutineButtons() {
       const box = document.getElementById(`routinePreview_${id}`);
       if (!box) return;
 
-      // toggle
       const isHidden = box.classList.contains("d-none");
       if (!isHidden) {
         box.classList.add("d-none");
@@ -456,27 +487,30 @@ function bindRoutineButtons() {
     });
   });
 
-  // editar: lo dejás conectado a tu modal/editor (si ya lo tenés)
-  $.gymRoutinesList?.querySelectorAll("[data-edit-routine]").forEach(btn => {
+  // Edit routine (emit event para tu editor real)
+  $.gymRoutinesList?.querySelectorAll("[data-edit-routine]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = btn.getAttribute("data-edit-routine");
       if (!id) return;
-      // 🔧 Acá conectás tu editor real:
-      // window.dispatchEvent(new CustomEvent("gym:editRoutine", { detail: { id } }));
-      console.log("[gym] edit routine:", id);
+      if (!_ctx.canEdit) return;
+      emitGymUI("gymUI:routine:edit", { id }); // si no lo usás, no pasa nada
     });
   });
 }
 
 function renderRoutinePreview(routine, items) {
-  const rows = items.map(it => `
+  const rows = items
+    .map(
+      (it) => `
     <div class="border rounded p-2 mb-2">
       <div class="fw-semibold">${escapeHtml(it.order)}. ${escapeHtml(it.name)}</div>
       <div class="text-muted small">${escapeHtml(fmtItemSeries(it))}</div>
       ${it.notes ? `<div class="small mt-1">${escapeHtml(it.notes)}</div>` : ``}
       ${it.videoUrl ? `<a class="small" href="${escapeHtml(it.videoUrl)}" target="_blank" rel="noopener">Video</a>` : ``}
     </div>
-  `).join("");
+  `
+    )
+    .join("");
 
   return `
     <div class="mt-2">
@@ -501,15 +535,14 @@ export async function loadRoutineResolved({ db, routineId }) {
   items.sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
 
   const exerciseSnaps = await Promise.all(
-    items.map(it => it?.exerciseId ? getDoc(doc(db, COL_EXERCISES, it.exerciseId)) : Promise.resolve(null))
+    items.map((it) => (it?.exerciseId ? getDoc(doc(db, COL_EXERCISES, it.exerciseId)) : Promise.resolve(null)))
   );
 
   const resolvedItems = items.map((it, idx) => {
     const exSnap = exerciseSnaps[idx];
     const ex = exSnap && exSnap.exists() ? { id: exSnap.id, ...exSnap.data() } : null;
 
-    const pick = (overrideVal, baseVal) =>
-      (overrideVal === null || overrideVal === undefined) ? baseVal : overrideVal;
+    const pick = (overrideVal, baseVal) => (overrideVal === null || overrideVal === undefined ? baseVal : overrideVal);
 
     const pickNotes = (overrideNotes, baseNotes) => {
       const o = (overrideNotes ?? "").toString().trim();
@@ -518,14 +551,13 @@ export async function loadRoutineResolved({ db, routineId }) {
     };
 
     return {
-      order: it.order ?? (idx + 1),
+      order: it.order ?? idx + 1,
       exerciseId: it.exerciseId || null,
 
       name: ex?.name || "—",
       videoUrl: ex?.videoUrl || "",
       bodyParts: ex?.bodyParts || [],
 
-      // series fields: si item trae null -> defaults del exercise
       seriesType: pick(it.seriesType, ex?.seriesType ?? "reps"),
       sets: pick(it.sets, ex?.sets ?? null),
       reps: pick(it.reps, ex?.reps ?? null),
@@ -533,7 +565,6 @@ export async function loadRoutineResolved({ db, routineId }) {
       distance: pick(it.distance, ex?.distance ?? null),
       distanceUnit: pick(it.distanceUnit, ex?.distanceUnit ?? null),
 
-      // notes: si item.notes == "" usa ex.notes
       notes: pickNotes(it.notes, ex?.notes),
 
       _exerciseMissing: !ex,
@@ -562,15 +593,13 @@ function fmtItemSeries(it) {
 }
 
 /* =========================
-   Render: Weeks (simple placeholder)
+   Render: Weeks (placeholder)
 ========================= */
 function renderWeeks() {
   if (!$.gymWeeksList) return;
 
   const term = norm($.gymWeekSearch?.value);
-  const filtered = term
-    ? weeks.filter(w => norm(w.name).includes(term))
-    : weeks;
+  const filtered = term ? weeks.filter((w) => norm(w.name).includes(term)) : weeks;
 
   $.gymWeeksList.innerHTML = "";
 
@@ -591,12 +620,27 @@ function renderWeeks() {
           <div class="text-muted small">${escapeHtml(w.description || "")}</div>
         </div>
         <div class="d-flex gap-2">
-          ${_ctx.canEdit ? `<button class="btn btn-sm btn-primary" data-edit-week="${escapeHtml(w.id)}">Editar</button>` : ``}
+          ${
+            _ctx.canEdit
+              ? `<button class="btn btn-sm btn-primary" data-edit-week="${escapeHtml(w.id)}">Editar</button>`
+              : ``
+          }
         </div>
       </div>
     `;
 
     $.gymWeeksList.appendChild(item);
+  }
+
+  // si querés editar semana: emit evento (no rompe si nadie lo escucha)
+  if (_ctx.canEdit) {
+    $.gymWeeksList?.querySelectorAll("[data-edit-week]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-edit-week");
+        if (!id) return;
+        emitGymUI("gymUI:week:edit", { id });
+      });
+    });
   }
 }
 
