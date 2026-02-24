@@ -1,5 +1,5 @@
 // /js/features/playbook/gym/gym.js
-// Gym tab (Playbook): lista ejercicios / rutinas / semanas + share rutina pública
+// Gym tab (Playbook): lista ejercicios / rutinas / planes (antes "weeks")
 // Emite eventos gymUI:* para que gym_editors.js abra y guarde en modales.
 
 import {
@@ -17,8 +17,8 @@ import {
    Collections
 ========================= */
 const COL_EXERCISES = "gym_exercises";
-const COL_ROUTINES = "gym_routines";
-const COL_WEEKS = "gym_weeks";
+const COL_ROUTINES  = "gym_routines";
+const COL_PLANS     = "gym_weeks";
 
 /* =========================
    State
@@ -31,8 +31,8 @@ let _ctx = {
 };
 
 let exercises = [];
-let routines = [];
-let weeks = [];
+let routines  = [];
+let plans     = [];
 
 /* =========================
    Public API
@@ -42,13 +42,12 @@ export async function initGymTab({ db, clubId, canEdit }) {
 
   cacheDom();
   bindEvents();
-
   toggleAdminButtons(canEdit);
 
   await refreshAll();
 }
 
-// (export opcional si lo usás en otro lado)
+// Se usa también en gym_routine.html / gym_plan.html si querés reutilizarlo
 export async function loadRoutineResolved({ db, routineId }) {
   const rSnap = await getDoc(doc(db, COL_ROUTINES, routineId));
   if (!rSnap.exists()) throw new Error("Rutina no existe");
@@ -59,7 +58,9 @@ export async function loadRoutineResolved({ db, routineId }) {
   items.sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
 
   const exerciseSnaps = await Promise.all(
-    items.map((it) => (it?.exerciseId ? getDoc(doc(db, COL_EXERCISES, it.exerciseId)) : Promise.resolve(null)))
+    items.map((it) =>
+      it?.exerciseId ? getDoc(doc(db, COL_EXERCISES, it.exerciseId)) : Promise.resolve(null)
+    )
   );
 
   const resolvedItems = items.map((it, idx) => {
@@ -91,7 +92,6 @@ export async function loadRoutineResolved({ db, routineId }) {
       distanceUnit: pick(it.distanceUnit, ex?.distanceUnit ?? null),
 
       notes: pickNotes(it.notes, ex?.notes),
-
       _exerciseMissing: !ex,
     };
   });
@@ -108,36 +108,31 @@ function cacheDom() {
 
     // Exercises
     gymExerciseSearch: document.getElementById("gymExerciseSearch"),
-    gymExercisesList: document.getElementById("gymExercisesList"),
+    gymExercisesList:  document.getElementById("gymExercisesList"),
     gymExercisesEmpty: document.getElementById("gymExercisesEmpty"),
 
     // Routines
-    gymRoutineSearch: document.getElementById("gymRoutineSearch"),
-    gymRoutinesList: document.getElementById("gymRoutinesList"),
-    gymRoutinesEmpty: document.getElementById("gymRoutinesEmpty"),
+    gymRoutineSearch:  document.getElementById("gymRoutineSearch"),
+    gymRoutinesList:   document.getElementById("gymRoutinesList"),
+    gymRoutinesEmpty:  document.getElementById("gymRoutinesEmpty"),
 
-    // Weeks
-    gymWeekSearch: document.getElementById("gymWeekSearch"),
-    gymWeeksList: document.getElementById("gymWeeksList"),
-    gymWeeksEmpty: document.getElementById("gymWeeksEmpty"),
+    // Plans (antes weeks)
+    gymPlanSearch:  document.getElementById("gymWeekSearch") || document.getElementById("gymPlanSearch"),
+    gymPlansList:   document.getElementById("gymWeeksList")  || document.getElementById("gymPlansList"),
+    gymPlansEmpty:  document.getElementById("gymWeeksEmpty") || document.getElementById("gymPlansEmpty"),
 
     // Admin CTAs
     openCreateGymExerciseBtn: document.getElementById("openCreateGymExerciseBtn"),
-    openCreateGymRoutineBtn: document.getElementById("openCreateGymRoutineBtn"),
-    openCreateGymWeekBtn: document.getElementById("openCreateGymWeekBtn"),
+    openCreateGymRoutineBtn:  document.getElementById("openCreateGymRoutineBtn"),
+    openCreateGymPlanBtn:     document.getElementById("openCreateGymWeekBtn") || document.getElementById("openCreateGymPlanBtn"),
   };
 }
 
 function toggleAdminButtons(canEdit) {
-  if (canEdit) {
-    $.openCreateGymExerciseBtn?.classList.remove("d-none");
-    $.openCreateGymRoutineBtn?.classList.remove("d-none");
-    $.openCreateGymWeekBtn?.classList.remove("d-none");
-  } else {
-    $.openCreateGymExerciseBtn?.classList.add("d-none");
-    $.openCreateGymRoutineBtn?.classList.add("d-none");
-    $.openCreateGymWeekBtn?.classList.add("d-none");
-  }
+  const toggle = (el, on) => el?.classList[on ? "remove" : "add"]("d-none");
+  toggle($.openCreateGymExerciseBtn, canEdit);
+  toggle($.openCreateGymRoutineBtn,  canEdit);
+  toggle($.openCreateGymPlanBtn,     canEdit);
 }
 
 /* =========================
@@ -148,15 +143,14 @@ function bindEvents() {
 
   $.gymExerciseSearch?.addEventListener("input", renderExercises);
   $.gymRoutineSearch?.addEventListener("input", renderRoutines);
-  $.gymWeekSearch?.addEventListener("input", renderWeeks);
+  $.gymPlanSearch?.addEventListener("input", renderPlans);
 
-  // externos (si tus modales disparan eventos de refresh)
   window.addEventListener("gym:changed", refreshAll);
   window.addEventListener("gym:routinesChanged", loadRoutinesAndRender);
   window.addEventListener("gym:exercisesChanged", loadExercisesAndRender);
-  window.addEventListener("gym:weeksChanged", loadWeeksAndRender);
+  window.addEventListener("gym:weeksChanged", loadPlansAndRender); // compat con tus eventos existentes
+  window.addEventListener("gym:plansChanged", loadPlansAndRender);
 
-  // Admin CTAs: limpiar estado + emitir eventos "gymUI:*"
   $.openCreateGymExerciseBtn?.addEventListener("click", () => {
     if (!_ctx.canEdit) return;
     cleanupExerciseModalState();
@@ -169,9 +163,10 @@ function bindEvents() {
     emitGymUI("gymUI:routine:new");
   });
 
-  $.openCreateGymWeekBtn?.addEventListener("click", () => {
+  $.openCreateGymPlanBtn?.addEventListener("click", () => {
     if (!_ctx.canEdit) return;
-    cleanupWeekModalState();
+    cleanupPlanModalState();
+    // mantenemos el evento original (week) para no romper tu editor existente
     emitGymUI("gymUI:week:new");
   });
 }
@@ -217,12 +212,12 @@ function cleanupRoutineModalState() {
   formEl?.reset?.();
 }
 
-function cleanupWeekModalState() {
-  const modalEl = document.getElementById("gymWeekModal") || document.getElementById("gymWeekEditorModal");
+function cleanupPlanModalState() {
+  const modalEl = document.getElementById("gymWeekModal") || document.getElementById("gymWeekEditorModal") || document.getElementById("gymPlanModal");
   modalEl?.removeAttribute("data-edit-id");
   modalEl?.removeAttribute("data-mode");
 
-  const formEl = document.getElementById("gymWeekForm") || document.getElementById("gymWeekEditorForm");
+  const formEl = document.getElementById("gymWeekForm") || document.getElementById("gymWeekEditorForm") || document.getElementById("gymPlanForm");
   formEl?.reset?.();
 }
 
@@ -230,10 +225,10 @@ function cleanupWeekModalState() {
    Load
 ========================= */
 async function refreshAll() {
-  await Promise.all([loadExercises(), loadRoutines(), loadWeeks()]);
+  await Promise.all([loadExercises(), loadRoutines(), loadPlans()]);
   renderExercises();
   renderRoutines();
-  renderWeeks();
+  renderPlans();
 }
 
 async function loadExercises() {
@@ -252,26 +247,24 @@ async function loadRoutines() {
   routines.sort((a, b) => toDateSafe(b.updatedAt) - toDateSafe(a.updatedAt));
 }
 
-async function loadWeeks() {
+async function loadPlans() {
   if (!_ctx.db) return;
-  const qy = query(collection(_ctx.db, COL_WEEKS), where("clubId", "==", _ctx.clubId));
+  const qy = query(collection(_ctx.db, COL_PLANS), where("clubId", "==", _ctx.clubId));
   const snap = await getDocs(qy);
-  weeks = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => x.isActive !== false);
-  weeks.sort((a, b) => toDateSafe(b.updatedAt) - toDateSafe(a.updatedAt));
+  plans = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => x.isActive !== false);
+
+  // Orden: más reciente primero (por monthKey si existe, si no updatedAt)
+  plans.sort((a, b) => {
+    const ak = String(a.monthKey || "");
+    const bk = String(b.monthKey || "");
+    if (ak && bk && ak !== bk) return bk.localeCompare(ak);
+    return toDateSafe(b.updatedAt) - toDateSafe(a.updatedAt);
+  });
 }
 
-async function loadExercisesAndRender() {
-  await loadExercises();
-  renderExercises();
-}
-async function loadRoutinesAndRender() {
-  await loadRoutines();
-  renderRoutines();
-}
-async function loadWeeksAndRender() {
-  await loadWeeks();
-  renderWeeks();
-}
+async function loadExercisesAndRender() { await loadExercises(); renderExercises(); }
+async function loadRoutinesAndRender()  { await loadRoutines();  renderRoutines(); }
+async function loadPlansAndRender()     { await loadPlans();     renderPlans(); }
 
 /* =========================
    Render: Exercises
@@ -294,11 +287,9 @@ function renderExercises() {
     const item = document.createElement("div");
     item.className = "list-group-item";
 
-    const clickable = _ctx.canEdit ? `data-edit-exercise="${escapeHtml(ex.id)}" style="cursor:pointer"` : "";
-
     item.innerHTML = `
-      <div class="d-flex justify-content-between gap-2 flex-wrap" ${clickable}>
-        <div>
+      <div class="d-flex justify-content-between gap-2 flex-wrap">
+        <div ${_ctx.canEdit ? `data-edit-exercise="${escapeHtml(ex.id)}" style="cursor:pointer"` : ""}>
           <div class="fw-semibold">${escapeHtml(ex.name || "—")}</div>
           <div class="text-muted small">${fmtExerciseDefaults(ex)}</div>
           ${ex.notes ? `<div class="small mt-1">${escapeHtml(ex.notes)}</div>` : ``}
@@ -306,11 +297,7 @@ function renderExercises() {
 
         <div class="d-flex gap-2 align-items-start flex-wrap">
           ${ex.videoUrl ? `<a class="btn btn-sm btn-outline-secondary" href="${escapeHtml(ex.videoUrl)}" target="_blank" rel="noopener">Video</a>` : ``}
-          ${
-            _ctx.canEdit
-              ? `<button class="btn btn-sm btn-primary" data-edit-exercise-btn="${escapeHtml(ex.id)}">Editar</button>`
-              : ``
-          }
+          ${_ctx.canEdit ? `<button class="btn btn-sm btn-primary" data-edit-exercise-btn="${escapeHtml(ex.id)}">Editar</button>` : ``}
         </div>
       </div>
     `;
@@ -414,17 +401,12 @@ function renderRoutines() {
                 <button class="btn btn-sm btn-outline-primary" data-copy-routine="${escapeHtml(r.id)}">Copiar link</button>
               `
               : `
-                ${_ctx.canEdit ? `<button class="btn btn-sm btn-outline-primary" data-make-public="${escapeHtml(r.id)}">Hacer pública</button>` : ``}
+                ${_ctx.canEdit ? `<button class="btn btn-sm btn-outline-primary" data-make-routine-public="${escapeHtml(r.id)}">Hacer pública</button>` : ``}
               `
           }
 
           <button class="btn btn-sm btn-outline-secondary" data-preview-routine="${escapeHtml(r.id)}">Preview</button>
-
-          ${
-            _ctx.canEdit
-              ? `<button class="btn btn-sm btn-primary" data-edit-routine="${escapeHtml(r.id)}">Editar</button>`
-              : ``
-          }
+          ${_ctx.canEdit ? `<button class="btn btn-sm btn-primary" data-edit-routine="${escapeHtml(r.id)}">Editar</button>` : ``}
         </div>
       </div>
 
@@ -454,9 +436,9 @@ function bindRoutineButtons() {
     });
   });
 
-  $.gymRoutinesList?.querySelectorAll("[data-make-public]").forEach((btn) => {
+  $.gymRoutinesList?.querySelectorAll("[data-make-routine-public]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-make-public");
+      const id = btn.getAttribute("data-make-routine-public");
       if (!id) return;
       if (!_ctx.canEdit) return;
 
@@ -514,7 +496,7 @@ function bindRoutineButtons() {
   });
 }
 
-function renderRoutinePreview(routine, items) {
+function renderRoutinePreview(_routine, items) {
   const rows = items
     .map(
       (it) => `
@@ -528,11 +510,7 @@ function renderRoutinePreview(routine, items) {
     )
     .join("");
 
-  return `
-    <div class="mt-2">
-      ${rows || `<div class="text-muted small">Sin ejercicios.</div>`}
-    </div>
-  `;
+  return `<div class="mt-2">${rows || `<div class="text-muted small">Sin ejercicios.</div>`}</div>`;
 }
 
 function fmtItemSeries(it) {
@@ -554,54 +532,124 @@ function fmtItemSeries(it) {
 }
 
 /* =========================
-   Render: Weeks
+   Render: Plans (antes Weeks)
 ========================= */
-function renderWeeks() {
-  if (!$.gymWeeksList) return;
+function renderPlans() {
+  if (!$.gymPlansList) return;
 
-  const term = norm($.gymWeekSearch?.value);
-  const filtered = term ? weeks.filter((w) => norm(w.name).includes(term)) : weeks;
+  const term = norm($.gymPlanSearch?.value);
+  const filtered = term ? plans.filter((p) => norm(planTitle(p)).includes(term)) : plans;
 
-  $.gymWeeksList.innerHTML = "";
+  $.gymPlansList.innerHTML = "";
 
   if (!filtered.length) {
-    $.gymWeeksEmpty?.classList.remove("d-none");
+    $.gymPlansEmpty?.classList.remove("d-none");
     return;
   }
-  $.gymWeeksEmpty?.classList.add("d-none");
+  $.gymPlansEmpty?.classList.add("d-none");
 
-  for (const w of filtered) {
+  for (const p of filtered) {
+    const isPublic = p.isPublic === true;
+
     const item = document.createElement("div");
     item.className = "list-group-item";
 
     item.innerHTML = `
       <div class="d-flex justify-content-between gap-2 flex-wrap">
         <div>
-          <div class="fw-semibold">${escapeHtml(w.name || "—")}</div>
-          <div class="text-muted small">${escapeHtml(w.description || "")}</div>
+          <div class="fw-semibold">${escapeHtml(planTitle(p))}</div>
+          <div class="text-muted small">
+            ${isPublic ? "🌐 Público" : "🔒 Privado"}
+            ${p.monthKey ? ` · ${escapeHtml(p.monthKey)}` : ``}
+          </div>
+          ${p.description ? `<div class="small mt-1">${escapeHtml(p.description)}</div>` : ``}
         </div>
-        <div class="d-flex gap-2">
+
+        <div class="d-flex gap-2 flex-wrap">
           ${
-            _ctx.canEdit
-              ? `<button class="btn btn-sm btn-primary" data-edit-week="${escapeHtml(w.id)}">Editar</button>`
-              : ``
+            isPublic
+              ? `
+                <a class="btn btn-sm btn-outline-secondary" href="${planSharePath(p.id)}" target="_blank" rel="noopener">Ver</a>
+                <button class="btn btn-sm btn-outline-primary" data-copy-plan="${escapeHtml(p.id)}">Copiar link</button>
+              `
+              : `
+                ${_ctx.canEdit ? `<button class="btn btn-sm btn-outline-primary" data-make-plan-public="${escapeHtml(p.id)}">Hacer público</button>` : ``}
+              `
           }
+          ${_ctx.canEdit ? `<button class="btn btn-sm btn-primary" data-edit-plan="${escapeHtml(p.id)}">Editar</button>` : ``}
         </div>
       </div>
     `;
 
-    $.gymWeeksList.appendChild(item);
+    $.gymPlansList.appendChild(item);
   }
 
-  if (_ctx.canEdit) {
-    $.gymWeeksList?.querySelectorAll("[data-edit-week]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-edit-week");
-        if (!id) return;
-        emitGymUI("gymUI:week:edit", { id });
-      });
+  bindPlanButtons();
+}
+
+function bindPlanButtons() {
+  $.gymPlansList?.querySelectorAll("[data-copy-plan]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-copy-plan");
+      if (!id) return;
+      try {
+        await copyPlanLink(id);
+        const old = btn.textContent;
+        btn.textContent = "Copiado ✅";
+        setTimeout(() => (btn.textContent = old), 1200);
+      } catch (e) {
+        console.error(e);
+        alert("No pude copiar el link del plan.");
+      }
     });
-  }
+  });
+
+  $.gymPlansList?.querySelectorAll("[data-make-plan-public]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-make-plan-public");
+      if (!id) return;
+      if (!_ctx.canEdit) return;
+
+      btn.disabled = true;
+      try {
+        await updateDoc(doc(_ctx.db, COL_PLANS, id), {
+          isPublic: true,
+          updatedAt: serverTimestamp(),
+        });
+        await loadPlansAndRender();
+      } catch (e) {
+        console.error(e);
+        alert("Error haciendo el plan público.");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
+  $.gymPlansList?.querySelectorAll("[data-edit-plan]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-edit-plan");
+      if (!id) return;
+      if (!_ctx.canEdit) return;
+      // mantenemos evento week:edit para no romper tu editor existente
+      emitGymUI("gymUI:week:edit", { id });
+    });
+  });
+}
+
+function planTitle(p) {
+  // title explícito, si no, name, si no, monthKey
+  return (
+    (p.title || "").trim() ||
+    (p.name || "").trim() ||
+    (p.monthKey ? `Plan de gimnasio – ${monthKeyToLabel(p.monthKey)}` : "Plan de gimnasio")
+  );
+}
+
+function monthKeyToLabel(monthKey) {
+  // "YYYY-MM" -> "Mes YYYY-MM" (simple, sin depender de locale)
+  // Si querés nombres de meses en español, lo hago luego con un map.
+  return `Mes ${monthKey}`;
 }
 
 /* =========================
@@ -610,8 +658,17 @@ function renderWeeks() {
 function routineSharePath(id) {
   return `/gym_routine.html?id=${encodeURIComponent(id)}`;
 }
+function planSharePath(id) {
+  return `/gym_plan.html?id=${encodeURIComponent(id)}`;
+}
+
 async function copyRoutineLink(routineId) {
   const url = `${window.location.origin}${routineSharePath(routineId)}`;
+  await navigator.clipboard.writeText(url);
+  return url;
+}
+async function copyPlanLink(planId) {
+  const url = `${window.location.origin}${planSharePath(planId)}`;
   await navigator.clipboard.writeText(url);
   return url;
 }
