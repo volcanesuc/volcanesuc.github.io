@@ -13,7 +13,7 @@ import { loadPartialOnce } from "/js/ui/loadPartial.js";
 import { createTrainingEditor } from "./training_editor.js";
 
 import { initGymTab } from "./gym/gym.js";
-import "./gym/gym_editors.js";
+import { initGymEditors } from "./gym/gym_editors.js";
 
 import {
   collection,
@@ -72,6 +72,7 @@ watchAuth(async () => {
     await loadTrainings();
     try {
       await initGymTab({ db, clubId, canEdit, modalMountId: "modalMount" });
+      await initGymEditors({ db, clubId, canEdit, modalMountId: "modalMount" });
     } catch (e) {
       console.error("[playbook] Gym init error:", e);
       showAlert("La pestaña Gimnasio falló al cargar. Ver consola.", "warning");
