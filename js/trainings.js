@@ -269,6 +269,7 @@ async function loadTrainings() {
   });
 
   bindEditEvents();
+}
 
 function bindEditEvents() {
   document.querySelectorAll(".training-row, .training-card").forEach(el => {
