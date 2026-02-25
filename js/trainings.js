@@ -700,9 +700,9 @@ function renderTrainings(list) {
     // DESKTOP ROW (sin Estado)
     $.table.innerHTML += `
       <tr data-id="${escapeHtml(t.id)}" class="training-row" style="cursor:pointer">
-        <td>${escapeHtml(label)}</td>
-        <td>${detailsHtml}</td>
-        <td>${count}</td>
+        <td class="date-col">${escapeHtml(label)}</td>
+        <td class="name-col">${detailsHtml}</td>
+        <td class="att-col"><span class="att-pill">${count}</span></td>
       </tr>
     `;
 
