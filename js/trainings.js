@@ -73,6 +73,8 @@ const $ = {
   dateFrom: document.getElementById("dateFrom"),
   dateTo: document.getElementById("dateTo"),
 
+  clearFiltersBtn: document.getElementById("clearFiltersBtn"),
+
 };
 
 let modalInstance = null;
@@ -271,6 +273,8 @@ async function loadTrainings() {
   refreshListUI();
 
   bindEditEvents();
+
+  updateClearBtnState();
 }
 
 function bindEditEvents() {
@@ -549,6 +553,11 @@ function bindEvents() {
   $.dateFrom?.addEventListener("change", refreshListUI);
   $.dateTo?.addEventListener("change", refreshListUI);
 
+  $.clearFiltersBtn?.addEventListener("click", () => {
+    clearFilters();
+    updateClearBtnState();
+  });
+
   // cuando se cierra, reset (sin re-abrir)
   $.modal?.addEventListener("hidden.bs.modal", () => {
     // reset silencioso
@@ -758,6 +767,28 @@ function highlightText(text, term) {
 
   const re = new RegExp(`(${escapeRegExp(t)})`, "ig");
   return safeText.replace(re, `<mark class="search-hit">$1</mark>`);
+}
+
+function clearFilters() {
+  if ($.search) $.search.value = "";
+  if ($.monthFilter) $.monthFilter.value = "";
+  if ($.sortFilter) $.sortFilter.value = "date_desc";
+  if ($.dateFrom) $.dateFrom.value = "";
+  if ($.dateTo) $.dateTo.value = "";
+  refreshListUI();
+}
+
+function updateClearBtnState() {
+  if (!$.clearFiltersBtn) return;
+
+  const hasFilters =
+    (norm($.search?.value) !== "") ||
+    (($.monthFilter?.value || "") !== "") ||
+    (($.sortFilter?.value || "date_desc") !== "date_desc") ||
+    (($.dateFrom?.value || "") !== "") ||
+    (($.dateTo?.value || "") !== "");
+
+  $.clearFiltersBtn.disabled = !hasFilters;
 }
 
 /* =========================

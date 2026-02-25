@@ -420,6 +420,27 @@ mark.search-hit {
   white-space: nowrap;
 }
 
+/* Botón limpiar filtros (X) */
+.trainings-page .clear-filters-btn{
+  border-color: #dc3545 !important; /* bootstrap danger */
+  color: #dc3545 !important;
+  font-weight: 800;
+}
+
+.trainings-page .clear-filters-btn:hover{
+  background: #dc3545 !important;
+  color: #fff !important;
+}
+
+.trainings-page .clear-filters-btn:focus{
+  box-shadow: 0 0 0 .2rem rgba(220,53,69,.25) !important;
+}
+
+.trainings-page .clear-filters-btn:disabled{
+  opacity: .45;
+  cursor: not-allowed;
+}
+
 /* ======================================================
    TOP 3 (Attendance)
 ====================================================== */
