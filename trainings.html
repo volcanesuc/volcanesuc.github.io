@@ -70,23 +70,27 @@
           <div class="card-body">
             <div class="row g-2 align-items-end">
 
-              <div class="col-12 col-lg-4">
+              <div class="col-12 col-lg-3">
                 <label class="form-label small text-muted mb-1">Buscar por contenido</label>
-                <input
-                  id="trainingSearch"
-                  class="form-control"
-                  placeholder="Buscar en resumen / drills / playbook…"
-                />
+
+                <div class="input-group">
+                  <span class="input-group-text" aria-hidden="true">🔎</span>
+                  <input
+                    id="trainingSearch"
+                    class="form-control"
+                    placeholder="Buscar en resumen / drills / playbook…"
+                  />
+                </div>
               </div>
 
-              <div class="col-12 col-md-4 col-lg-2">
+              <div class="col-6 col-md-3 col-lg-2">
                 <label class="form-label small text-muted mb-1">Mes</label>
                 <select id="monthFilter" class="form-select">
                   <option value="">Todos</option>
                 </select>
               </div>
 
-              <div class="col-12 col-md-4 col-lg-2">
+              <div class="col-6 col-md-3 col-lg-2">
                 <label class="form-label small text-muted mb-1">Ordenar</label>
                 <select id="sortFilter" class="form-select">
                   <option value="date_desc">Fecha (reciente → antiguo)</option>
@@ -101,9 +105,15 @@
                 <input id="dateFrom" type="date" class="form-control" />
               </div>
 
-              <div class="col-6 col-md-4 col-lg-2">
+              <div class="col-6 col-md-3 col-lg-2">
                 <label class="form-label small text-muted mb-1">Hasta</label>
                 <input id="dateTo" type="date" class="form-control" />
+              </div>
+
+              <div class="col-12 col-lg-1 d-flex">
+                <button id="clearFiltersBtn" class="btn btn-outline-secondary w-100 w-lg-auto">
+                  ✕
+                </button>
               </div>
 
             </div>
