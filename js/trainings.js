@@ -121,7 +121,7 @@ function ensurePlaybookUI() {
         aria-expanded="true"
         aria-controls="playbookCollapse"
       >
-        <span class="fw-semibold">Playbook (opcional)</span>
+        <span class="fw-semibold">Playbook</span>
         <span class="collapse-caret" data-caret-for="playbookCollapse">▾</span>
       </button>
     </div>
