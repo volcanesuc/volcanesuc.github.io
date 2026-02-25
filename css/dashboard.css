@@ -327,6 +327,99 @@ mark.search-hit {
   border-radius: .25rem;
 }
 
+/* =========================
+   TRAININGS TABLE (scoped)
+========================= */
+
+.trainings-page .trainings-table {
+  --row-radius: 12px;
+}
+
+/* Cabecera más sobria */
+.trainings-page .trainings-table thead th{
+  font-size: 12px;
+  letter-spacing: .06em;
+  color: rgba(0,0,0,.55);
+  background: transparent !important;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+}
+
+/* Celdas con más aire */
+.trainings-page .trainings-table tbody td{
+  padding: 14px 16px;
+  border-top: 0;
+  vertical-align: middle;
+}
+
+/* Filas tipo “card” */
+.trainings-page .trainings-table tbody tr{
+  background: var(--card);
+  border: 1px solid var(--border);
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+
+/* Separación entre filas */
+.trainings-page .trainings-table{
+  border-collapse: separate;
+  border-spacing: 0 10px; /* gap vertical */
+}
+
+/* Redondeo en extremos */
+.trainings-page .trainings-table tbody tr td:first-child{
+  border-top-left-radius: var(--row-radius);
+  border-bottom-left-radius: var(--row-radius);
+}
+.trainings-page .trainings-table tbody tr td:last-child{
+  border-top-right-radius: var(--row-radius);
+  border-bottom-right-radius: var(--row-radius);
+}
+
+/* Hover bonito */
+.trainings-page .trainings-table tbody tr:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  border-color: rgba(0,0,0,.08);
+}
+
+/* Quitar “fondo gris” default del hover de bootstrap */
+.trainings-page .trainings-table.table-hover > tbody > tr:hover > *{
+  background: transparent !important;
+}
+
+/* Columna asistentes como “pill” */
+.trainings-page .trainings-table td.att-col{
+  width: 140px;
+  text-align: right;
+}
+.trainings-page .att-pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.02);
+  font-weight: 700;
+}
+
+/* Iconito suave */
+.trainings-page .att-pill::before{
+  content: "👥";
+  font-weight: 400;
+}
+
+/* Nombre: que se vea “más importante” */
+.trainings-page .trainings-table td.name-col{
+  font-weight: 600;
+}
+
+/* Fecha con estilo secundario (opcional) */
+.trainings-page .trainings-table td.date-col{
+  color: rgba(0,0,0,.75);
+  white-space: nowrap;
+}
+
 /* ======================================================
    TOP 3 (Attendance)
 ====================================================== */
