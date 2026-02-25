@@ -441,6 +441,13 @@ mark.search-hit {
   cursor: not-allowed;
 }
 
+.trainings-page .trainings-table thead th{
+  font-size: 11px;
+  letter-spacing: .08em;
+  font-weight: 700;
+  color: rgba(0,0,0,.45);
+}
+
 /* ======================================================
    TOP 3 (Attendance)
 ====================================================== */
