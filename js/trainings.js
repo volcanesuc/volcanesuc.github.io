@@ -554,6 +554,7 @@ function bindEvents() {
   $.dateTo?.addEventListener("change", refreshListUI);
 
   $.clearFiltersBtn?.addEventListener("click", () => {
+    console.log('clearFiltersBtn', "clean filters button pressed");
     clearFilters();
     updateClearBtnState();
   });
