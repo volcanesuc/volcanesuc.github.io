@@ -599,12 +599,13 @@ function calcKPIs(list) {
       ? 0
       : list.reduce((acc, t) => acc + (Array.isArray(t.attendees) ? t.attendees.length : 0), 0) / total;
 
-  // list viene en DESC desde firestore (por date desc); el último entreno es list[0]
-  const last = list[0]?.date ? fmtHumanDayMonth(list[0].date) : "—";
+  const lastISO = list[0]?.date || null;
+  const lastHuman = lastISO ? fmtHumanDayMonth(lastISO) : "—";
+  const ago = lastISO ? humanDaysAgo(daysAgo(lastISO)) : "";
 
   if ($.kpiTotal) $.kpiTotal.textContent = total.toString();
   if ($.kpiAvg) $.kpiAvg.textContent = total ? avg.toFixed(1) : "0.0";
-  if ($.kpiLast) $.kpiLast.textContent = last;
+  if ($.kpiLast) $.kpiLast.textContent = lastISO ? `${lastHuman} · ${ago}` : "—";
 }
 
 function monthLabel(yyyyMm) {
@@ -619,16 +620,22 @@ function monthLabel(yyyyMm) {
 
 function fillMonthOptions(list) {
   if (!$.monthFilter) return;
-  const months = [...new Set(list.map(t => t.month).filter(Boolean))].sort().reverse();
 
-  // preservar selección
+  const counts = new Map();
+  list.forEach(t => {
+    if (!t.month) return;
+    counts.set(t.month, (counts.get(t.month) || 0) + 1);
+  });
+
+  const months = [...counts.keys()].sort().reverse();
   const current = $.monthFilter.value;
 
   $.monthFilter.innerHTML = `<option value="">Todos</option>`;
+
   months.forEach(mm => {
     const opt = document.createElement("option");
     opt.value = mm;
-    opt.textContent = monthLabel(mm);
+    opt.textContent = `${monthLabel(mm)} (${counts.get(mm)})`;
     $.monthFilter.appendChild(opt);
   });
 
@@ -685,14 +692,16 @@ function renderTrainings(list) {
   list.forEach((t) => {
     const idxInAll = trainings.findIndex(x => x.id === t.id);
     const label = trainingLabel(t, idxInAll >= 0 ? idxInAll : 0, totalAll);
-    const details = shortTitle(trainingDisplayText(t));
+    const rawDetails = shortTitle(trainingDisplayText(t));
+    const term = $.search?.value || "";
+    const detailsHtml = highlightText(rawDetails, term);
     const count = Array.isArray(t.attendees) ? t.attendees.length : 0;
 
     // DESKTOP ROW (sin Estado)
     $.table.innerHTML += `
       <tr data-id="${escapeHtml(t.id)}" class="training-row" style="cursor:pointer">
         <td>${escapeHtml(label)}</td>
-        <td>${escapeHtml(details)}</td>
+        <td>${detailsHtml}</td>
         <td>${count}</td>
       </tr>
     `;
@@ -702,7 +711,7 @@ function renderTrainings(list) {
       <div class="card mb-2 training-card" data-id="${escapeHtml(t.id)}" style="cursor:pointer">
         <div class="card-body p-3">
           <div class="fw-semibold">${escapeHtml(label)}</div>
-          <div class="text-muted small">${escapeHtml(details || "Entrenamiento")}</div>
+          <div class="text-muted small">${detailsHtml || "Entrenamiento"}</div>
           <div class="d-flex justify-content-between mt-2">
             <span class="small">👥 ${count} asistentes</span>
             <span class="text-primary small">Editar →</span>
@@ -718,6 +727,37 @@ function renderTrainings(list) {
 function refreshListUI() {
   const filtered = applyFilters(trainings);
   renderTrainings(filtered);
+}
+
+function daysAgo(iso) {
+  const d = parseISODate(iso);
+  if (!d) return null;
+  const today = new Date();
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const b = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diffMs = b - a;
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function humanDaysAgo(n) {
+  if (n == null) return "";
+  if (n === 0) return "hoy";
+  if (n === 1) return "hace 1 día";
+  if (n < 0) return "próximo"; // por si metieron fecha futura
+  return `hace ${n} días`;
+}
+
+function escapeRegExp(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function highlightText(text, term) {
+  const safeText = escapeHtml(text ?? "");
+  const t = norm(term);
+  if (!t) return safeText;
+
+  const re = new RegExp(`(${escapeRegExp(t)})`, "ig");
+  return safeText.replace(re, `<mark class="search-hit">$1</mark>`);
 }
 
 /* =========================
