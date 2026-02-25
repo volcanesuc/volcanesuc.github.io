@@ -100,11 +100,23 @@
             </div>
 
             <!-- CHECKLIST -->
-            <h6 class="mb-2">Checklist manual</h6>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <button
+                class="btn btn-link p-0 text-decoration-none d-flex align-items-center gap-2"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#playersCollapse"
+                aria-expanded="true"
+                aria-controls="playersCollapse"
+              >
+                <span class="fw-semibold">Checklist manual</span>
+                <span class="collapse-caret" data-caret-for="playersCollapse">▾</span>
+              </button>
+            </div>
 
-            <div class="attendance-box">
-              <div id="playersList" class="attendance-list">
-                <!-- CARGA JUGADORES EN JS -->
+            <div id="playersCollapse" class="collapse show">
+              <div class="attendance-box">
+                <div id="playersList" class="attendance-list"></div>
               </div>
             </div>
 

@@ -71,7 +71,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { cfg, redirected } = await guardPage("trainings");
   if (!redirected) await loadHeader("trainings", cfg);
 
-  ensurePlaybookUI(); // ✅ crea los selectores dentro del modal (sin tocar tu HTML)
+  ensurePlaybookUI(); //crea los selectores dentro del modal
+
+  bindCollapseCarets();
 
   await loadPlayers();
   await loadPlaybookData();
@@ -98,53 +100,65 @@ function showLoading() {
    PLAYBOOK UI (inject into modal)
 ========================= */
 function ensurePlaybookUI() {
-  // Insertamos una sección Playbook ANTES del bloque "Resumen del entrenamiento"
-  // Tu HTML no tiene esos nodos, así que lo armamos acá.
-
   const summaryEl = document.getElementById("trainingSummary");
   if (!summaryEl) return;
 
   const summaryBlock = summaryEl.closest(".mb-3");
   if (!summaryBlock) return;
 
-  // evitar duplicar si se recarga el módulo
   if (document.getElementById("pbTrainingsList")) return;
 
   const wrap = document.createElement("div");
   wrap.className = "mb-3";
+
   wrap.innerHTML = `
-    <label class="form-label fw-semibold">Playbook (opcional)</label>
-
-    <div class="row g-3">
-      <div class="col-12 col-lg-6">
-        <div class="d-flex justify-content-between align-items-center gap-2">
-          <div class="small text-muted">Entrenamientos completos</div>
-          <input id="pbTrainingSearch" class="form-control form-control-sm" style="max-width:220px" placeholder="Buscar..." />
-        </div>
-        <div id="pbTrainingsList" class="list-group mt-2"></div>
-      </div>
-
-      <div class="col-12 col-lg-6">
-        <div class="d-flex justify-content-between align-items-center gap-2">
-          <div class="small text-muted">Drills</div>
-          <input id="pbDrillSearch" class="form-control form-control-sm" style="max-width:220px" placeholder="Buscar..." />
-        </div>
-        <div id="pbDrillsList" class="list-group mt-2"></div>
-      </div>
+    <div class="d-flex align-items-center justify-content-between">
+      <button
+        class="btn btn-link p-0 text-decoration-none d-flex align-items-center gap-2"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#playbookCollapse"
+        aria-expanded="true"
+        aria-controls="playbookCollapse"
+      >
+        <span class="fw-semibold">Playbook (opcional)</span>
+        <span class="collapse-caret" data-caret-for="playbookCollapse">▾</span>
+      </button>
     </div>
 
-    <div class="form-text mt-2">
-      Seleccioná drills / entrenos del playbook, o describí todo en el resumen.
+    <div id="playbookCollapse" class="collapse show mt-2">
+      <div class="row g-3">
+        <div class="col-12 col-lg-6">
+          <div class="d-flex justify-content-between align-items-center gap-2">
+            <div class="small text-muted">Entrenamientos completos</div>
+            <input id="pbTrainingSearch" class="form-control form-control-sm" style="max-width:220px" placeholder="Buscar..." />
+          </div>
+          <div id="pbTrainingsList" class="list-group mt-2"></div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <div class="d-flex justify-content-between align-items-center gap-2">
+            <div class="small text-muted">Drills</div>
+            <input id="pbDrillSearch" class="form-control form-control-sm" style="max-width:220px" placeholder="Buscar..." />
+          </div>
+          <div id="pbDrillsList" class="list-group mt-2"></div>
+        </div>
+      </div>
+
+      <div class="form-text mt-2">
+        Seleccioná drills/entrenos del playbook, o describí todo en el resumen.
+      </div>
     </div>
   `;
 
   summaryBlock.parentNode.insertBefore(wrap, summaryBlock);
 
-  // binds search (una sola vez)
-  const tSearch = document.getElementById("pbTrainingSearch");
-  const dSearch = document.getElementById("pbDrillSearch");
-  tSearch?.addEventListener("input", renderPlaybookSelectors);
-  dSearch?.addEventListener("input", renderPlaybookSelectors);
+  // binds search
+  document.getElementById("pbTrainingSearch")?.addEventListener("input", renderPlaybookSelectors);
+  document.getElementById("pbDrillSearch")?.addEventListener("input", renderPlaybookSelectors);
+
+  // bind carets (para que rote)
+  bindCollapseCarets();
 }
 
 /* =========================
@@ -312,6 +326,8 @@ function openNewTraining() {
   if (dSearch) dSearch.value = "";
 
   renderPlaybookSelectors();
+  bootstrap.Collapse.getOrCreateInstance(document.getElementById("playersCollapse"), { toggle: false }).show();
+  bootstrap.Collapse.getOrCreateInstance(document.getElementById("playbookCollapse"), { toggle: false }).show();
 
   showModal();
 }
@@ -346,6 +362,8 @@ function openEditTraining(training) {
   if (dSearch) dSearch.value = "";
 
   renderPlaybookSelectors();
+  bootstrap.Collapse.getOrCreateInstance(document.getElementById("playersCollapse"), { toggle: false }).hide();
+  bootstrap.Collapse.getOrCreateInstance(document.getElementById("playbookCollapse"), { toggle: false }).hide();
 
   showModal();
 }
@@ -656,4 +674,22 @@ function trainingLabel(t, idx, total) {
   // Queremos #1 el más viejo => número = total - idx
   const n = total - idx;
   return `Entreno #${n}: ${fmtHumanDayMonth(t.date)}`;
+}
+
+function bindCollapseCarets() {
+  // evita doble bind
+  if (bindCollapseCarets._bound) return;
+  bindCollapseCarets._bound = true;
+
+  document.addEventListener("shown.bs.collapse", (e) => {
+    const id = e.target?.id;
+    if (!id) return;
+    document.querySelectorAll(`[data-caret-for="${id}"]`).forEach(el => (el.textContent = "▾"));
+  });
+
+  document.addEventListener("hidden.bs.collapse", (e) => {
+    const id = e.target?.id;
+    if (!id) return;
+    document.querySelectorAll(`[data-caret-for="${id}"]`).forEach(el => (el.textContent = "▸"));
+  });
 }
