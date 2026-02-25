@@ -199,10 +199,24 @@ async function loadPlaybookData() {
   pbDrills = s1.docs.map(d => ({ id: d.id, ...d.data() }));
   pbDrills.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
-  // playbook trainings
-  const qPB = query(collection(db, COL_PLAYBOOK_TRAININGS), where("clubId", "==", clubId));
+  // playbook trainings (con clubId)
+  const qPB = query(
+    collection(db, COL_PLAYBOOK_TRAININGS),
+    where("clubId", "==", clubId)
+  );
   const s2 = await getDocs(qPB);
   pbTrainings = s2.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  // ✅ fallback migración: si no hay nada, traé todos y quedate con los que
+  // tienen clubId==clubId o no tienen clubId (docs viejos)
+  if (!pbTrainings.length) {
+    console.warn("[trainings] 0 playbook_trainings con clubId, intentando fallback (migración).");
+    const all = await getDocs(collection(db, COL_PLAYBOOK_TRAININGS));
+    pbTrainings = all.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(x => !x.clubId || x.clubId === clubId);
+  }
+
   pbTrainings.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 }
 
@@ -230,7 +244,7 @@ async function loadTrainings() {
     $.table.innerHTML += `
       <tr data-id="${escapeHtml(t.id)}" class="training-row" style="cursor:pointer">
         <td>${escapeHtml(t.date ?? "-")}</td>
-        <td>${escapeHtml(shortTitle(t.summary))}</td>
+        <td>${escapeHtml(shortTitle(trainingDisplayText(t)))}</td>
         <td>${count}</td>
         <td>${active ? "✅ Activo" : "📦 Archivado"}</td>
       </tr>
@@ -241,7 +255,7 @@ async function loadTrainings() {
       <div class="card mb-2 training-card" data-id="${escapeHtml(t.id)}" style="cursor:pointer">
         <div class="card-body p-3">
           <div class="fw-semibold">${escapeHtml(t.date ?? "-")}</div>
-          <div class="text-muted small">${escapeHtml(shortTitle(t.summary) || "Entrenamiento")}</div>
+          <div class="text-muted small">${escapeHtml(shortTitle(trainingDisplayText(t)) || "Entrenamiento")}</div>
           <div class="d-flex justify-content-between mt-2">
             <span class="small">👥 ${count} asistentes</span>
             <span class="text-primary small">Editar →</span>
@@ -407,7 +421,7 @@ function renderPlaybookSelectors() {
       <input class="form-check-input mt-1" type="checkbox" ${checked ? "checked" : ""}>
       <div>
         <div class="fw-semibold">${escapeHtml(d.name || "—")}</div>
-        <div class="text-muted small">Autor: ${escapeHtml(d.authorName || "—")}</div>
+        <div class="text-muted small">${escapeHtml(d.objective || "—")}</div>
       </div>
     `;
     el.querySelector("input").addEventListener("change", () => {
@@ -579,4 +593,40 @@ function escapeHtml(str) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function getDrillName(id) {
+  const d = pbDrills.find(x => x.id === id);
+  return d?.name || null;
+}
+
+function getPlaybookTrainingName(id) {
+  const t = pbTrainings.find(x => x.id === id);
+  return t?.name || null;
+}
+
+function trainingDisplayText(t) {
+  const summary = (t.summary || "").trim();
+  if (summary) return summary;
+
+  const names = [];
+
+  // primero entrenamientos completos
+  if (Array.isArray(t.playbookTrainingIds)) {
+    for (const id of t.playbookTrainingIds) {
+      const nm = getPlaybookTrainingName(id);
+      if (nm) names.push(nm);
+    }
+  }
+
+  // luego drills sueltos
+  if (Array.isArray(t.drillIds)) {
+    for (const id of t.drillIds) {
+      const nm = getDrillName(id);
+      if (nm) names.push(nm);
+    }
+  }
+
+  if (!names.length) return "-";
+  return names.join(", ");
 }
