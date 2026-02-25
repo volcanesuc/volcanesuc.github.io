@@ -232,19 +232,22 @@ async function loadTrainings() {
 
   const qy = query(collection(db, COL_TRAININGS), where("clubId", "==", clubId), orderBy("date", "desc"));
   const snapshot = await getDocs(qy);
+  snapshot.forEach(d => trainings.push({ id: d.id, ...d.data() }));
 
-  snapshot.forEach(d => {
-    const t = { id: d.id, ...d.data() };
-    trainings.push(t);
+  const total = trainings.length;
 
+  trainings.forEach((t, idx) => {
     const count = Array.isArray(t.attendees) ? t.attendees.length : 0;
     const active = t.active !== false;
+
+    const label = trainingLabel(t, idx, total);
+    const details = shortTitle(trainingDisplayText(t)); // lo que hicimos antes (summary o lista drills)
 
     // DESKTOP ROW
     $.table.innerHTML += `
       <tr data-id="${escapeHtml(t.id)}" class="training-row" style="cursor:pointer">
-        <td>${escapeHtml(t.date ?? "-")}</td>
-        <td>${escapeHtml(shortTitle(trainingDisplayText(t)))}</td>
+        <td>${escapeHtml(label)}</td>
+        <td>${escapeHtml(details)}</td>
         <td>${count}</td>
         <td>${active ? "✅ Activo" : "📦 Archivado"}</td>
       </tr>
@@ -254,8 +257,8 @@ async function loadTrainings() {
     $.cards.innerHTML += `
       <div class="card mb-2 training-card" data-id="${escapeHtml(t.id)}" style="cursor:pointer">
         <div class="card-body p-3">
-          <div class="fw-semibold">${escapeHtml(t.date ?? "-")}</div>
-          <div class="text-muted small">${escapeHtml(shortTitle(trainingDisplayText(t)) || "Entrenamiento")}</div>
+          <div class="fw-semibold">${escapeHtml(label)}</div>
+          <div class="text-muted small">${escapeHtml(details || "Entrenamiento")}</div>
           <div class="d-flex justify-content-between mt-2">
             <span class="small">👥 ${count} asistentes</span>
             <span class="text-primary small">Editar →</span>
@@ -266,7 +269,6 @@ async function loadTrainings() {
   });
 
   bindEditEvents();
-}
 
 function bindEditEvents() {
   document.querySelectorAll(".training-row, .training-card").forEach(el => {
@@ -629,4 +631,28 @@ function trainingDisplayText(t) {
 
   if (!names.length) return "-";
   return names.join(", ");
+}
+
+function parseISODate(iso) {
+  // iso: "YYYY-MM-DD"
+  if (!iso) return null;
+  const d = new Date(iso + "T00:00:00");
+  return isNaN(d) ? null : d;
+}
+
+function fmtHumanDayMonth(iso) {
+  const d = parseISODate(iso);
+  if (!d) return "—";
+  // "febrero 24" -> capitalizamos mes
+  const month = d.toLocaleDateString("es-CR", { month: "long" });
+  const day = d.toLocaleDateString("es-CR", { day: "2-digit" });
+  const capMonth = month.charAt(0).toUpperCase() + month.slice(1);
+  return `${capMonth} ${day}`;
+}
+
+function trainingLabel(t, idx, total) {
+  // idx viene del render (0..total-1) en orden DESC.
+  // Queremos #1 el más viejo => número = total - idx
+  const n = total - idx;
+  return `Entreno #${n}: ${fmtHumanDayMonth(t.date)}`;
 }
