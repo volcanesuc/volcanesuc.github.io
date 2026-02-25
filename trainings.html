@@ -32,6 +32,91 @@
         </button>
       </div>
 
+      <!-- KPIs + BUSCADOR/FILTROS -->
+      <div class="row g-3 mb-3">
+        <!-- KPI: Total -->
+        <div class="col-12 col-lg-4">
+          <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div class="kpi-icon">📅</div>
+              <div>
+                <div class="text-muted small">Total entrenamientos</div>
+                <div id="kpiTotalTrainings" class="kpi-value">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI: Promedio -->
+        <div class="col-12 col-lg-4">
+          <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div class="kpi-icon">👥</div>
+              <div>
+                <div class="text-muted small">Promedio asistencia</div>
+                <div id="kpiAvgAttendance" class="kpi-value">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI: Último -->
+        <div class="col-12 col-lg-4">
+          <div class="card kpi-card">
+            <div class="card-body d-flex align-items-center gap-3">
+              <div class="kpi-icon">🏷️</div>
+              <div>
+                <div class="text-muted small">Último entrenamiento</div>
+                <div id="kpiLastTraining" class="kpi-value">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BUSCAR + FILTROS -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="row g-2 align-items-end">
+            <div class="col-12 col-lg-5">
+              <label class="form-label small text-muted mb-1">Buscar por contenido</label>
+              <input
+                id="trainingSearch"
+                class="form-control"
+                placeholder="Buscar en resumen / drills / playbook…"
+              />
+            </div>
+
+            <div class="col-12 col-md-4 col-lg-2">
+              <label class="form-label small text-muted mb-1">Mes</label>
+              <select id="monthFilter" class="form-select">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="col-12 col-md-4 col-lg-2">
+              <label class="form-label small text-muted mb-1">Ordenar</label>
+              <select id="sortFilter" class="form-select">
+                <option value="date_desc">Fecha (reciente → viejo)</option>
+                <option value="date_asc">Fecha (viejo → reciente)</option>
+                <option value="att_desc">Asistentes (mayor → menor)</option>
+                <option value="att_asc">Asistentes (menor → mayor)</option>
+              </select>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-1">
+              <label class="form-label small text-muted mb-1">Desde</label>
+              <input id="dateFrom" type="date" class="form-control" />
+            </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+              <label class="form-label small text-muted mb-1">Hasta</label>
+              <input id="dateTo" type="date" class="form-control" />
+            </div>
+          </div>
+        </div>
+      </div>
+
          <!-- TABLA ENTRENAMIENTOS -->
       <!-- MOBILE -->
       <div id="trainingsCards" class="d-md-none  mb-2"></div>
@@ -45,7 +130,6 @@
                   <th>Fecha</th>
                   <th>Nombre</th>
                   <th>Asistentes</th>
-                  <th>Estado</th>
                 </tr>
               </thead>
               <tbody id="trainingsTable"> <!-- JS --> </tbody>

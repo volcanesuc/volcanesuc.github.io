@@ -60,6 +60,19 @@ const $ = {
   saveBtn: document.getElementById("saveTrainingBtn"),
 
   loadingOverlay: document.getElementById("loadingOverlay"),
+
+    // KPIs
+  kpiTotal: document.getElementById("kpiTotalTrainings"),
+  kpiAvg: document.getElementById("kpiAvgAttendance"),
+  kpiLast: document.getElementById("kpiLastTraining"),
+
+  // filtros
+  search: document.getElementById("trainingSearch"),
+  monthFilter: document.getElementById("monthFilter"),
+  sortFilter: document.getElementById("sortFilter"),
+  dateFrom: document.getElementById("dateFrom"),
+  dateTo: document.getElementById("dateTo"),
+
 };
 
 let modalInstance = null;
@@ -250,37 +263,12 @@ async function loadTrainings() {
 
   const total = trainings.length;
 
-  trainings.forEach((t, idx) => {
-    const count = Array.isArray(t.attendees) ? t.attendees.length : 0;
-    const active = t.active !== false;
+  // KPIs + opciones de mes
+  calcKPIs(trainings);
+  fillMonthOptions(trainings);
 
-    const label = trainingLabel(t, idx, total);
-    const details = shortTitle(trainingDisplayText(t)); // lo que hicimos antes (summary o lista drills)
-
-    // DESKTOP ROW
-    $.table.innerHTML += `
-      <tr data-id="${escapeHtml(t.id)}" class="training-row" style="cursor:pointer">
-        <td>${escapeHtml(label)}</td>
-        <td>${escapeHtml(details)}</td>
-        <td>${count}</td>
-        <td>${active ? "✅ Activo" : "📦 Archivado"}</td>
-      </tr>
-    `;
-
-    // MOBILE CARD
-    $.cards.innerHTML += `
-      <div class="card mb-2 training-card" data-id="${escapeHtml(t.id)}" style="cursor:pointer">
-        <div class="card-body p-3">
-          <div class="fw-semibold">${escapeHtml(label)}</div>
-          <div class="text-muted small">${escapeHtml(details || "Entrenamiento")}</div>
-          <div class="d-flex justify-content-between mt-2">
-            <span class="small">👥 ${count} asistentes</span>
-            <span class="text-primary small">Editar →</span>
-          </div>
-        </div>
-      </div>
-    `;
-  });
+  // Render inicial con filtros aplicados (por defecto: date_desc)
+  refreshListUI();
 
   bindEditEvents();
 }
@@ -554,6 +542,12 @@ async function saveTraining() {
 function bindEvents() {
   $.saveBtn?.addEventListener("click", saveTraining);
   $.processBtn?.addEventListener("click", processQuickText);
+    // filtros
+  $.search?.addEventListener("input", refreshListUI);
+  $.monthFilter?.addEventListener("change", refreshListUI);
+  $.sortFilter?.addEventListener("change", refreshListUI);
+  $.dateFrom?.addEventListener("change", refreshListUI);
+  $.dateTo?.addEventListener("change", refreshListUI);
 
   // cuando se cierra, reset (sin re-abrir)
   $.modal?.addEventListener("hidden.bs.modal", () => {
@@ -592,6 +586,138 @@ function bindEvents() {
       renderPlaybookSelectors();
     }
   });
+}
+/* =========================
+   HELPERS
+========================= */
+
+function calcKPIs(list) {
+  const total = list.length;
+
+  const avg =
+    total === 0
+      ? 0
+      : list.reduce((acc, t) => acc + (Array.isArray(t.attendees) ? t.attendees.length : 0), 0) / total;
+
+  // list viene en DESC desde firestore (por date desc); el último entreno es list[0]
+  const last = list[0]?.date ? fmtHumanDayMonth(list[0].date) : "—";
+
+  if ($.kpiTotal) $.kpiTotal.textContent = total.toString();
+  if ($.kpiAvg) $.kpiAvg.textContent = total ? avg.toFixed(1) : "0.0";
+  if ($.kpiLast) $.kpiLast.textContent = last;
+}
+
+function monthLabel(yyyyMm) {
+  // "2026-02" => "Febrero 2026"
+  if (!yyyyMm) return "—";
+  const [y, m] = yyyyMm.split("-");
+  const d = new Date(`${yyyyMm}-01T00:00:00`);
+  const month = d.toLocaleDateString("es-CR", { month: "long" });
+  const capMonth = month.charAt(0).toUpperCase() + month.slice(1);
+  return `${capMonth} ${y}`;
+}
+
+function fillMonthOptions(list) {
+  if (!$.monthFilter) return;
+  const months = [...new Set(list.map(t => t.month).filter(Boolean))].sort().reverse();
+
+  // preservar selección
+  const current = $.monthFilter.value;
+
+  $.monthFilter.innerHTML = `<option value="">Todos</option>`;
+  months.forEach(mm => {
+    const opt = document.createElement("option");
+    opt.value = mm;
+    opt.textContent = monthLabel(mm);
+    $.monthFilter.appendChild(opt);
+  });
+
+  $.monthFilter.value = current;
+}
+
+function buildSearchText(t) {
+  // incluye summary o drills/playbook names (trainingDisplayText ya los concatena)
+  const base = trainingDisplayText(t);
+  const notes = (t.notes || "").toString();
+  // podés sumar más campos si querés
+  return norm(`${base} ${notes}`);
+}
+
+function applyFilters(list) {
+  let out = [...list];
+
+  // month
+  const month = $.monthFilter?.value || "";
+  if (month) out = out.filter(t => (t.month || "") === month);
+
+  // date range
+  const from = $.dateFrom?.value || "";
+  const to = $.dateTo?.value || "";
+  if (from) out = out.filter(t => (t.date || "") >= from);
+  if (to) out = out.filter(t => (t.date || "") <= to);
+
+  // search
+  const term = norm($.search?.value || "");
+  if (term) out = out.filter(t => buildSearchText(t).includes(term));
+
+  // sort
+  const sort = $.sortFilter?.value || "date_desc";
+  out.sort((a, b) => {
+    const aCount = Array.isArray(a.attendees) ? a.attendees.length : 0;
+    const bCount = Array.isArray(b.attendees) ? b.attendees.length : 0;
+
+    if (sort === "date_asc") return (a.date || "").localeCompare(b.date || "");
+    if (sort === "att_desc") return bCount - aCount;
+    if (sort === "att_asc") return aCount - bCount;
+    // default date_desc
+    return (b.date || "").localeCompare(a.date || "");
+  });
+
+  return out;
+}
+
+function renderTrainings(list) {
+  $.table.innerHTML = "";
+  $.cards.innerHTML = "";
+
+  const totalAll = trainings.length; // para el label Entreno #n consistente con tu lógica original
+
+  list.forEach((t) => {
+    const idxInAll = trainings.findIndex(x => x.id === t.id);
+    const label = trainingLabel(t, idxInAll >= 0 ? idxInAll : 0, totalAll);
+    const details = shortTitle(trainingDisplayText(t));
+    const count = Array.isArray(t.attendees) ? t.attendees.length : 0;
+
+    // DESKTOP ROW (sin Estado)
+    $.table.innerHTML += `
+      <tr data-id="${escapeHtml(t.id)}" class="training-row" style="cursor:pointer">
+        <td>${escapeHtml(label)}</td>
+        <td>${escapeHtml(details)}</td>
+        <td>${count}</td>
+      </tr>
+    `;
+
+    // MOBILE CARD (sin Estado)
+    $.cards.innerHTML += `
+      <div class="card mb-2 training-card" data-id="${escapeHtml(t.id)}" style="cursor:pointer">
+        <div class="card-body p-3">
+          <div class="fw-semibold">${escapeHtml(label)}</div>
+          <div class="text-muted small">${escapeHtml(details || "Entrenamiento")}</div>
+          <div class="d-flex justify-content-between mt-2">
+            <span class="small">👥 ${count} asistentes</span>
+            <span class="text-primary small">Editar →</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  bindEditEvents(); // re-bindea click
+}
+
+function refreshListUI() {
+  const filtered = applyFilters(trainings);
+  renderTrainings(filtered);
 }
 
 /* =========================
