@@ -286,6 +286,47 @@ mark.search-hit {
   border-radius: .25rem;
 }
 
+/* =========================
+   TRAININGS PAGE (scoped)
+========================= */
+
+.trainings-page .kpi-card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  border-radius: 16px;
+}
+
+.trainings-page .kpi-card .card-body{
+  padding: 18px 18px;
+}
+
+.trainings-page .kpi-value{
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.trainings-page .kpi-label{
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted, #6c757d);
+}
+
+/* filtros */
+.trainings-page .filters-card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+}
+
+/* highlight de búsqueda */
+.trainings-page mark.search-hit{
+  padding: 0 .15em;
+  border-radius: .25rem;
+}
+
 /* ======================================================
    TOP 3 (Attendance)
 ====================================================== */
