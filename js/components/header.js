@@ -17,7 +17,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/fi
 
 export async function loadHeader(activeTab, cfgOverride) {
   const header = document.getElementById("app-header");
-  if (!header) return;
+  if (!header) return { ready: Promise.resolve() };
 
   const MENU = CLUB_DATA.header.menu || [];
   const HOME_HREF = toAbsHref(CLUB_DATA.header.homeHref || "dashboard.html");
@@ -34,17 +34,21 @@ export async function loadHeader(activeTab, cfgOverride) {
   }
 
   const isOverride = !!cfgOverride;
-  const VISIBLE_MENU = isOverride ? filterMenuStrict(MENU, cfg) : filterMenuByConfig(MENU, cfg);
+  const VISIBLE_MENU = isOverride
+    ? filterMenuStrict(MENU, cfg)
+    : filterMenuByConfig(MENU, cfg);
 
   function filterMenuStrict(menu, cfg) {
     const enabled = cfg?.enabledTabs || {};
-    return (menu || []).filter(item => enabled[item.id] === true);
+    return (menu || []).filter((item) => enabled[item.id] === true);
   }
 
   const renderLinksDesktop = () =>
     VISIBLE_MENU.map(
       (item) => `
-        <a href="${toAbsHref(item.href)}" class="top-tab ${activeTab === item.id ? "active" : ""}">
+        <a href="${toAbsHref(item.href)}" class="top-tab ${
+        activeTab === item.id ? "active" : ""
+      }">
           ${item.label}
         </a>
       `
@@ -53,12 +57,33 @@ export async function loadHeader(activeTab, cfgOverride) {
   const renderLinksMobile = () =>
     VISIBLE_MENU.map(
       (item) => `
-        <a href="${toAbsHref(item.href)}" class="mobile-link ${activeTab === item.id ? "active" : ""}">
+        <a href="${toAbsHref(item.href)}" class="mobile-link ${
+        activeTab === item.id ? "active" : ""
+      }">
           ${item.label}
         </a>
       `
     ).join("");
 
+  // =====================================================
+  // ✅ READY PROMISE (declared inside loadHeader)
+  // =====================================================
+  let resolvedOnce = false;
+  let readyResolve;
+
+  const ready = new Promise((resolve) => {
+    readyResolve = resolve;
+  });
+
+  const resolveOnce = (val) => {
+    if (resolvedOnce) return;
+    resolvedOnce = true;
+    readyResolve(val);
+  };
+
+  // =====================================================
+  // RENDER HEADER BASE
+  // =====================================================
   header.innerHTML = `
     <header class="topbar">
       <div class="left">
@@ -103,12 +128,33 @@ export async function loadHeader(activeTab, cfgOverride) {
     </div>
   `;
 
+  // Spinner inicial mientras Firebase valida
+  const initialCta = document.getElementById("headerCta");
+  const initialMcta = document.getElementById("mobileCta");
+
+  if (initialCta) {
+    initialCta.innerHTML = `
+      <div class="spinner-border spinner-border-sm text-light" role="status"></div>
+    `;
+  }
+  if (initialMcta) {
+    initialMcta.innerHTML = `
+      <div class="spinner-border spinner-border-sm" role="status"></div>
+    `;
+  }
+
   onAuthStateChanged(auth, async (user) => {
     const cta = document.getElementById("headerCta");
     const mcta = document.getElementById("mobileCta");
-    if (!cta || !mcta) return;
 
-    const registerHref = toAbsHref(CLUB_DATA.header?.cta?.register?.href || "public/register.html");
+    if (!cta || !mcta) {
+      resolveOnce({ user, reason: "no-cta" });
+      return;
+    }
+
+    const registerHref = toAbsHref(
+      CLUB_DATA.header?.cta?.register?.href || "public/register.html"
+    );
     const logoutLabel = CLUB_DATA.header?.logout?.label || "SALIR";
 
     const isIndex =
@@ -149,8 +195,15 @@ export async function loadHeader(activeTab, cfgOverride) {
         }
       };
 
-      document.getElementById("googleLoginBtn")?.addEventListener("click", doLoginAndRoute);
-      document.getElementById("googleLoginBtnMobile")?.addEventListener("click", doLoginAndRoute);
+      document
+        .getElementById("googleLoginBtn")
+        ?.addEventListener("click", doLoginAndRoute);
+
+      document
+        .getElementById("googleLoginBtnMobile")
+        ?.addEventListener("click", doLoginAndRoute);
+
+      resolveOnce({ user: null, reason: "logged-out" });
       return;
     }
 
@@ -158,9 +211,11 @@ export async function loadHeader(activeTab, cfgOverride) {
     if (isIndex) {
       try {
         await routeAfterGoogleLogin(user);
+        resolveOnce({ user, reason: "routed" });
       } catch (e) {
         console.error(e);
         // fallback: si algo raro pasa, al menos no lo dejamos pegado sin UI
+        resolveOnce({ user, reason: "route-error" });
       }
       return;
     }
@@ -175,7 +230,11 @@ export async function loadHeader(activeTab, cfgOverride) {
     `;
 
     bindHeaderEvents();
+
+    resolveOnce({ user, reason: "logged-in" });
   });
+
+  return { ready };
 }
 
 function bindHeaderEvents() {

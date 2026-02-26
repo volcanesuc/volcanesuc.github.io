@@ -2,12 +2,29 @@
 import "./config/config.js";
 import { CLUB_DATA } from "./strings.js";
 import { loadHeader } from "./components/header.js";
+import { showLoader, hideLoader } from "/js/ui/loader.js";
+
 
 /* =========================================================
    HEADER
 ========================================================= */
 
-loadHeader("home", { enabledTabs: {} });
+async function init() {
+  try {
+    showLoader("Validando sesión…");
+
+    const { ready } = await loadHeader("home", { enabledTabs: {} });
+
+    await ready; // espera a que Firebase resuelva auth
+
+    hideLoader();
+  } catch (err) {
+    console.error("Error inicializando index:", err);
+    hideLoader(); // fallback de seguridad
+  }
+}
+
+init();
 
 /* =========================================================
    HERO
@@ -280,5 +297,3 @@ function hideLoader() {
   // opcional: remover del DOM
   setTimeout(() => loader.remove(), 400);
 }
-
-hideLoader();
