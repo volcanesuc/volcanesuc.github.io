@@ -8,6 +8,7 @@ export function showLoader(message = "Cargando…") {
 
 export function hideLoader() {
   document.body.classList.remove("loading");
+  document.documentElement.classList.remove("preload");
   hideLoaderOverlay();
 }
 
