@@ -2,7 +2,7 @@
 import "./config/config.js";
 import { CLUB_DATA } from "./strings.js";
 import { loadHeader } from "./components/header.js";
-import { showLoader, hideLoader } from "/js/ui/loader.js";
+import { showLoader, hideLoader, updateLoaderMessage } from "/js/ui/loader.js";
 
 
 /* =========================================================
