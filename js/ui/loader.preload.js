@@ -3,11 +3,12 @@
   const OVERLAY_ID = "volcanesLoadingOverlay";
   const STYLE_ID = "volcanesPreloadLoaderStyles";
 
-  // Inyecta estilos mínimos para mostrar el loader inmediatamente (sin esperar main.css)
   if (!document.getElementById(STYLE_ID)) {
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
+      body.loading { overflow: hidden; }
+
       #${OVERLAY_ID}{
         position:fixed; inset:0;
         display:flex; align-items:center; justify-content:center;
@@ -26,10 +27,10 @@
       }
       #${OVERLAY_ID} .loader{ width:96px; height:96px; }
       #${OVERLAY_ID} svg{ width:100%; height:100%; }
-      #${OVERLAY_ID} .disc{ fill:#19473f; }       /* fallback */
+      #${OVERLAY_ID} .disc{ fill:#19473f; }
       #${OVERLAY_ID} .inner-ring{ fill:none; stroke:#fff; stroke-width:3; opacity:.92; }
       #${OVERLAY_ID} .star{
-        fill:#e8ce26;                             /* fallback */
+        fill:#e8ce26;
         transform-origin:32px 32px;
         animation: loader-spin 3s linear infinite;
       }
@@ -47,6 +48,10 @@
 
     const overlay = document.createElement("div");
     overlay.id = OVERLAY_ID;
+
+    // 🔥 clave: crear visible desde ya
+    overlay.classList.add("is-visible");
+
     overlay.setAttribute("aria-hidden", "false");
     overlay.innerHTML = `
       <div class="loader-card" role="status" aria-live="polite" aria-label="Cargando">
@@ -70,10 +75,22 @@
         <div class="loader-text" id="${OVERLAY_ID}Message">Cargando…</div>
       </div>
     `;
+
+    // asegurar body.loading
+    document.body.classList.add("loading");
     document.body.appendChild(overlay);
   }
 
-  // Inserta apenas exista body (sin esperar tu módulo)
-  if (document.body) injectOverlay();
-  else document.addEventListener("DOMContentLoaded", injectOverlay);
+  // En vez de esperar DOMContentLoaded, esperamos a que exista <body>
+  if (document.body) {
+    injectOverlay();
+  } else {
+    const mo = new MutationObserver(() => {
+      if (document.body) {
+        mo.disconnect();
+        injectOverlay();
+      }
+    });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+  }
 })();
