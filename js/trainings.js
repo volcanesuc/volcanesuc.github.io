@@ -14,6 +14,7 @@ import {
 import { db } from "./auth/firebase.js";
 import { guardPage } from "./page-guard.js";
 import { loadHeader } from "./components/header.js";
+import { showLoader, hideLoader, updateLoaderMessage } from "./ui/loader.js";
 
 /* =========================
    CONFIG / COLS
@@ -81,19 +82,34 @@ let modalInstance = null;
    INIT
 ========================= */
 document.addEventListener("DOMContentLoaded", async () => {
-  const { cfg, redirected } = await guardPage("trainings");
-  if (!redirected) await loadHeader("trainings", cfg);
+  showLoader("Cargando entrenos…");
 
-  ensurePlaybookUI(); //crea los selectores dentro del modal
+  try {
+    const { cfg, redirected } = await guardPage("trainings");
+    if (redirected) return;
 
-  bindCollapseCarets();
+    updateLoaderMessage("Cargando header…");
+    await loadHeader("trainings", cfg);
 
-  await loadPlayers();
-  await loadPlaybookData();
-  await loadTrainings();
+    ensurePlaybookUI();
+    bindCollapseCarets();
 
-  bindEvents();
+    updateLoaderMessage("Cargando jugadores…");
+    await loadPlayers();
 
+    updateLoaderMessage("Cargando playbook…");
+    await loadPlaybookData();
+
+    updateLoaderMessage("Cargando lista…");
+    await loadTrainings();
+
+    bindEvents();
+  } catch (e) {
+    console.error("[trainings] init error:", e);
+    // opcional: mostrar un mensaje en la UI
+  } finally {
+    hideLoader(); // 🔥 quita html.preload y destapa el body
+  }
 });
 
 
@@ -245,21 +261,35 @@ async function loadTrainings() {
   $.cards.innerHTML = "";
   trainings = [];
 
-  const qy = query(collection(db, COL_TRAININGS), where("clubId", "==", clubId), orderBy("date", "desc"));
-  const snapshot = await getDocs(qy);
-  snapshot.forEach(d => trainings.push({ id: d.id, ...d.data() }));
+  // 1) intento con clubId (lo actual)
+  const q1 = query(
+    collection(db, COL_TRAININGS),
+    where("clubId", "==", clubId),
+    orderBy("date", "desc")
+  );
 
-  const total = trainings.length;
+  let snapshot = await getDocs(q1);
 
-  // KPIs + opciones de mes
+  // 2) fallback migración: si no hay nada, trae todo y filtra local
+  if (snapshot.empty) {
+    console.warn("[trainings] 0 trainings con clubId; fallback (migración).");
+
+    const all = await getDocs(collection(db, COL_TRAININGS));
+    trainings = all.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      // legacy: sin clubId o clubId correcto
+      .filter(t => !t.clubId || t.clubId === clubId)
+      // orden desc por date
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  } else {
+    snapshot.forEach(d => trainings.push({ id: d.id, ...d.data() }));
+  }
+
+  // KPIs + filtros + render
   calcKPIs(trainings);
   fillMonthOptions(trainings);
-
-  // Render inicial con filtros aplicados (por defecto: date_desc)
   refreshListUI();
-
   bindEditEvents();
-
   updateClearBtnState();
 }
 
