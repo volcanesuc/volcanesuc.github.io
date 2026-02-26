@@ -7,11 +7,8 @@
 
   <script>document.documentElement.classList.add("preload");</script>
   <style>
-    /* Evita flash blanco y evita ver contenido antes del loader */
     html.preload, html.preload body { background:#0b0b0c; margin:0; }
     html.preload body { visibility: hidden; }
-
-    /* Si el overlay existe, que SI se vea aunque el body esté hidden */
     html.preload #volcanesLoadingOverlay { visibility: visible; }
   </style>
   <script src="/js/ui/loader.preload.js?v=20260226-1"></script>
