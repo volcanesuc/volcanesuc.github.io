@@ -1,7 +1,7 @@
 // js/ui/loader.component.js
 import { APP_CONFIG } from "../config/config.js";
 
-const OVERLAY_ID = "loadingOverlay";
+const OVERLAY_ID = "volcanesLoadingOverlay"; 
 const STYLE_ID = "loaderStyles";
 
 function ensureStyles() {
@@ -126,12 +126,15 @@ function applyThemeVars() {
 
 function ensureOverlay() {
   let overlay = document.getElementById(OVERLAY_ID);
-  if (overlay) return overlay;
 
-  overlay = document.createElement("div");
-  overlay.id = OVERLAY_ID;
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = OVERLAY_ID;
+    document.body.appendChild(overlay);
+  }
+
+  // ✅ SIEMPRE “upgradea” el contenido (mata spinner viejo)
   overlay.setAttribute("aria-hidden", "true");
-
   overlay.innerHTML = `
     <div class="loader-card" role="status" aria-live="polite" aria-label="Cargando">
       <div class="loader" aria-hidden="true">
@@ -155,7 +158,6 @@ function ensureOverlay() {
     </div>
   `;
 
-  document.body.appendChild(overlay);
   return overlay;
 }
 
@@ -170,7 +172,6 @@ export function setLoaderMessage(message = "Cargando…") {
   const msgEl = overlay.querySelector(`#${OVERLAY_ID}Message`);
   if (msgEl) msgEl.textContent = message || "Cargando…";
 }
-
 /**
  * show: prende clase is-visible (fade-in)
  */
