@@ -389,49 +389,187 @@ function renderKPIs(kpis) {
 function calculateAlerts({ players, trainings }) {
   const alerts = [];
   const now = new Date();
-  const THIRTY_DAYS = 1000 * 60 * 60 * 24 * 30;
+  const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
+  const since = new Date(now.getTime() - THIRTY_DAYS_MS);
 
-  const lastAttendance = {};
+  // helpers
+  const toDate = (v) => {
+    if (!v) return null;
+    if (typeof v === "object" && typeof v.toDate === "function") return v.toDate();
+    if (v instanceof Date) return v;
+    const d = new Date(v);
+    return isNaN(d) ? null : d;
+  };
 
-  trainings.forEach(t => {
-    if (!t.active || !t.date) return;
-    const d = t.date?.toDate?.() ?? new Date(t.date);
-    (t.attendees || []).forEach(pid => {
-      if (!lastAttendance[pid] || d > lastAttendance[pid]) {
-        lastAttendance[pid] = d;
-      }
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const fmt = (d) =>
+    d ? new Intl.DateTimeFormat("es-CR", { day: "2-digit", month: "short" }).format(d).replace(".", "") : "—";
+
+  // index players
+  const byId = new Map(players.map(p => [p.id, p]));
+  const activeIds = new Set(players.filter(p => p.active).map(p => p.id));
+  const activePlayers = players.filter(p => p.active);
+
+  // only trainings in last 30 days (and active)
+  const recentTrainings = (trainings || [])
+    .map(t => ({ ...t, _d: toDate(t.date) }))
+    .filter(t => t.active && t._d && startOfDay(t._d) >= startOfDay(since) && startOfDay(t._d) <= startOfDay(now))
+    .sort((a, b) => a._d - b._d); // oldest -> newest
+
+  // If no trainings in last 30 days, that's the only alert that makes sense (and it respects scope)
+  if (!recentTrainings.length) {
+    alerts.push({
+      type: "warning",
+      message: "No hay entrenamientos registrados en los últimos 30 días."
+    });
+    return alerts;
+  }
+
+  // Attendance stats per training + global stats
+  const attendanceCounts = recentTrainings.map(t => (Array.isArray(t.attendees) ? t.attendees.length : 0));
+  const avgAtt = attendanceCounts.reduce((a, b) => a + b, 0) / attendanceCounts.length;
+
+  const lastTraining = recentTrainings[recentTrainings.length - 1];
+  const lastAtt = Array.isArray(lastTraining.attendees) ? lastTraining.attendees.length : 0;
+
+  // --- Per-player last attendance within last 30 days
+  const lastAttendance = {}; // pid -> Date
+  const attendCount30 = {};  // pid -> count (last 30 days)
+
+  recentTrainings.forEach(t => {
+    const d = t._d;
+    const list = Array.isArray(t.attendees) ? t.attendees : [];
+
+    list.forEach(pid => {
+      attendCount30[pid] = (attendCount30[pid] || 0) + 1;
+      if (!lastAttendance[pid] || d > lastAttendance[pid]) lastAttendance[pid] = d;
     });
   });
 
-  // 🔴 Activos sin entrenar 30 días
-  const inactive30 = players.filter(p => {
-    if (!p.active) return false;
-    const last = lastAttendance[p.id];
-    return !last || now - last > THIRTY_DAYS;
-  });
-
+  // 🔴 Activos sin entrenar en los últimos 30 días (scope correcto)
+  const inactive30 = activePlayers.filter(p => !lastAttendance[p.id]);
   if (inactive30.length) {
     alerts.push({
       type: "danger",
-      message: `${inactive30.length} jugadores activos sin entrenar en 30 días.`
+      message: `${inactive30.length} jugadores activos no entrenaron en los últimos 30 días.`
     });
   }
 
-  // 🟡 Entrenos con pocos handlers
-  trainings.forEach(t => {
-    if (!t.active) return;
+  // 🟠 Activos con muy baja participación (≤1 entreno en 30 días)
+  const lowParticipation = activePlayers.filter(p => (attendCount30[p.id] || 0) <= 1 && lastAttendance[p.id]);
+  if (lowParticipation.length) {
+    alerts.push({
+      type: "warning",
+      message: `${lowParticipation.length} jugadores activos entrenaron 1 vez o menos en los últimos 30 días.`
+    });
+  }
 
-    const handlers = (t.attendees || []).filter(id =>
-      players.find(p => p.id === id && p.role === "handler")
-    );
+  // 🟡 Participación de roster activo en el último entreno
+  const lastAttIds = new Set(Array.isArray(lastTraining.attendees) ? lastTraining.attendees : []);
+  const activeInLast = [...lastAttIds].filter(id => activeIds.has(id)).length;
+  const activeRosterSize = activeIds.size || 1;
+  const pctActiveInLast = Math.round((activeInLast / activeRosterSize) * 100);
 
-    if (handlers.length < 3) {
-      alerts.push({
-        type: "warning",
-        message: `${t.date}: solo ${handlers.length} handlers participaron del entrenamiento.`
-      });
+  if (pctActiveInLast < 35) {
+    alerts.push({
+      type: "warning",
+      message: `Baja participación: solo ${pctActiveInLast}% del roster activo asistió al último entreno (${fmt(lastTraining._d)}).`
+    });
+  }
+
+  // 🟡 Drop fuerte vs promedio (último entreno)
+  if (avgAtt >= 8 && lastAtt <= avgAtt * 0.6) {
+    alerts.push({
+      type: "warning",
+      message: `Asistencia cayó: último entreno (${lastAtt}) está ${Math.round((1 - lastAtt / avgAtt) * 100)}% por debajo del promedio 30 días (${avgAtt.toFixed(1)}).`
+    });
+  }
+
+  // 🟡 Entrenos con baja asistencia (umbral dinámico + mínimo)
+  const lowAttThreshold = Math.max(8, Math.round(avgAtt * 0.6));
+  const lowAttendanceTrainings = recentTrainings.filter(t => (t.attendees?.length || 0) < lowAttThreshold);
+
+  if (lowAttendanceTrainings.length >= 2) {
+    const worst = lowAttendanceTrainings
+      .slice()
+      .sort((a, b) => (a.attendees?.length || 0) - (b.attendees?.length || 0))[0];
+
+    alerts.push({
+      type: "warning",
+      message: `${lowAttendanceTrainings.length} entrenos tuvieron asistencia baja (<${lowAttThreshold}) en los últimos 30 días. Peor caso: ${fmt(worst._d)} con ${(worst.attendees?.length || 0)}.`
+    });
+  }
+
+  // 🟠 Pocos handlers en un entreno (últimos 30 días)
+  const trainingsFewHandlers = [];
+  recentTrainings.forEach(t => {
+    const handlerCount = (t.attendees || []).reduce((acc, id) => {
+      const p = byId.get(id);
+      return acc + (p?.role === "handler" ? 1 : 0);
+    }, 0);
+
+    // umbral: mínimo 3 o 25% de asistentes (lo que sea mayor)
+    const att = t.attendees?.length || 0;
+    const minHandlers = Math.max(3, Math.ceil(att * 0.25));
+
+    if (att >= 8 && handlerCount < minHandlers) {
+      trainingsFewHandlers.push({ t, handlerCount, minHandlers });
     }
   });
+
+  if (trainingsFewHandlers.length) {
+    // mostramos solo el peor (para no spamear)
+    trainingsFewHandlers.sort((a, b) => (a.handlerCount / (a.t.attendees?.length || 1)) - (b.handlerCount / (b.t.attendees?.length || 1)));
+    const w = trainingsFewHandlers[0];
+    alerts.push({
+      type: "warning",
+      message: `Pocos handlers: ${fmt(w.t._d)} hubo ${w.handlerCount} handlers (mín recomendado ${w.minHandlers}).`
+    });
+  }
+
+  // 🟡 Desbalance de género en el último entreno (si hay data)
+  const lastGender = { M: 0, F: 0, X: 0, NA: 0 };
+  (lastTraining.attendees || []).forEach(id => {
+    const g = byId.get(id)?.gender;
+    if (g === "M" || g === "F" || g === "X") lastGender[g]++;
+    else lastGender.NA++;
+  });
+
+  const knownGender = lastGender.M + lastGender.F + lastGender.X;
+  if (knownGender >= 10) {
+    const max = Math.max(lastGender.M, lastGender.F);
+    const min = Math.min(lastGender.M, lastGender.F);
+    // si uno es 2x el otro (o más)
+    if (min > 0 && max / min >= 2) {
+      alerts.push({
+        type: "warning",
+        message: `Desbalance de género en el último entreno (${fmt(lastTraining._d)}): ${lastGender.M} H vs ${lastGender.F} M.`
+      });
+    }
+  }
+
+  // 🟠 Entrenos con data incompleta (últimos 30 días)
+  const incomplete = recentTrainings.filter(t => !Array.isArray(t.attendees) || !t.attendees.length);
+  if (incomplete.length >= 2) {
+    alerts.push({
+      type: "warning",
+      message: `${incomplete.length} entrenos en los últimos 30 días tienen asistencia vacía o no registrada.`
+    });
+  }
+
+  // 🔴 “ausentes recurrentes” (activos con 0 o 1 asistencia) — ya cubierto,
+  // pero si querés un highlight de nombres (máx 5) para acción rápida:
+  const topAbsents = inactive30
+    .map(p => p.fullName || `${p.firstName || ""} ${p.lastName || ""}`.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+
+  if (inactive30.length && topAbsents.length) {
+    alerts.push({
+      type: "danger",
+      message: `Sin entrenar (30 días): ${topAbsents.join(", ")}${inactive30.length > topAbsents.length ? "…" : ""}`
+    });
+  }
 
   return alerts;
 }
