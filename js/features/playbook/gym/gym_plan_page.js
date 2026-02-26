@@ -1,6 +1,7 @@
-// /js/pages/gym_plan_page.js
+// /js/features/playbook/gym/gym_plan_page.js
 import { db } from "/js/auth/firebase.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { showLoader, hideLoader, updateLoaderMessage } from "/js/ui/loader.js";
 
 const COL_PLANS = "gym_weeks";
 const COL_ROUTINES = "gym_routines";
@@ -19,212 +20,63 @@ const $ = {
 boot().catch((e) => {
   console.error(e);
   showError("No pude cargar el plan (error inesperado).");
-  document.body.classList.remove("loading");
+  hideLoader(); // ✅ destapa todo aunque falle
 });
 
 async function boot() {
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
+  showLoader("Cargando plan…"); // ✅ muestra overlay + deja visible
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
 
-  if (!id) {
-    showError("Falta ?id del plan.");
-    throw new Error("Missing plan id");
-  }
-
-  setupCopyLink();
-
-  const snap = await getDoc(doc(db, COL_PLANS, id));
-  if (!snap.exists()) {
-    showError("Este plan no existe.");
-    document.body.classList.remove("loading");
-    return;
-  }
-
-  const plan = { id: snap.id, ...snap.data() };
-  renderHeader(plan);
-
-  // Preferimos slots (nuevo modelo)
-  const slots = Array.isArray(plan.slots) ? plan.slots.slice() : [];
-  if (slots.length) {
-    $.sectionTitle && ($.sectionTitle.textContent = "Slots del plan");
-    slots.sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
-
-    const routineIds = uniq(
-      slots.map((s) => (s?.routineId || "").toString().trim()).filter(Boolean)
-    );
-    const routinesById = await fetchRoutinesById(routineIds);
-
-    renderSlots(slots, routinesById);
-    document.body.classList.remove("loading");
-    return;
-  }
-
-  // Fallback legacy: routineIds
-  const routineIds = Array.isArray(plan.routineIds) ? plan.routineIds.filter(Boolean) : [];
-  if (routineIds.length) {
-    $.sectionTitle && ($.sectionTitle.textContent = "Rutinas del plan");
-    const routinesById = await fetchRoutinesById(routineIds);
-    renderRoutinesFlat(routineIds, routinesById);
-    document.body.classList.remove("loading");
-    return;
-  }
-
-  $.emptyState?.classList.remove("d-none");
-  document.body.classList.remove("loading");
-}
-
-function setupCopyLink() {
-  $.copyLinkBtn?.classList.remove("d-none");
-  $.copyLinkBtn?.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      const old = $.copyLinkBtn.textContent;
-      $.copyLinkBtn.textContent = "Copiado ✅";
-      setTimeout(() => ($.copyLinkBtn.textContent = old), 1200);
-    } catch (e) {
-      console.error(e);
+    if (!id) {
+      showError("Falta ?id del plan.");
+      return;
     }
-  });
-}
 
-function renderHeader(plan) {
-  const title =
-    plan.title ||
-    plan.name ||
-    (plan.monthKey ? `Plan de gimnasio – Mes ${plan.monthKey}` : "Plan de gimnasio");
+    setupCopyLink();
 
-  if ($.planTitle) $.planTitle.textContent = title;
+    updateLoaderMessage("Leyendo plan…");
+    const snap = await getDoc(doc(db, COL_PLANS, id));
+    if (!snap.exists()) {
+      showError("Este plan no existe.");
+      return;
+    }
 
-  const meta = [];
-  if (plan.monthKey) meta.push(`Mes: ${plan.monthKey}`);
-  if (plan.clubId) meta.push(`Club: ${plan.clubId}`);
-  if (plan.isPublic === true) meta.push("🌐 Público");
-  if ($.planMeta) $.planMeta.textContent = meta.join(" · ");
+    const plan = { id: snap.id, ...snap.data() };
+    renderHeader(plan);
 
-  if ($.planDesc) $.planDesc.textContent = (plan.description || "").toString().trim() || "—";
-}
+    // Preferimos slots (nuevo modelo)
+    const slots = Array.isArray(plan.slots) ? plan.slots.slice() : [];
+    if (slots.length) {
+      $.sectionTitle && ($.sectionTitle.textContent = "Slots del plan");
+      slots.sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
 
-async function fetchRoutinesById(ids) {
-  const snaps = await Promise.all(ids.map((rid) => getDoc(doc(db, COL_ROUTINES, rid))));
+      const routineIds = uniq(
+        slots.map((s) => (s?.routineId || "").toString().trim()).filter(Boolean)
+      );
 
-  const map = new Map();
-  for (const rs of snaps) {
-    if (!rs || !rs.exists()) continue;
-    const r = { id: rs.id, ...rs.data() };
-    if (r.isActive === false) continue;
-    map.set(r.id, r);
-  }
-  return map;
-}
+      updateLoaderMessage("Cargando rutinas…");
+      const routinesById = await fetchRoutinesById(routineIds);
 
-function renderSlots(slots, routinesById) {
-  if (!$.routinesList) return;
+      renderSlots(slots, routinesById);
+      return;
+    }
 
-  $.routinesList.innerHTML = "";
-  $.emptyState?.classList.add("d-none");
+    // Fallback legacy: routineIds
+    const routineIds = Array.isArray(plan.routineIds) ? plan.routineIds.filter(Boolean) : [];
+    if (routineIds.length) {
+      $.sectionTitle && ($.sectionTitle.textContent = "Rutinas del plan");
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "table-responsive";
+      updateLoaderMessage("Cargando rutinas…");
+      const routinesById = await fetchRoutinesById(routineIds);
 
-  wrapper.innerHTML = `
-    <table class="table table-sm align-middle">
-      <thead class="table-light">
-        <tr>
-          <th style="width:60px;">#</th>
-          <th style="width:220px;">Slot</th>
-          <th>Rutina</th>
-          <th style="width:160px;"></th>
-        </tr>
-      </thead>
-      <tbody id="slotsTbody"></tbody>
-    </table>
-  `;
+      renderRoutinesFlat(routineIds, routinesById);
+      return;
+    }
 
-  $.routinesList.appendChild(wrapper);
-
-  const tbody = wrapper.querySelector("#slotsTbody");
-  tbody.innerHTML = "";
-
-  for (const s of slots) {
-    const rid = (s?.routineId || "").toString();
-    const r = routinesById.get(rid) || null;
-
-    const routineName = r?.name || (rid ? "Rutina (no accesible)" : "—");
-    const label = (s?.label || "").toString().trim() || "—";
-    const order = Number(s?.order ?? 0) || "";
-
-    const isPublic = r?.isPublic === true;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHtml(order)}</td>
-      <td>${escapeHtml(label)}</td>
-      <td>
-        <div class="fw-semibold">${escapeHtml(routineName)}</div>
-        ${r?.description ? `<div class="text-muted small">${escapeHtml(r.description)}</div>` : ``}
-        ${!r && rid ? `<div class="text-muted small">ID: ${escapeHtml(rid)}</div>` : ``}
-      </td>
-      <td class="text-end">
-        ${
-          isPublic
-            ? `<a class="btn btn-sm btn-outline-secondary" href="/gym_routine.html?id=${encodeURIComponent(r.id)}" target="_blank" rel="noopener">Ver rutina</a>`
-            : `<span class="text-muted small">${r ? "🔒 Privada" : ""}</span>`
-        }
-      </td>
-    `;
-    tbody.appendChild(tr);
-  }
-}
-
-function renderRoutinesFlat(orderIds, routinesById) {
-  if (!$.routinesList) return;
-
-  $.routinesList.innerHTML = "";
-
-  const routines = orderIds.map((id) => routinesById.get(id)).filter(Boolean);
-
-  if (!routines.length) {
     $.emptyState?.classList.remove("d-none");
-    return;
+  } finally {
+    hideLoader(); // ✅ quita html.preload + body.loading + overlay
   }
-  $.emptyState?.classList.add("d-none");
-
-  for (const r of routines) {
-    const isPublic = r.isPublic === true;
-    const row = document.createElement("div");
-    row.className = "list-group-item";
-
-    row.innerHTML = `
-      <div class="d-flex justify-content-between gap-2 flex-wrap">
-        <div>
-          <div class="fw-semibold">${escapeHtml(r.name || "—")}</div>
-          <div class="text-muted small">${isPublic ? "🌐 Pública" : "🔒 Privada"}</div>
-          ${r.description ? `<div class="small mt-1">${escapeHtml(r.description)}</div>` : ``}
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-          ${isPublic ? `<a class="btn btn-sm btn-outline-secondary" href="/gym_routine.html?id=${encodeURIComponent(r.id)}" target="_blank" rel="noopener">Ver rutina</a>` : ``}
-        </div>
-      </div>
-    `;
-    $.routinesList.appendChild(row);
-  }
-}
-
-function uniq(arr) {
-  return Array.from(new Set(arr));
-}
-
-function showError(msg) {
-  if (!$.errorBox) return;
-  $.errorBox.textContent = msg;
-  $.errorBox.classList.remove("d-none");
-}
-
-function escapeHtml(str) {
-  return String(str ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
