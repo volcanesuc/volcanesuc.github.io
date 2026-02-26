@@ -44,8 +44,14 @@
   }
 
   function injectOverlay() {
+    const existing = document.getElementById(OVERLAY_ID);
+    if (existing) {
+      existing.classList.add("is-visible");
+      document.body?.classList.add("loading");
+      return;
+    }
     if (document.getElementById(OVERLAY_ID)) return;
-
+    // si no existe, lo crea
     const overlay = document.createElement("div");
     overlay.id = OVERLAY_ID;
 

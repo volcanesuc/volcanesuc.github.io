@@ -7,10 +7,42 @@
 
   <script>document.documentElement.classList.add("preload");</script>
   <style>
-    html.preload, html.preload body { background: #0b0b0c; }
-    html.preload body { visibility: hidden; }
-    html.preload #volcanesLoadingOverlay { visibility: visible; }
+    html.preload, html.preload body { background:#0b0b0c; margin:0; }
+    /* oculta contenido pero NO el loader */
+    html.preload body > :not(#volcanesLoadingOverlay) { visibility: hidden; }
+
+    #volcanesLoadingOverlay{
+      position:fixed; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      z-index:99999;
+      background: rgba(0,0,0,0.88);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+    #volcanesLoadingOverlay .loader-card{
+      display:flex; flex-direction:column; align-items:center; gap:14px;
+      padding:18px 20px; border-radius:16px;
+      background: rgba(10,10,12,0.38);
+      box-shadow: 0 12px 34px rgba(0,0,0,0.46);
+      border: 1px solid rgba(255,255,255,0.06);
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    }
+    #volcanesLoadingOverlay .loader{ width:96px; height:96px; }
+    #volcanesLoadingOverlay svg{ width:100%; height:100%; }
+    #volcanesLoadingOverlay .disc{ fill:#19473f; }
+    #volcanesLoadingOverlay .inner-ring{ fill:none; stroke:#fff; stroke-width:3; opacity:.92; }
+    #volcanesLoadingOverlay .star{
+      fill:#e8ce26;
+      transform-origin:32px 32px;
+      animation: loader-spin 3s linear infinite;
+    }
+    @keyframes loader-spin { to { transform: rotate(360deg); } }
+    #volcanesLoadingOverlay .loader-text{
+      font-size:.98rem; color: rgba(255,255,255,0.86);
+      text-align:center; max-width:320px;
+    }
   </style>
+
   <script src="/js/ui/loader.preload.js"></script>
 
   <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
@@ -26,6 +58,29 @@
 </head>
 
 <body class="loading">
+
+  <div id="volcanesLoadingOverlay" aria-hidden="false">
+    <div class="loader-card" role="status" aria-live="polite" aria-label="Cargando">
+      <div class="loader" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="28" class="disc"></circle>
+          <circle cx="32" cy="32" r="23" class="inner-ring"></circle>
+          <path class="star"
+            d="M32 18
+               L36 27
+               L46 28
+               L39 35
+               L41 45
+               L32 40
+               L23 45
+               L25 35
+               L18 28
+               L28 27 Z"></path>
+        </svg>
+      </div>
+      <div class="loader-text" id="volcanesLoadingOverlayMessage">Cargando…</div>
+    </div>
+  </div>
 
   <!-- HEADER -->
   <div id="app-header"></div>
