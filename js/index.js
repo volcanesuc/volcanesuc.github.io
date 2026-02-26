@@ -12,11 +12,10 @@ import { showLoader, hideLoader } from "/js/ui/loader.js";
 async function init() {
   try {
     showLoader("Validando sesión…");
-
     const { ready } = await loadHeader("home", { enabledTabs: {} });
-
+    updateLoaderMessage("Armando dashboard…");
     await ready; // espera a que Firebase resuelva auth
-
+    updateLoaderMessage("Cargando entrenamientos…");
     hideLoader();
   } catch (err) {
     console.error("Error inicializando index:", err);
@@ -285,15 +284,4 @@ if (footer) {
     <p>${CLUB_DATA.footer.copyright}</p>
     <p>Fundados en el ${CLUB_DATA.club.foundedYear}</p>
   `;
-}
-
-
-function hideLoader() {
-  const loader = document.getElementById("pageLoader");
-  if (!loader) return;
-
-  loader.classList.add("hidden");
-
-  // opcional: remover del DOM
-  setTimeout(() => loader.remove(), 400);
 }
