@@ -1,4 +1,4 @@
-// js/ui/loader.preload.js
+// /js/ui/loader.preload.js
 (function () {
   const OVERLAY_ID = "volcanesLoadingOverlay";
   const STYLE_ID = "volcanesPreloadLoaderStyles";
@@ -49,7 +49,7 @@
     const overlay = document.createElement("div");
     overlay.id = OVERLAY_ID;
 
-    // 🔥 clave: crear visible desde ya
+    // 🔥 clave: visible desde ya (por si luego entra el CSS “grande”)
     overlay.classList.add("is-visible");
 
     overlay.setAttribute("aria-hidden", "false");
@@ -76,15 +76,12 @@
       </div>
     `;
 
-    // asegurar body.loading
     document.body.classList.add("loading");
     document.body.appendChild(overlay);
   }
 
-  // En vez de esperar DOMContentLoaded, esperamos a que exista <body>
-  if (document.body) {
-    injectOverlay();
-  } else {
+  if (document.body) injectOverlay();
+  else {
     const mo = new MutationObserver(() => {
       if (document.body) {
         mo.disconnect();
