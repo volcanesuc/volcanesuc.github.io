@@ -230,7 +230,7 @@ $.googleBtn?.addEventListener("click", async () => {
     }
   } catch (e) {
     console.warn(e);
-    showAlert("No se pudo iniciar sesión con Google.");
+    showAlert(e);
   }
 });
 

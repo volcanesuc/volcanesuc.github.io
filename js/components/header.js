@@ -1,6 +1,6 @@
 // js/components/header.js
 import { auth } from "../auth/firebase.js";
-import { loginWithGoogle, logout } from "../auth/auth.js";
+import { loginWithGoogle, logout, handleGoogleRedirectResult } from "../auth/auth.js";
 import { routeAfterGoogleLogin } from "../auth/role-routing.js";
 
 import { CLUB_DATA } from "../strings.js";
@@ -8,11 +8,13 @@ import { loadHeaderTabsConfig, filterMenuByConfig } from "../remote-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 /*
-  Header único (sin HTML separado):
+  Header único:
   - Tabs filtrados por remote config
   - CTA según sesión:
-      * NO logueado: "Ingresar con Google" + "Crear cuenta"
-      * Logueado: "Salir" (y si estás en index, te rutea automáticamente por roles)
+      * NO logueado: "Ingresar con Google" (solo)
+      * Logueado: "Salir"
+  - En index: rutea por roles/onboarding
+  - Con redirect login: consume getRedirectResult 1 vez en el boot
 */
 
 export async function loadHeader(activeTab, cfgOverride) {
@@ -66,7 +68,7 @@ export async function loadHeader(activeTab, cfgOverride) {
     ).join("");
 
   // =====================================================
-  // ✅ READY PROMISE (declared inside loadHeader)
+  // ✅ READY PROMISE
   // =====================================================
   let resolvedOnce = false;
   let readyResolve;
@@ -131,16 +133,22 @@ export async function loadHeader(activeTab, cfgOverride) {
   // Spinner inicial mientras Firebase valida
   const initialCta = document.getElementById("headerCta");
   const initialMcta = document.getElementById("mobileCta");
-
   if (initialCta) {
-    initialCta.innerHTML = `
-      <div class="spinner-border spinner-border-sm text-light" role="status"></div>
-    `;
+    initialCta.innerHTML = `<div class="spinner-border spinner-border-sm text-light" role="status"></div>`;
   }
   if (initialMcta) {
-    initialMcta.innerHTML = `
-      <div class="spinner-border spinner-border-sm" role="status"></div>
-    `;
+    initialMcta.innerHTML = `<div class="spinner-border spinner-border-sm" role="status"></div>`;
+  }
+
+  // =====================================================
+  // ✅ IMPORTANT: consume redirect result ONCE before auth UI
+  // (si venía del login redirect, esta función puede rutear)
+  // =====================================================
+  try {
+    await handleGoogleRedirectResult();
+  } catch (e) {
+    console.error("[header] handleGoogleRedirectResult error:", e);
+    // no bloqueamos el header
   }
 
   onAuthStateChanged(auth, async (user) => {
@@ -152,9 +160,6 @@ export async function loadHeader(activeTab, cfgOverride) {
       return;
     }
 
-    const registerHref = toAbsHref(
-      CLUB_DATA.header?.cta?.register?.href || "public/register.html"
-    );
     const logoutLabel = CLUB_DATA.header?.logout?.label || "SALIR";
 
     const isIndex =
@@ -163,15 +168,12 @@ export async function loadHeader(activeTab, cfgOverride) {
       location.pathname.endsWith("/");
 
     if (!user) {
-      // NO logueado: Google + Crear cuenta
+      // NO logueado: solo Google
       cta.innerHTML = `
         <button id="googleLoginBtn" class="btn btn-light btn-sm d-flex align-items-center gap-2">
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="16" height="16" alt="Google">
           Ingresar con Google
         </button>
-        <a href="${registerHref}" class="btn btn-outline-light btn-sm">
-          ${CLUB_DATA.header?.cta?.register?.label || "Crear cuenta"}
-        </a>
       `;
 
       mcta.innerHTML = `
@@ -179,42 +181,32 @@ export async function loadHeader(activeTab, cfgOverride) {
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="16" height="16" alt="Google">
           Ingresar con Google
         </button>
-        <a href="${registerHref}" class="btn btn-outline-light w-100 mt-2">
-          ${CLUB_DATA.header?.cta?.register?.label || "Crear cuenta"}
-        </a>
       `;
 
-      const doLoginAndRoute = async () => {
+      const doLogin = async () => {
         try {
-          const u = await loginWithGoogle();
-          if (!u?.uid) throw new Error("No uid from login");
-          await routeAfterGoogleLogin(u); // ✅ aquí vive todo el flow
+          // redirect flow: esto navega fuera; no hay "return user"
+          await loginWithGoogle();
         } catch (e) {
           console.error(e);
           alert("No se pudo iniciar sesión con Google.");
         }
       };
 
-      document
-        .getElementById("googleLoginBtn")
-        ?.addEventListener("click", doLoginAndRoute);
-
-      document
-        .getElementById("googleLoginBtnMobile")
-        ?.addEventListener("click", doLoginAndRoute);
+      document.getElementById("googleLoginBtn")?.addEventListener("click", doLogin);
+      document.getElementById("googleLoginBtnMobile")?.addEventListener("click", doLogin);
 
       resolveOnce({ user: null, reason: "logged-out" });
       return;
     }
 
-    // ✅ si ya está logueado y está en index, aplicamos flow por roles (dashboard o register)
+    // ✅ si ya está logueado y está en index: ruteo por roles/onboarding
     if (isIndex) {
       try {
         await routeAfterGoogleLogin(user);
         resolveOnce({ user, reason: "routed" });
       } catch (e) {
         console.error(e);
-        // fallback: si algo raro pasa, al menos no lo dejamos pegado sin UI
         resolveOnce({ user, reason: "route-error" });
       }
       return;
@@ -230,7 +222,6 @@ export async function loadHeader(activeTab, cfgOverride) {
     `;
 
     bindHeaderEvents();
-
     resolveOnce({ user, reason: "logged-in" });
   });
 
