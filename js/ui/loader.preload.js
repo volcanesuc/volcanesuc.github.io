@@ -3,7 +3,9 @@
   const OVERLAY_ID = "volcanesLoadingOverlay";
   const STYLE_ID = "volcanesPreloadLoaderStyles";
 
-  if (!document.getElementById(STYLE_ID)) {
+  function ensureStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
@@ -27,10 +29,10 @@
       }
       #${OVERLAY_ID} .loader{ width:96px; height:96px; }
       #${OVERLAY_ID} svg{ width:100%; height:100%; }
-      #${OVERLAY_ID} .disc{ fill:#19473f; }
+      #${OVERLAY_ID} .disc{ fill:#19473f; } /* fallback */
       #${OVERLAY_ID} .inner-ring{ fill:none; stroke:#fff; stroke-width:3; opacity:.92; }
       #${OVERLAY_ID} .star{
-        fill:#e8ce26;
+        fill:#e8ce26; /* fallback */
         transform-origin:32px 32px;
         animation: loader-spin 3s linear infinite;
       }
@@ -43,23 +45,8 @@
     document.head.appendChild(style);
   }
 
-  function injectOverlay() {
-    const existing = document.getElementById(OVERLAY_ID);
-    if (existing) {
-      existing.classList.add("is-visible");
-      document.body?.classList.add("loading");
-      return;
-    }
-    if (document.getElementById(OVERLAY_ID)) return;
-    // si no existe, lo crea
-    const overlay = document.createElement("div");
-    overlay.id = OVERLAY_ID;
-
-    // 🔥 clave: visible desde ya (por si luego entra el CSS “grande”)
-    overlay.classList.add("is-visible");
-
-    overlay.setAttribute("aria-hidden", "false");
-    overlay.innerHTML = `
+  function overlayMarkup() {
+    return `
       <div class="loader-card" role="status" aria-live="polite" aria-label="Cargando">
         <div class="loader" aria-hidden="true">
           <svg viewBox="0 0 64 64">
@@ -81,17 +68,36 @@
         <div class="loader-text" id="${OVERLAY_ID}Message">Cargando…</div>
       </div>
     `;
-
-    document.body.classList.add("loading");
-    document.body.appendChild(overlay);
   }
 
-  if (document.body) injectOverlay();
-  else {
+  function ensureOverlay() {
+    let overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = OVERLAY_ID;
+      overlay.setAttribute("aria-hidden", "false");
+      overlay.innerHTML = overlayMarkup();
+      document.body.appendChild(overlay);
+    }
+    // visible desde el inicio
+    overlay.classList.add("is-visible");
+    document.body.classList.add("loading");
+    return overlay;
+  }
+
+  function boot() {
+    ensureStyles();
+    ensureOverlay();
+  }
+
+  // Ejecutar lo antes posible, incluso si body aún no existe
+  if (document.body) {
+    boot();
+  } else {
     const mo = new MutationObserver(() => {
       if (document.body) {
         mo.disconnect();
-        injectOverlay();
+        boot();
       }
     });
     mo.observe(document.documentElement, { childList: true, subtree: true });
