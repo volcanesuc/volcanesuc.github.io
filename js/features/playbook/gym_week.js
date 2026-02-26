@@ -13,7 +13,6 @@
 // - #weekBadge
 // - #alertBox
 // - #weekAccordion
-// - loading overlay: #loadingOverlay (opcional)
 // - body.loading (opcional)
 
 import { db } from "/js/auth/firebase.js";

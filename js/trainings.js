@@ -59,8 +59,6 @@ const $ = {
   playersList: document.getElementById("playersList"),
   saveBtn: document.getElementById("saveTrainingBtn"),
 
-  loadingOverlay: document.getElementById("loadingOverlay"),
-
     // KPIs
   kpiTotal: document.getElementById("kpiTotalTrainings"),
   kpiAvg: document.getElementById("kpiAvgAttendance"),
@@ -96,20 +94,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   bindEvents();
 
-  hideLoading();
 });
 
-/* =========================
-   LOADER
-========================= */
-function hideLoading() {
-  document.body.classList.remove("loading");
-  if ($.loadingOverlay) $.loadingOverlay.style.display = "none";
-}
-function showLoading() {
-  document.body.classList.add("loading");
-  if ($.loadingOverlay) $.loadingOverlay.style.display = "flex";
-}
 
 /* =========================
    PLAYBOOK UI (inject into modal)
@@ -509,7 +495,6 @@ async function saveTraining() {
   };
 
   $.saveBtn.disabled = true;
-  showLoading();
 
   try {
     if (currentTrainingId) {
@@ -536,7 +521,6 @@ async function saveTraining() {
     alert("❌ Error guardando entreno");
   } finally {
     $.saveBtn.disabled = false;
-    hideLoading();
   }
 }
 
