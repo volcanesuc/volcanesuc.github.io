@@ -13,9 +13,8 @@ async function init() {
   try {
     showLoader("Validando sesión…");
     const { ready } = await loadHeader("home", { enabledTabs: {} });
-    updateLoaderMessage("Armando dashboard…");
     await ready; // espera a que Firebase resuelva auth
-    updateLoaderMessage("Cargando entrenamientos…");
+    updateLoaderMessage("Armando dashboard…");
     hideLoader();
   } catch (err) {
     console.error("Error inicializando index:", err);
