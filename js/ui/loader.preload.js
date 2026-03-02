@@ -87,7 +87,26 @@
 
   function boot() {
     ensureStyles();
-    ensureOverlay();
+    const overlay = ensureOverlay();
+
+    // ✅ Auto-release del preload: si tu app no lo apaga, no queda pegado
+    const release = () => {
+      overlay.classList.remove("is-visible");
+      overlay.setAttribute("aria-hidden", "true");
+      overlay.style.display = "none";
+      document.documentElement.classList.remove("preload");
+      document.body.classList.remove("loading");
+    };
+
+    // lo antes posible después de render
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      setTimeout(release, 0);
+    } else {
+      window.addEventListener("DOMContentLoaded", () => setTimeout(release, 0), { once: true });
+    }
+
+    // failsafe duro por si algo raro pasa
+    setTimeout(release, 2000);
   }
 
   // Ejecutar lo antes posible, incluso si body aún no existe

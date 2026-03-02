@@ -141,33 +141,28 @@ export function mountLoader() {
 }
 
 export function setLoaderMessage(message = "Cargando…") {
-  const overlay = mountLoader();
-  const msgEl = overlay.querySelector(`#${OVERLAY_ID}Message`);
-  if (msgEl) msgEl.textContent = message || "Cargando…";
+  const msg = document.getElementById(`${OVERLAY_ID}Message`);
+  if (msg) msg.textContent = message;
 }
 /**
  * show: prende clase is-visible (fade-in)
  */
 export function showLoaderOverlay(message = "Cargando…") {
-  const overlay = mountLoader();
+  const ov = document.getElementById(OVERLAY_ID);
+  if (!ov) return;
+  ov.style.display = "";
+  ov.classList.add("is-visible");
+  ov.setAttribute("aria-hidden", "false");
   setLoaderMessage(message);
-
-  overlay.setAttribute("aria-hidden", "false");
-
-  // forzamos reflow para asegurar transición (por si se creó recién)
-  // eslint-disable-next-line no-unused-expressions
-  overlay.offsetHeight;
-
-  overlay.classList.add("is-visible");
 }
 
 /**
  * hide: quita is-visible (fade-out)
  */
 export function hideLoaderOverlay() {
-  const overlay = document.getElementById(OVERLAY_ID);
-  if (!overlay) return;
-
-  overlay.classList.remove("is-visible");
-  overlay.setAttribute("aria-hidden", "true");
+  const ov = document.getElementById(OVERLAY_ID);
+  if (!ov) return;
+  ov.classList.remove("is-visible");
+  ov.setAttribute("aria-hidden", "true");
+  ov.style.display = "none";
 }

@@ -3,6 +3,7 @@ import { db, auth, storage } from "./firebase.js";
 import { loginWithGoogle, logout, handleGoogleRedirectResult } from "./auth.js";
 import { loadHeader } from "../components/header.js";
 import { APP_CONFIG } from "../config/config.js";
+import { showLoader, hideLoader, updateLoaderMessage } from "/js/ui/loader.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -278,7 +279,7 @@ loadHeader("home", { enabledTabs: {} });
 (async () => {
   try {
     // si querés loader mientras procesa redirect:
-    // setLoading(true);
+    // showLoader("Cargando…");
 
     await handleGoogleRedirectResult();
   } catch (e) {
@@ -286,7 +287,7 @@ loadHeader("home", { enabledTabs: {} });
   } finally {
     // ✅ pase lo que pase, no quedamos negros
     releaseUI();
-    setLoading(false);
+    hideLoader();
   }
 
   // limpiar google=1 (si lo usás)
@@ -306,27 +307,27 @@ $.googleBtn?.addEventListener("click", async () => {
   hideAlert();
   try {
     // loginWithGoogle dispara redirect
-    setLoading(true);
+    showLoader("Cargando…");
     await loginWithGoogle();
   } catch (e) {
     console.warn(e);
     showAlert("Error al iniciar sesión con Google.");
-    setLoading(false);
+    hideLoader();
   }
 });
 
 $.logoutBtn?.addEventListener("click", async () => {
   try {
-    setLoading(true);
+    showLoader("Cargando…");
     await logout();
   } finally {
-    setLoading(false);
+    hideLoader();
   }
 });
 
 // IMPORTANT: no más “pantalla negra” por errores aquí
 onAuthStateChanged(auth, async (user) => {
-  setLoading(true);
+  showLoader("Cargando…");
   try {
     // si ya tiene rol activo -> dashboard
     if (user?.uid && (await hasActiveRole(user.uid))) {
@@ -347,7 +348,7 @@ onAuthStateChanged(auth, async (user) => {
     console.warn("onAuthStateChanged handler failed:", e);
     // seguimos igual, solo evitamos crash
   } finally {
-    setLoading(false);
+    hideLoader();
     releaseUI(); 
   }
 });
@@ -739,7 +740,7 @@ applyPrefillFromSession();
    Init
 ========================= */
 async function init() {
-  setLoading(true);
+  showLoader("Cargando…");
   try {
     fillProvinceCanton();
     await loadPlans();
@@ -748,7 +749,7 @@ async function init() {
     console.warn(e);
     showAlert("No se pudo cargar la configuración. Refresca la página.");
   } finally {
-    setLoading(false);
+    hideLoader();
     releaseUI();
     document.body.classList.remove("loading");
   }
@@ -844,7 +845,7 @@ $.form?.addEventListener("submit", async (ev) => {
     acceptedAt: serverTimestamp(),
   };
 
-  setLoading(true);
+  showLoader("Cargando…");
   try {
     if (!uid) throw new Error("No hay uid (login incompleto).");
 
@@ -962,6 +963,6 @@ $.form?.addEventListener("submit", async (ev) => {
     console.warn(e);
     showAlert(String(e.message || e), "danger");
   } finally {
-    setLoading(false);
+    hideLoader();
   }
 });
