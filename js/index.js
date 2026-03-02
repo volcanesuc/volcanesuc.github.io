@@ -3,9 +3,8 @@ import "./config/config.js";
 import { CLUB_DATA } from "./strings.js";
 import { loadHeader } from "./components/header.js";
 import { showLoader, hideLoader, updateLoaderMessage } from "./ui/loader.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-const db = getFirestore();
+import { db } from "/js/auth/firebase.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 
 /* =========================================================
@@ -43,7 +42,7 @@ function applyIndexSettings(indexSettings = {}) {
     show_events: true,
     show_trainings: true,
     show_honors: true,
-    show_uniforms: true
+    show_uniforms: true,
   };
 
   const s = { ...defaults, ...indexSettings };
@@ -63,13 +62,14 @@ async function loadIndexSettings() {
       const data = snap.data();
       applyIndexSettings(data.index_settings);
     } else {
-      applyIndexSettings(); // defaults
+      applyIndexSettings();
     }
   } catch (err) {
     console.error("Error loading index settings:", err);
     applyIndexSettings();
   }
 }
+
 loadIndexSettings();
 
 /* =========================================================
