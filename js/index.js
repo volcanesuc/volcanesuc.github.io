@@ -3,6 +3,9 @@ import "./config/config.js";
 import { CLUB_DATA } from "./strings.js";
 import { loadHeader } from "./components/header.js";
 import { showLoader, hideLoader, updateLoaderMessage } from "./ui/loader.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const db = getFirestore();
 
 
 /* =========================================================
@@ -23,6 +26,51 @@ async function init() {
 }
 
 init();
+
+
+/* =========================================================
+   MANAGE SECTIONS TO BE SHOWN OR HIDDEN
+========================================================= */
+
+function setSectionVisible(sectionId, visible) {
+  const el = document.getElementById(sectionId);
+  if (!el) return;
+  el.style.display = visible ? "" : "none";
+}
+
+function applyIndexSettings(indexSettings = {}) {
+  const defaults = {
+    show_events: true,
+    show_trainings: true,
+    show_honors: true,
+    show_uniforms: true
+  };
+
+  const s = { ...defaults, ...indexSettings };
+
+  setSectionVisible("eventsSection", s.show_events);
+  setSectionVisible("entrenamientos", s.show_trainings);
+  setSectionVisible("honorsSection", s.show_honors);
+  setSectionVisible("uniformsSection", s.show_uniforms);
+}
+
+async function loadIndexSettings() {
+  try {
+    const ref = doc(db, "club_config", "index_settings");
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      const data = snap.data();
+      applyIndexSettings(data.index_settings);
+    } else {
+      applyIndexSettings(); // defaults
+    }
+  } catch (err) {
+    console.error("Error loading index settings:", err);
+    applyIndexSettings();
+  }
+}
+loadIndexSettings();
 
 /* =========================================================
    HERO
