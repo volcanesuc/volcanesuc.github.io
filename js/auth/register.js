@@ -3,6 +3,7 @@ import { db, auth, storage } from "./firebase.js";
 import { loginWithGoogle, logout } from "./auth.js";
 import { loadHeader } from "../components/header.js";
 import { APP_CONFIG } from "../config/config.js";
+import { handleGoogleRedirectResult } from "./auth.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -202,16 +203,27 @@ loadHeader("home", { enabledTabs: {} });
 
 /* =========================
    Auto-login ?google=1
+   Handle redirect FIRST, then optional auto-login
 ========================= */
 (async () => {
+  // 1) procesar el resultado si venimos de Google
+  await handleGoogleRedirectResult();
+
+  // 2) si ya hay usuario, NO volver a redirigir
+  if (auth.currentUser) {
+    // opcional: limpiar query ?google=1 para no re-trigger
+    const url = new URL(location.href);
+    if (url.searchParams.get("google") === "1") {
+      url.searchParams.delete("google");
+      history.replaceState({}, "", url.toString());
+    }
+    return;
+  }
+
+  // 3) auto-login solo si realmente no hay sesión
   const params = new URLSearchParams(location.search);
   if (params.get("google") === "1") {
-    try {
-      await loginWithGoogle();
-    } catch (e) {
-      console.warn(e);
-      showAlert("No se pudo iniciar sesión con Google. Intenta de nuevo.");
-    }
+    await loginWithGoogle();
   }
 })();
 
@@ -221,16 +233,10 @@ loadHeader("home", { enabledTabs: {} });
 $.googleBtn?.addEventListener("click", async () => {
   hideAlert();
   try {
-    const u = await loginWithGoogle();
-
-    // Si ya tiene rol activo, no debería estar registrándose aquí:
-    if (u?.uid && (await hasActiveRole(u.uid))) {
-      window.location.replace("../dashboard.html");
-      return;
-    }
+    await loginWithGoogle(); // solo dispara el redirect
   } catch (e) {
     console.warn(e);
-    showAlert(e);
+    showAlert("Error al iniciar sesión con Google.");
   }
 });
 
