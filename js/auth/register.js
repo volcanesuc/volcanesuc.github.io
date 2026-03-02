@@ -107,6 +107,62 @@ const $ = {
   termsLink: document.getElementById("termsLink"),
 };
 
+let PUBLIC_CFG = { enableMembershipPayment: true, requireTerms: false, requireInfoDeclaration: false };
+
+function isVisible(el) {
+  if (!el) return false;
+  // visible en DOM + no oculto por d-none + no hidden + no display none
+  if (el.classList?.contains("d-none")) return false;
+  if (el.hidden) return false;
+  return !!(el.offsetParent || el.getClientRects().length);
+}
+
+function hasValue(el) {
+  if (!el) return false;
+  if (el.type === "checkbox") return !!el.checked;
+  if (el.type === "file") return (el.files?.length || 0) > 0;
+  return String(el.value || "").trim().length > 0;
+}
+
+function setSubmitEnabled(enabled) {
+  if (!$.submitBtn) return;
+  $.submitBtn.disabled = !enabled;
+  $.submitBtn.classList.toggle("disabled", !enabled); // opcional (Bootstrap style)
+}
+
+function computeFormComplete() {
+  // básicos siempre
+  const requiredEls = [
+    $.firstName,
+    $.lastName,
+    $.birthDate,
+    $.idType,
+    $.idNumber,
+    $.email,
+    $.province,
+    $.canton,
+  ];
+
+  // por config: consentimientos
+  if (PUBLIC_CFG.requireInfoDeclaration) requiredEls.push($.infoDeclaration);
+  if (PUBLIC_CFG.requireTerms) requiredEls.push($.termsAccepted);
+
+  // por config: pago
+  if (PUBLIC_CFG.enableMembershipPayment) {
+    requiredEls.push($.planId, $.proofFile);
+  }
+
+  // Solo consideramos los elementos visibles
+  return requiredEls
+    .filter((el) => isVisible(el))
+    .every((el) => hasValue(el));
+}
+
+function updateSubmitState() {
+  const ok = computeFormComplete();
+  setSubmitEnabled(ok);
+}
+
 /* =========================
    Helpers
 ========================= */
@@ -484,7 +540,8 @@ async function loadPublicRegConfig() {
     }
   }
 
-  // si en algún momento metés clubId en cfg, lo devolvemos (pero NO sobreescribimos el const CLUB_ID)
+  PUBLIC_CFG = { enableMembershipPayment, requireTerms, requireInfoDeclaration };
+
   return { requireInfoDeclaration, requireTerms, termsUrl, enableMembershipPayment, clubId: cfg.clubId || cfg.club?.id || null };
 }
 
@@ -847,6 +904,7 @@ async function init() {
     if (!cfg.enableMembershipPayment) {
       const sec = document.getElementById("paymentSection");
       if (sec) sec.classList.add("d-none");
+      updateSubmitState();
     }
 
   } catch (e) {
@@ -855,6 +913,7 @@ async function init() {
   } finally {
     hideLoader();
     releaseUI();
+    updateSubmitState();
     document.body.classList.remove("loading");
   }
 }
@@ -1080,3 +1139,25 @@ $.form?.addEventListener("submit", async (ev) => {
     hideLoader();
   }
 });
+
+function wireUpFormCompleteness() {
+  const els = [
+    $.firstName, $.lastName, $.birthDate, $.idType, $.idNumber, $.email,
+    $.province, $.canton, $.planId, $.proofFile,
+    $.infoDeclaration, $.termsAccepted,
+  ].filter(Boolean);
+
+  // input para texto, change para selects/checkbox/file
+  els.forEach((el) => {
+    el.addEventListener("input", updateSubmitState);
+    el.addEventListener("change", updateSubmitState);
+  });
+
+  // cuando cambia provincia, se repuebla cantón → recalculamos
+  $.province?.addEventListener("change", () => setTimeout(updateSubmitState, 0));
+
+  // estado inicial
+  updateSubmitState();
+}
+
+wireUpFormCompleteness();
