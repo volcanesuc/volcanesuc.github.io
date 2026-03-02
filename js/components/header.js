@@ -140,17 +140,6 @@ export async function loadHeader(activeTab, cfgOverride) {
     initialMcta.innerHTML = `<div class="spinner-border spinner-border-sm" role="status"></div>`;
   }
 
-  // =====================================================
-  // ✅ IMPORTANT: consume redirect result ONCE before auth UI
-  // (si venía del login redirect, esta función puede rutear)
-  // =====================================================
-  try {
-    await handleGoogleRedirectResult();
-  } catch (e) {
-    console.error("[header] handleGoogleRedirectResult error:", e);
-    // no bloqueamos el header
-  }
-
   onAuthStateChanged(auth, async (user) => {
     const cta = document.getElementById("headerCta");
     const mcta = document.getElementById("mobileCta");

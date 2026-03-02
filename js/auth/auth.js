@@ -29,7 +29,7 @@ const STORAGE_KEY = "google_login_paths";
 ========================================================= */
 export async function loginWithGoogle(opts = {}) {
   const dashboardPath = opts.dashboardPath ?? "dashboard.html";
-  const registerPath = opts.registerPath ?? "public/register.html?google=1";
+  const registerPath = opts.registerPath ?? "public/register.html";
 
   try {
     // guardá paths para usarlos cuando regrese del redirect

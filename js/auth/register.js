@@ -206,24 +206,13 @@ loadHeader("home", { enabledTabs: {} });
    Handle redirect FIRST, then optional auto-login
 ========================= */
 (async () => {
-  // 1) procesar el resultado si venimos de Google
   await handleGoogleRedirectResult();
 
-  // 2) si ya hay usuario, NO volver a redirigir
-  if (auth.currentUser) {
-    // opcional: limpiar query ?google=1 para no re-trigger
-    const url = new URL(location.href);
-    if (url.searchParams.get("google") === "1") {
-      url.searchParams.delete("google");
-      history.replaceState({}, "", url.toString());
-    }
-    return;
-  }
-
-  // 3) auto-login solo si realmente no hay sesión
-  const params = new URLSearchParams(location.search);
-  if (params.get("google") === "1") {
-    await loginWithGoogle();
+  // opcional: limpiar cualquier google=1 viejo
+  const url = new URL(location.href);
+  if (url.searchParams.get("google") === "1") {
+    url.searchParams.delete("google");
+    history.replaceState({}, "", url.toString());
   }
 })();
 
