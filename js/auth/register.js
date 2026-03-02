@@ -1,9 +1,8 @@
-// js/public/register.js
+// /js/public/register.js
 import { db, auth, storage } from "./firebase.js";
-import { loginWithGoogle, logout } from "./auth.js";
+import { loginWithGoogle, logout, handleGoogleRedirectResult } from "./auth.js";
 import { loadHeader } from "../components/header.js";
 import { APP_CONFIG } from "../config/config.js";
-import { handleGoogleRedirectResult } from "./auth.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -32,7 +31,7 @@ import {
 ========================= */
 const CLUB_ID = APP_CONFIG?.clubId || APP_CONFIG?.club?.id || "volcanes";
 
-const COL_PLANS = "subscription_plans"; // (tus planes actuales)
+const COL_PLANS = "subscription_plans";
 const COL_ASSOC = "associates";
 const COL_PLAYERS = "club_players";
 const COL_MEMBERSHIPS = "memberships";
@@ -120,7 +119,6 @@ function fmtMoney(n, cur = "CRC") {
 }
 
 function makePayCode(len = 6) {
-  // parecido a lo que ya usas (QEQHH5X)
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";
   for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
@@ -128,38 +126,86 @@ function makePayCode(len = 6) {
 }
 
 function safeSeasonFromToday() {
-  // simple: usa año actual local del navegador
   return String(new Date().getFullYear());
 }
 
 /* =========================
-   Role / Access helpers
+   Debug helpers
+========================= */
+function firebaseErrMsg(e) {
+  const code = e?.code ? String(e.code) : "";
+  if (code.includes("permission-denied")) return "Permisos insuficientes (rules).";
+  if (code.includes("unauthenticated")) return "No hay sesión (login) activa.";
+  if (code.includes("failed-precondition")) return "Falta un índice o precondición en Firestore.";
+  return e?.message ? e.message : "Error desconocido.";
+}
+
+async function step(name, fn) {
+  try {
+    const r = await fn();
+    console.log(`✅ ${name}`);
+    return r;
+  } catch (e) {
+    console.error(`❌ ${name}`, e);
+    throw new Error(`${name}: ${firebaseErrMsg(e)}`);
+  }
+}
+
+/* =========================
+   Role / Access helpers (safe)
 ========================= */
 async function hasActiveRole(uid) {
-  const roleRef = doc(db, "user_roles", uid);
-  const snap = await getDoc(roleRef);
-  if (!snap.exists()) return false;
-  const r = snap.data();
-  return r?.active === true && r?.clubId === CLUB_ID;
+  try {
+    const roleRef = doc(db, "user_roles", uid);
+    const snap = await getDoc(roleRef);
+    if (!snap.exists()) return false;
+    const r = snap.data();
+    return r?.active === true && r?.clubId === CLUB_ID;
+  } catch (e) {
+    // si rules bloquean, NO dejamos negro; solo asumimos "no tiene rol"
+    console.warn("hasActiveRole failed:", e);
+    return false;
+  }
 }
 
 async function ensureRole(uid) {
-  const roleRef = doc(db, "user_roles", uid);
-  const snap = await getDoc(roleRef);
-  if (snap.exists()) return;
+  try {
+    const roleRef = doc(db, "user_roles", uid);
+    const snap = await getDoc(roleRef);
+    if (snap.exists()) return;
 
-  await setDoc( roleRef,
-    {
+    await setDoc(roleRef, {
       clubId: CLUB_ID,
       role: "viewer",
       active: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+  } catch (e) {
+    console.warn("ensureRole failed:", e);
+  }
 }
 
 /* =========================
-   Costa Rica: Provincia/Cantón (mínimo viable)
+   Ensure users/{uid} exists (new Google users)
+========================= */
+async function ensureUserDoc(uid, email) {
+  const uref = doc(db, "users", uid);
+  const usnap = await getDoc(uref).catch(() => null);
+
+  const payload = {
+    clubId: CLUB_ID,
+    email: email || null,
+    updatedAt: serverTimestamp(),
+  };
+  if (!usnap?.exists?.()) payload.createdAt = serverTimestamp();
+
+  // merge para no pisar cosas
+  await setDoc(uref, payload, { merge: true });
+}
+
+/* =========================
+   Costa Rica: Provincia/Cantón
 ========================= */
 const CR = {
   "San José": ["San José", "Escazú", "Desamparados", "Goicoechea", "Santa Ana", "Curridabat"],
@@ -199,18 +245,26 @@ function fillProvinceCanton() {
 loadHeader("home", { enabledTabs: {} });
 
 /* =========================
-   Auto-login ?google=1
-   Handle redirect FIRST, then optional auto-login
+   Redirect handling (SAFE)
+   Handle redirect FIRST
 ========================= */
 (async () => {
-  await handleGoogleRedirectResult();
-
-  // opcional: limpiar cualquier google=1 viejo
-  const url = new URL(location.href);
-  if (url.searchParams.get("google") === "1") {
-    url.searchParams.delete("google");
-    history.replaceState({}, "", url.toString());
+  try {
+    // Esto puede lanzar si hay errores de redirect / session, etc.
+    await handleGoogleRedirectResult();
+  } catch (e) {
+    console.warn("handleGoogleRedirectResult failed:", e);
+    // No rompemos el resto del script
   }
+
+  // limpiar cualquier google=1 viejo
+  try {
+    const url = new URL(location.href);
+    if (url.searchParams.get("google") === "1") {
+      url.searchParams.delete("google");
+      history.replaceState({}, "", url.toString());
+    }
+  } catch (_) {}
 })();
 
 /* =========================
@@ -219,30 +273,49 @@ loadHeader("home", { enabledTabs: {} });
 $.googleBtn?.addEventListener("click", async () => {
   hideAlert();
   try {
-    await loginWithGoogle(); // solo dispara el redirect
+    // loginWithGoogle dispara redirect
+    setLoading(true);
+    await loginWithGoogle();
   } catch (e) {
     console.warn(e);
     showAlert("Error al iniciar sesión con Google.");
+    setLoading(false);
   }
 });
 
 $.logoutBtn?.addEventListener("click", async () => {
-  await logout();
+  try {
+    setLoading(true);
+    await logout();
+  } finally {
+    setLoading(false);
+  }
 });
 
+// IMPORTANT: no más “pantalla negra” por errores aquí
 onAuthStateChanged(auth, async (user) => {
-  if (user?.uid && (await hasActiveRole(user.uid))) {
-    window.location.replace("../dashboard.html");
-    return;
-  }
+  setLoading(true);
+  try {
+    // si ya tiene rol activo -> dashboard
+    if (user?.uid && (await hasActiveRole(user.uid))) {
+      window.location.replace("../dashboard.html");
+      return;
+    }
 
-  if (user?.email && $.email) {
-    $.email.value = user.email;
-    $.email.readOnly = true;
-    $.logoutBtn?.classList.remove("d-none");
-  } else {
-    if ($.email) $.email.readOnly = false;
-    $.logoutBtn?.classList.add("d-none");
+    // prefill email
+    if (user?.email && $.email) {
+      $.email.value = user.email;
+      $.email.readOnly = true;
+      $.logoutBtn?.classList.remove("d-none");
+    } else {
+      if ($.email) $.email.readOnly = false;
+      $.logoutBtn?.classList.add("d-none");
+    }
+  } catch (e) {
+    console.warn("onAuthStateChanged handler failed:", e);
+    // seguimos igual, solo evitamos crash
+  } finally {
+    setLoading(false);
   }
 });
 
@@ -280,7 +353,8 @@ async function loadPublicRegConfig() {
     }
   }
 
-  return { requireInfoDeclaration, requireTerms, termsUrl };
+  // si en algún momento metés clubId en cfg, lo devolvemos (pero NO sobreescribimos el const CLUB_ID)
+  return { requireInfoDeclaration, requireTerms, termsUrl, clubId: cfg.clubId || cfg.club?.id || null };
 }
 
 /* =========================
@@ -289,7 +363,6 @@ async function loadPublicRegConfig() {
 let plansById = new Map();
 
 function planAmount(plan) {
-  // soporta ambos: amount o totalAmount
   const a = plan?.totalAmount ?? plan?.amount ?? null;
   return a === null || a === undefined ? null : Number(a);
 }
@@ -334,10 +407,8 @@ $.planId?.addEventListener("change", () => {
 });
 
 /* =========================
-   Identity linking (Associate <-> Player <-> UserRoles)
+   Identity linking (Associate <-> Player)
 ========================= */
-
-// 2) upsert associate by uid or email
 async function upsertAssociate({
   uid,
   email,
@@ -354,14 +425,12 @@ async function upsertAssociate({
 
   let assocId = null;
 
-  // a) match by uid (más fuerte)
   if (uid) {
     const qUid = query(collection(db, COL_ASSOC), where("uid", "==", uid), limit(1));
     const sUid = await getDocs(qUid);
     sUid.forEach((d) => (assocId = d.id));
   }
 
-  // b) match by email
   if (!assocId && email) {
     const qEmail = query(collection(db, COL_ASSOC), where("email", "==", email), limit(1));
     const sEmail = await getDocs(qEmail);
@@ -377,7 +446,6 @@ async function upsertAssociate({
     idNumber: idNumber || null,
 
     uid: uid || null,
-    // nuevo: puntero directo (si linkeamos player)
     playerId: null,
 
     profile: {
@@ -412,9 +480,7 @@ async function upsertAssociate({
   return { assocId, associateSnapshot };
 }
 
-// 3) try link to existing club_player (email/uid/name+birthday). If ambiguous, do nothing.
 async function findPlayerToLink({ uid, email, firstName, lastName, birthDate }) {
-  // by uid
   if (uid) {
     const q1 = query(collection(db, COL_PLAYERS), where("uid", "==", uid), limit(1));
     const s1 = await getDocs(q1);
@@ -423,7 +489,6 @@ async function findPlayerToLink({ uid, email, firstName, lastName, birthDate }) 
     if (found) return found;
   }
 
-  // by email
   if (email) {
     const q2 = query(collection(db, COL_PLAYERS), where("email", "==", email), limit(1));
     const s2 = await getDocs(q2);
@@ -432,7 +497,6 @@ async function findPlayerToLink({ uid, email, firstName, lastName, birthDate }) 
     if (found) return found;
   }
 
-  // by name + birthday (unique) — sin índice compuesto:
   if (firstName && lastName && birthDate) {
     const qb = query(collection(db, COL_PLAYERS), where("birthday", "==", birthDate), limit(25));
     const sb = await getDocs(qb);
@@ -454,7 +518,6 @@ async function findPlayerToLink({ uid, email, firstName, lastName, birthDate }) 
   return null;
 }
 
-// 4) upsert player: if found, link. if not found, create minimal player and link.
 async function ensureLinkedPlayer({ assocId, uid, email, firstName, lastName, birthDate }) {
   let player = await findPlayerToLink({ uid, email, firstName, lastName, birthDate });
 
@@ -464,7 +527,6 @@ async function ensureLinkedPlayer({ assocId, uid, email, firstName, lastName, bi
     lastName: lastName || null,
     birthday: birthDate || null,
 
-    // nuevos links
     associateId: assocId,
     uid: uid || null,
     email: email || null,
@@ -483,7 +545,7 @@ async function ensureLinkedPlayer({ assocId, uid, email, firstName, lastName, bi
 }
 
 /* =========================
-   Membership builders (align to your schema)
+   Membership builders
 ========================= */
 function buildPlanSnapshot(plan) {
   return {
@@ -538,7 +600,6 @@ async function createMembership({ assocId, associateSnapshot, plan, season, cons
   return { membershipId: ref.id, payCode };
 }
 
-// si plan.installmentsCount > 1 => crea cuotas iguales y devuelve ids
 async function maybeCreateInstallments({ membershipId, plan, season }) {
   const count = Number(plan.installmentsCount || 0);
   if (!count || count < 2) return { installmentIds: [] };
@@ -612,7 +673,7 @@ async function uploadProofFile({ uid, assocId, file }) {
 }
 
 /* =========================
-   Fill info from Google (prefill)
+   Prefill from session
 ========================= */
 function applyPrefillFromSession() {
   try {
@@ -662,28 +723,6 @@ async function init() {
 init();
 
 /* =========================
-   Debug helpers
-========================= */
-function firebaseErrMsg(e) {
-  const code = e?.code ? String(e.code) : "";
-  if (code.includes("permission-denied")) return "Permisos insuficientes (rules).";
-  if (code.includes("unauthenticated")) return "No hay sesión (login) activa.";
-  if (code.includes("failed-precondition")) return "Falta un índice o precondición en Firestore.";
-  return e?.message ? e.message : "Error desconocido.";
-}
-
-async function step(name, fn) {
-  try {
-    const r = await fn();
-    console.log(`✅ ${name}`);
-    return r;
-  } catch (e) {
-    console.error(`❌ ${name}`, e);
-    throw new Error(`${name}: ${firebaseErrMsg(e)}`);
-  }
-}
-
-/* =========================
    Submit
 ========================= */
 $.form?.addEventListener("submit", async (ev) => {
@@ -692,7 +731,6 @@ $.form?.addEventListener("submit", async (ev) => {
 
   const user = auth.currentUser;
 
-  // registro público requiere estar logueado
   if (!user?.uid) {
     showAlert("Primero ingresa con Google para completar el registro.");
     return;
@@ -724,17 +762,18 @@ $.form?.addEventListener("submit", async (ev) => {
 
   const file = $.proofFile?.files?.[0] || null;
 
-  const payerName =
-    norm($.payerName?.value) || `${firstName} ${lastName}`.trim();
-
+  const payerName = norm($.payerName?.value) || `${firstName} ${lastName}`.trim();
   const method = normLower($.payMethod?.value) || "sinpe";
 
   // enforce config
-  const cfg = await loadPublicRegConfig();
-
-  // ✅ clubId source of truth: config si viene, si no fallback
-  const CLUB_ID =
-    cfg?.clubId || cfg?.club?.id || APP_CONFIG?.clubId || APP_CONFIG?.club?.id || "volcanes";
+  let cfg;
+  try {
+    cfg = await loadPublicRegConfig();
+  } catch (e) {
+    console.warn(e);
+    showAlert("No se pudo cargar la configuración. Refresca la página.");
+    return;
+  }
 
   // Validate basics
   if (!firstName || !lastName || !birthDate || !idType || !idNumber || !email) {
@@ -773,8 +812,10 @@ $.form?.addEventListener("submit", async (ev) => {
 
   setLoading(true);
   try {
-    // 0) sanity: uid siempre
     if (!uid) throw new Error("No hay uid (login incompleto).");
+
+    // ✅ usuarios nuevos: garantizamos users/{uid} para que nada reviente después
+    await step("Ensure users/{uid}", () => ensureUserDoc(uid, email));
 
     const { assocId, associateSnapshot } = await step("Upsert associate", () =>
       upsertAssociate({
@@ -819,7 +860,6 @@ $.form?.addEventListener("submit", async (ev) => {
       })
     );
 
-    // opcional: si querés crear installments según plan:
     await step("Maybe create installments", () =>
       maybeCreateInstallments({ membershipId, plan: { id: planId, ...plan }, season })
     );
@@ -856,21 +896,17 @@ $.form?.addEventListener("submit", async (ev) => {
       })
     );
 
-    // ✅ ÚNICO FLAG: onboardingComplete
     await step("Mark onboarding complete (users/{uid})", async () => {
       const uref = doc(db, "users", uid);
-      const usnap = await getDoc(uref);
-
       const payload = {
         clubId: CLUB_ID,
         email: email || auth.currentUser?.email || null,
 
-        onboardingComplete: true, // 🔥 aquí
+        onboardingComplete: true,
 
         associateId: assocId,
         playerId: playerId || null,
 
-        // si querés guardar también lo mínimo del perfil:
         firstName: firstName || null,
         lastName: lastName || null,
         birthDate: birthDate || null,
@@ -878,19 +914,14 @@ $.form?.addEventListener("submit", async (ev) => {
 
         updatedAt: serverTimestamp(),
       };
-
-      if (!usnap.exists()) payload.createdAt = serverTimestamp();
-
       return setDoc(uref, payload, { merge: true });
     });
 
-    // role (si tu modelo requiere rol para entrar al dashboard)
     await step("Ensure access role (user_roles/{uid})", () => ensureRole(uid));
 
-    // limpieza opcional
     sessionStorage.removeItem("prefill_register");
 
-    // dashboard (desde /public/)
+    // desde /public/
     window.location.replace("../dashboard.html");
     return;
   } catch (e) {
