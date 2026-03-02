@@ -11,6 +11,20 @@
     html.preload #volcanesLoadingOverlay { visibility: visible; }
   </style>
   <script src="/js/ui/loader.preload.js"></script>
+  <script>
+  // Failsafe: si el preload script no quita "preload", lo quitamos igual.
+  setTimeout(() => document.documentElement.classList.remove("preload"), 1500);
+
+  // Si algo explota antes de que tu JS corra, no dejamos el body oculto/negro.
+  window.addEventListener("error", () => {
+    document.documentElement.classList.remove("preload");
+    document.body.classList.remove("loading");
+  });
+  window.addEventListener("unhandledrejection", () => {
+    document.documentElement.classList.remove("preload");
+    document.body.classList.remove("loading");
+  });
+</script>
 
   <base href="/" />
 

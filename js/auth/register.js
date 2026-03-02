@@ -1,4 +1,4 @@
-// /js/public/register.js
+// //js\auth\register.js
 import { db, auth, storage } from "./firebase.js";
 import { loginWithGoogle, logout, handleGoogleRedirectResult } from "./auth.js";
 import { loadHeader } from "../components/header.js";
@@ -25,6 +25,33 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+function releaseUI() {
+  document.documentElement.classList.remove("preload");
+  document.body.classList.remove("loading");
+}
+
+releaseUI(); // ✅ apenas carga el módulo, mostramos la página
+
+const url = new URL(location.href);
+const created = url.searchParams.get("created"); // "0" o "1" o null
+
+if (created === "0") {
+  // No hagás nada especial, pero asegurá UI visible.
+  releaseUI();
+}
+
+if (created === "1") {
+  // si querés: showAlert("Cuenta creada. Completá el formulario para terminar.", "success");
+  releaseUI();
+}
+
+// ✅ si algo se queda colgado o tarda, igual mostramos la UI
+setTimeout(releaseUI, 2000);
+
+// ✅ si pasa algo raro en runtime, no quedamos pegados
+window.addEventListener("error", releaseUI);
+window.addEventListener("unhandledrejection", releaseUI);
 
 /* =========================
    Config / Collections
@@ -250,14 +277,19 @@ loadHeader("home", { enabledTabs: {} });
 ========================= */
 (async () => {
   try {
-    // Esto puede lanzar si hay errores de redirect / session, etc.
+    // si querés loader mientras procesa redirect:
+    // setLoading(true);
+
     await handleGoogleRedirectResult();
   } catch (e) {
     console.warn("handleGoogleRedirectResult failed:", e);
-    // No rompemos el resto del script
+  } finally {
+    // ✅ pase lo que pase, no quedamos negros
+    releaseUI();
+    setLoading(false);
   }
 
-  // limpiar cualquier google=1 viejo
+  // limpiar google=1 (si lo usás)
   try {
     const url = new URL(location.href);
     if (url.searchParams.get("google") === "1") {
@@ -316,6 +348,7 @@ onAuthStateChanged(auth, async (user) => {
     // seguimos igual, solo evitamos crash
   } finally {
     setLoading(false);
+    releaseUI(); 
   }
 });
 
@@ -716,6 +749,7 @@ async function init() {
     showAlert("No se pudo cargar la configuración. Refresca la página.");
   } finally {
     setLoading(false);
+    releaseUI();
     document.body.classList.remove("loading");
   }
 }
