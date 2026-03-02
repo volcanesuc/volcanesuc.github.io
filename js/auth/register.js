@@ -363,6 +363,8 @@ async function loadPublicRegConfig() {
   const requireInfoDeclaration = cfg.requireInfoDeclaration === true;
   const infoDeclarationText = cfg.infoDeclarationText || null;
 
+  const enableMembershipPayment = cfg.enableMembershipPayment !== false;
+
   const requireTerms = cfg.requireTerms === true;
   const termsUrl = cfg.termsUrl || null;
 
@@ -388,7 +390,7 @@ async function loadPublicRegConfig() {
   }
 
   // si en algún momento metés clubId en cfg, lo devolvemos (pero NO sobreescribimos el const CLUB_ID)
-  return { requireInfoDeclaration, requireTerms, termsUrl, clubId: cfg.clubId || cfg.club?.id || null };
+  return { requireInfoDeclaration, requireTerms, termsUrl, enableMembershipPayment, clubId: cfg.clubId || cfg.club?.id || null };
 }
 
 /* =========================
@@ -744,7 +746,14 @@ async function init() {
   try {
     fillProvinceCanton();
     await loadPlans();
-    await loadPublicRegConfig();
+
+    const cfg = await loadPublicRegConfig(); // 👈 AQUÍ
+
+    if (!cfg.enableMembershipPayment) {
+      const sec = document.getElementById("paymentSection");
+      if (sec) sec.classList.add("d-none");
+    }
+
   } catch (e) {
     console.warn(e);
     showAlert("No se pudo cargar la configuración. Refresca la página.");
@@ -819,14 +828,20 @@ $.form?.addEventListener("submit", async (ev) => {
     showAlert("Selecciona provincia y cantón.");
     return;
   }
-  if (!planId || !plan) {
-    showAlert("Selecciona un plan de pago válido.");
-    return;
+
+  //Validate if payments is enabled or not
+  const paymentsEnabled = !!cfg.enableMembershipPayment;
+  if (paymentsEnabled) {
+    if (!planId || !plan) {
+      showAlert("Selecciona un plan de pago válido.");
+      return;
+    }
+    if (!file) {
+      showAlert("Adjunta el comprobante de pago.");
+      return;
+    }
   }
-  if (!file) {
-    showAlert("Adjunta el comprobante de pago.");
-    return;
-  }
+
   if (cfg.requireInfoDeclaration && !$.infoDeclaration?.checked) {
     showAlert("Debes aceptar la declaración de veracidad/uso de información.");
     return;
@@ -879,57 +894,61 @@ $.form?.addEventListener("submit", async (ev) => {
       )
     );
 
-    const proof = await step("Upload proof (Storage)", () =>
-      uploadProofFile({ uid, assocId, file })
-    );
+    const paymentsEnabled = !!cfg.enableMembershipPayment;
+    if (paymentsEnabled) {
 
-    const season = plan.season || safeSeasonFromToday();
+        const proof = await step("Upload proof (Storage)", () =>
+          uploadProofFile({ uid, assocId, file })
+        );
 
-    const { membershipId } = await step("Create membership", () =>
-      createMembership({
-        assocId,
-        associateSnapshot,
-        plan: { id: planId, ...plan },
-        season,
-        consents,
-      })
-    );
+        const season = plan.season || safeSeasonFromToday();
 
-    await step("Maybe create installments", () =>
-      maybeCreateInstallments({ membershipId, plan: { id: planId, ...plan }, season })
-    );
+        const { membershipId } = await step("Create membership", () =>
+          createMembership({
+            assocId,
+            associateSnapshot,
+            plan: { id: planId, ...plan },
+            season,
+            consents,
+          })
+        );
 
-    await step("Create payment submission", () =>
-      addDoc(collection(db, COL_SUBMISSIONS), {
-        adminNote: null,
-        note: null,
+        await step("Maybe create installments", () =>
+          maybeCreateInstallments({ membershipId, plan: { id: planId, ...plan }, season })
+        );
 
-        amountReported: planAmount(plan),
-        currency: plan.currency || "CRC",
+        await step("Create payment submission", () =>
+          addDoc(collection(db, COL_SUBMISSIONS), {
+            adminNote: null,
+            note: null,
 
-        email,
-        payerName: payerName || null,
-        phone: phone || null,
-        method: method || "sinpe",
+            amountReported: planAmount(plan),
+            currency: plan.currency || "CRC",
 
-        filePath: proof.filePath,
-        fileType: proof.fileType,
-        fileUrl: proof.fileUrl,
+            email,
+            payerName: payerName || null,
+            phone: phone || null,
+            method: method || "sinpe",
 
-        installmentId: null,
-        selectedInstallmentIds: [],
+            filePath: proof.filePath,
+            fileType: proof.fileType,
+            fileUrl: proof.fileUrl,
 
-        membershipId,
-        planId,
-        season,
+            installmentId: null,
+            selectedInstallmentIds: [],
 
-        status: "pending",
-        userId: uid,
+            membershipId,
+            planId,
+            season,
 
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
-    );
+            status: "pending",
+            userId: uid,
+
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          })
+        );
+    }
 
     await step("Mark onboarding complete (users/{uid})", async () => {
       const uref = doc(db, "users", uid);

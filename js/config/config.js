@@ -1,3 +1,5 @@
+//js\config\config.js
+// 
 export const APP_CONFIG = {
   version: "0.3",
 
