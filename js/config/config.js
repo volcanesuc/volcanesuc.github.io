@@ -36,7 +36,7 @@ export const APP_CONFIG = {
   // Firebase (centralizado)
   firebase: {
     apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
-    authDomain: "rifavolcanes.firebaseapp.com",
+    authDomain: "auth.volcanes.clubstudiohq.com",
     projectId: "rifavolcanes",
     storageBucket: "rifavolcanes.firebasestorage.app",
     messagingSenderId: "991215068881",
