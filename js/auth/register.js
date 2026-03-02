@@ -148,17 +148,14 @@ async function ensureRole(uid) {
   const snap = await getDoc(roleRef);
   if (snap.exists()) return;
 
-  await setDoc(
-    roleRef,
+  await setDoc( roleRef,
     {
       clubId: CLUB_ID,
       role: "viewer",
       active: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
+    });
 }
 
 /* =========================
