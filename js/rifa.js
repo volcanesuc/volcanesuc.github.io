@@ -1,3 +1,4 @@
+js\rifa.js
 import { initializeApp } from
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 
@@ -15,6 +16,9 @@ import { showLoader, hideLoader } from "./ui/loader.js";
 showLoader();
 
 let loaderHidden = false;
+const RAFFLE_ID = "raffle_march";
+const NUMBERS_COL_PATH = `raffles/${RAFFLE_ID}/numbers`;
+const TOTAL_NUMBERS = 100;
 
 const firebaseConfig = {
   apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
@@ -22,7 +26,7 @@ const firebaseConfig = {
   projectId: "rifavolcanes",
 };
 
-const ADMIN_PASSWORD = "admin123";
+const ADMIN_PASSWORD = "sub20.";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -85,7 +89,7 @@ loginBtn.onclick = () => {
   });
 };
 
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < TOTAL_NUMBERS; i++) {
   const btn = document.createElement("button");
   btn.className = "number btn btn-outline-secondary w-100 disabled";
   btn.innerText = i;
@@ -98,7 +102,7 @@ for (let i = 0; i < 100; i++) {
     if (!nombre) return;
 
     await setDoc(
-      doc(db, "rifa", i.toString()),
+      doc(db, NUMBERS_COL_PATH, i.toString()),
       { vendido: true, nombre },
       { merge: true }
     );
@@ -110,7 +114,7 @@ for (let i = 0; i < 100; i++) {
 
   estadoNumeros[i] = { vendido: false, nombre: "", btn };
 
-  onSnapshot(doc(db, "rifa", i.toString()), (snap) => {
+  onSnapshot(doc(db, NUMBERS_COL_PATH, i.toString()), (snap) => {
     let vendido = false;
     let nombre = "";
 
