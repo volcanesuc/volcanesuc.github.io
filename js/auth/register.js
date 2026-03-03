@@ -253,21 +253,23 @@ async function hasActiveRole(uid) {
 }
 
 async function ensureRole(uid) {
-  try {
-    const roleRef = doc(db, "user_roles", uid);
-    const snap = await getDoc(roleRef);
-    if (snap.exists()) return;
+  const ref = doc(db, "user_roles", uid);
+  const snap = await getDoc(ref);
 
-    await setDoc(roleRef, {
-      clubId: CLUB_ID,
-      role: "viewer",
-      active: true,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  } catch (e) {
-    console.warn("ensureRole failed:", e);
-  }
+  // si ya existe, no lo tocamos (evita “intentos de upgrade” o conflictos)
+  if (snap.exists()) return snap.data();
+
+  // crear SOLO viewer activo (compatible con tus rules)
+  const payload = {
+    clubId: String(CLUB_ID || "default"),
+    role: "viewer",
+    active: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  await setDoc(ref, payload, { merge: false });
+  return payload;
 }
 
 /* =========================
