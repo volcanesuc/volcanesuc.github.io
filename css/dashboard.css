@@ -796,6 +796,13 @@ mark.search-hit {
   border-color: var(--club-green);
 }
 
+/* Rutina: lista de ejercicios dentro del modal */
+#gymRoutineModal #grItems {
+  max-height: 50vh;   /* ajustable */
+  overflow: auto;
+  padding-right: .25rem; /* evita que el scroll tape inputs */
+}
+
 /* ======================================================
    RESPONSIVE (HOME + attendance)
 ====================================================== */

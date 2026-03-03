@@ -614,11 +614,57 @@ function addRoutineItemRow(existing) {
   const row = $.grItems.querySelector(`[data-ri-row="${rowId}"]`);
   if (!row) return;
 
-  if (existing?.exerciseId) row.querySelector("[data-ri-ex]").value = existing.exerciseId;
-  if (existing?.sets !== null && existing?.sets !== undefined) row.querySelector("[data-ri-sets]").value = existing.sets;
-  if (existing?.reps !== null && existing?.reps !== undefined) row.querySelector("[data-ri-reps]").value = String(existing.reps);
-  if (existing?.restSec !== null && existing?.restSec !== undefined) row.querySelector("[data-ri-rest]").value = existing.restSec;
-  if (existing?.notes) row.querySelector("[data-ri-notes]").value = existing.notes;
+  const exSelect = row.querySelector("[data-ri-ex]");
+  const setsEl   = row.querySelector("[data-ri-sets]");
+  const repsEl   = row.querySelector("[data-ri-reps]");
+  const restEl   = row.querySelector("[data-ri-rest]");
+  const notesEl  = row.querySelector("[data-ri-notes]");
+
+  function applyExerciseDefaults(exerciseId, { force = false } = {}) {
+    const ex = _exercisesCache.find(x => x.id === exerciseId);
+    if (!ex) return;
+
+    // Solo llenamos si está vacío, a menos que force=true
+    if (setsEl && (force || !trim(setsEl.value))) {
+      setsEl.value = ex.sets ?? "";
+      setsEl.placeholder = ex.sets ? String(ex.sets) : "(default)";
+    }
+
+    if (repsEl && (force || !trim(repsEl.value))) {
+      repsEl.value = ex.reps ?? "";
+      repsEl.placeholder = ex.reps ? String(ex.reps) : "(default)";
+    }
+
+    if (restEl && (force || !trim(restEl.value))) {
+      restEl.value = ex.restSec ?? "";
+      restEl.placeholder = (ex.restSec !== null && ex.restSec !== undefined)
+        ? String(ex.restSec)
+        : "(default)";
+    }
+
+    if (notesEl && (force || !trim(notesEl.value))) {
+      notesEl.value = ex.notes ?? "";
+      notesEl.placeholder = ex.notes ? String(ex.notes) : "(default)";
+    }
+  }
+
+  // Cuando cambia el ejercicio, aplicamos defaults (sin pisar overrides)
+  exSelect?.addEventListener("change", () => {
+    applyExerciseDefaults(exSelect.value, { force: false });
+  });
+
+    if (existing?.exerciseId) {
+    exSelect.value = existing.exerciseId;
+
+    // 1) primero defaults del ejercicio
+    applyExerciseDefaults(existing.exerciseId, { force: true });
+
+    // 2) luego overrides guardados (si existen)
+    if (existing?.sets !== null && existing?.sets !== undefined) setsEl.value = existing.sets;
+    if (existing?.reps !== null && existing?.reps !== undefined) repsEl.value = String(existing.reps);
+    if (existing?.restSec !== null && existing?.restSec !== undefined) restEl.value = existing.restSec;
+    if (existing?.notes) notesEl.value = existing.notes;
+  }
 
   row.querySelector("[data-ri-del]").addEventListener("click", () => {
     row.remove();
