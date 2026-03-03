@@ -323,7 +323,7 @@ function renderPlayers(list) {
     playersTable.innerHTML = list
       .map(({ player, count, pct }) => {
         const pillClass = pct >= threshold ? "pill pill--good" : "pill pill--warn";
-        const barColor = pct >= threshold ? "var(--club-green)" : "var(--club-yellow)";
+        const barColor = pct >= threshold ? "var(--theme-primary)" : "var(--theme-accent)";
 
         return `
           <tr>
@@ -349,7 +349,7 @@ function renderPlayers(list) {
       .slice(0, 50)
       .map(({ player, count, pct }) => {
         const pillClass = pct >= threshold ? "pill pill--good" : "pill pill--warn";
-        const barColor = pct >= threshold ? "var(--club-green)" : "var(--club-yellow)";
+        const barColor = pct >= threshold ? "var(--theme-primary)" : "var(--theme-accent)";
 
         return `
           <div class="mobile-card">
@@ -417,9 +417,9 @@ function cssVar(name, fallback = "") {
 }
 
 function renderChart(trainings, activeRoster = 0) {
-  const GREEN = cssVar("--club-green", "#19473f");
-  const YELLOW = cssVar("--club-yellow", "#e8ce26");
-  const GOOD = cssVar("--club-green-light", GREEN);
+  const GREEN = cssVar("--theme-primary", "#19473f");
+  const YELLOW = cssVar("--theme-accent", "#e8ce26");
+  const GOOD = cssVar("--theme-primary-light", GREEN);
   const BORDER = cssVar("--border", "#e5e7eb");
   const TEXT = cssVar("--text", "#1f2328");
   const TEXT_SOFT = cssVar("--text-soft", "#6b7280");

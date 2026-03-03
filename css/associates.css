@@ -7,7 +7,7 @@
 }
 
 .associates-page table thead th{
-  color: var(--club-green, #19473f);
+  color: var(--theme-primary, #19473f);
   font-weight: 800;
 }
 
@@ -16,7 +16,7 @@
   padding: 6px 10px;
   font-weight: 700;
   background: rgba(25, 71, 63, 0.08);
-  color: var(--club-green, #19473f);
+  color: var(--theme-primary, #19473f);
 }
 
 .badge-soft.gray{
@@ -26,5 +26,5 @@
 
 .badge-soft.yellow{
   background: rgba(232, 206, 38, 0.25);
-  color: var(--club-green, #19473f);
+  color: var(--theme-primary, #19473f);
 }

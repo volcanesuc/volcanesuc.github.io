@@ -1,8 +1,8 @@
 :root {
-  --club-green: #19473f;
-  --club-yellow: #e8ce26;
-  --club-green-dark: #12352f;
-  --club-gray: #f4f4f4;
+  --theme-primary: #19473f;
+  --theme-accent: #e8ce26;
+  --theme-primary-dark: #12352f;
+  --theme-gray: #f4f4f4;
 }
 
 /* Reset mínimo */
@@ -25,7 +25,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--club-green);
+  background: var(--theme-primary);
   color: white;
   display: flex;
   justify-content: space-between;
@@ -42,8 +42,8 @@ body {
 }
 
 .landing-login-btn {
-  background-color: var(--club-yellow);
-  color: var(--club-green);
+  background-color: var(--theme-accent);
+  color: var(--theme-primary);
   border: none;
   padding: 10px 16px;
   font-weight: 700;
@@ -74,7 +74,7 @@ body {
 
 .hero h2 {
   font-size: 36px;
-  color: var(--club-green);
+  color: var(--theme-primary);
 }
 
 .hero p {
@@ -118,24 +118,24 @@ body {
 
 /* botón principal */
 .landing-btn {
-  background-color: var(--club-green);
+  background-color: var(--theme-primary);
   color: white;
-  border: 2px solid var(--club-green);
+  border: 2px solid var(--theme-primary);
 }
 
 .landing-btn:hover {
-  background-color: var(--club-green-dark);
+  background-color: var(--theme-primary-dark);
 }
 
 /* botón WhatsApp (BLANCO con borde verde) */
 .landing-btn-whatsapp {
   background: white;
-  color: var(--club-green);
-  border: 2px solid var(--club-green);
+  color: var(--theme-primary);
+  border: 2px solid var(--theme-primary);
 }
 
 .landing-btn-whatsapp:hover {
-  background: var(--club-green);
+  background: var(--theme-primary);
   color: white;
 }
 
@@ -176,7 +176,7 @@ body {
 
 .landing-card {
   background: white;
-  border: 2px solid var(--club-green);
+  border: 2px solid var(--theme-primary);
   border-radius: 12px;
   padding: 24px;
   text-align: center;
@@ -184,7 +184,7 @@ body {
 }
 
 .landing-card h3 {
-  color: var(--club-green);
+  color: var(--theme-primary);
   margin-bottom: 8px;
 }
 
@@ -193,7 +193,7 @@ body {
 ====================================================== */
 
 .landing-footer {
-  background: var(--club-green);
+  background: var(--theme-primary);
   color: white;
   text-align: center;
   padding: 30px 20px;
@@ -244,10 +244,10 @@ body {
   opacity: 0.7;
 }
 
-.honor-gold { border-top: 5px solid var(--club-yellow); }
+.honor-gold { border-top: 5px solid var(--theme-accent); }
 .honor-silver { border-top: 5px solid #cfd8dc; }
 .honor-bronze { border-top: 5px solid #cd7f32; }
-.honor-spirit { border-top: 5px solid var(--club-green); }
+.honor-spirit { border-top: 5px solid var(--theme-primary); }
 
 /* ======================================================
    RESPONSIVE
@@ -285,7 +285,7 @@ body {
   width: 48px;
   height: 48px;
   border: 4px solid #e0e0e0;
-  border-top-color: var(--club-green);
+  border-top-color: var(--theme-primary);
   border-radius: 50%;
   animation: spin 0.9s linear infinite;
 }

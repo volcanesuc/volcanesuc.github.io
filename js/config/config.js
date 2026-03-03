@@ -59,11 +59,11 @@ function applyThemeFromConfig() {
 
   /* 🎨 map config -> CSS variables existentes */
   const map = {
-    primary: "--club-green",
-    primaryDark: "--club-green-dark",
-    primaryLight: "--club-green-light",
-    accent: "--club-yellow",
-    clubGray: "--club-gray",
+    primary: "--theme-primary",
+    primaryDark: "--theme-primary-dark",
+    primaryLight: "--theme-primary-light",
+    accent: "--theme-accent",
+    clubGray: "--theme-gray",
 
     bg: "--bg",
     bgSoft: "--bg-soft",

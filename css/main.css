@@ -7,11 +7,11 @@
    VARIABLES GLOBALES
 ========================= */
 :root {
-  --club-green: #19473f;
-  --club-green-dark: #12352f;
-  --club-green-light: #2c6b61;
-  --club-yellow: #e8ce26;
-  --club-gray: #f4f4f4;
+  --theme-primary: #19473f;
+  --theme-primary-dark: #12352f;
+  --theme-primary-light: #2c6b61;
+  --theme-accent: #e8ce26;
+  --theme-gray: #f4f4f4;
   --bg: #0b0f0e;
   --bg-soft: #fafafa;
   --card: #151c1a;
@@ -20,7 +20,7 @@
   --border: #1f2a28;
   --font-title: "Recons", system-ui, -apple-system, sans-serif;
   --font-body: system-ui, -apple-system, sans-serif;
-  --bs-primary: var(--club-green);
+  --bs-primary: var(--theme-primary);
 }
 
 /* =========================
@@ -64,8 +64,8 @@ body{
 /* =========================
    UTILIDADES
 ========================= */
-.text-success { color: var(--club-green-light) !important; }
-.text-warning { color: var(--club-yellow) !important; }
+.text-success { color: var(--theme-primary-light) !important; }
+.text-warning { color: var(--theme-accent) !important; }
 
 /* =========================
    LOADER GLOBAL
@@ -73,7 +73,7 @@ body{
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--club-green) 95%, transparent);
+  background: color-mix(in srgb, var(--theme-primary) 95%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -83,7 +83,7 @@ body{
 body:not(.loading) .loading-overlay { display: none; }
 
 .spinner-border {
-  color: var(--club-yellow);
+  color: var(--theme-accent);
   width: 3rem;
   height: 3rem;
 }
@@ -99,7 +99,7 @@ body:not(.loading) .loading-overlay { display: none; }
 }
 
 .card h3 {
-  color: var(--club-green);
+  color: var(--theme-primary);
   font-weight: 700;
 }
 
@@ -107,7 +107,7 @@ body:not(.loading) .loading-overlay { display: none; }
    TABLAS
 ========================= */
 .table thead {
-  background-color: var(--club-green);
+  background-color: var(--theme-primary);
   color: var(--card);
 }
 
@@ -119,31 +119,31 @@ body:not(.loading) .loading-overlay { display: none; }
    BOTONES
 ========================= */
 .btn-primary {
-  background-color: var(--club-green);
-  border-color: var(--club-green);
+  background-color: var(--theme-primary);
+  border-color: var(--theme-primary);
 }
 
 .btn-primary:hover {
-  background-color: var(--club-green-dark);
-  border-color: var(--club-green-dark);
+  background-color: var(--theme-primary-dark);
+  border-color: var(--theme-primary-dark);
 }
 
 .btn-outline-primary {
-  color: var(--club-green);
-  border-color: var(--club-green);
+  color: var(--theme-primary);
+  border-color: var(--theme-primary);
 }
 
 .btn-outline-primary:hover {
-  background-color: var(--club-yellow);
-  border-color: var(--club-yellow);
-  color: var(--club-green);
+  background-color: var(--theme-accent);
+  border-color: var(--theme-accent);
+  color: var(--theme-primary);
 }
 
 /* =========================
    HEADER / NAV PRINCIPAL
 ========================= */
 .topbar {
-  background: var(--club-green);
+  background: var(--theme-primary);
   color: var(--card);
   display: flex;
   align-items: center;
@@ -159,8 +159,8 @@ body:not(.loading) .loading-overlay { display: none; }
 }
 
 .logout-btn {
-  background: var(--club-yellow);
-  color: var(--club-green);
+  background: var(--theme-accent);
+  color: var(--theme-primary);
   border: none;
   padding: 0.4rem 0.8rem;
   border-radius: 6px;
@@ -169,7 +169,7 @@ body:not(.loading) .loading-overlay { display: none; }
 }
 
 .logout-btn:hover{
-  background: var(--club-yellow);
+  background: var(--theme-accent);
   filter: brightness(1.05);
 }
 
@@ -225,8 +225,8 @@ th.sortable.sorted-desc::after { content: " ↓"; }
 .nav-tabs a:hover { background: rgba(255,255,255,0.15); }
 
 .nav-tabs a.active {
-  background: var(--club-yellow);
-  color: var(--club-green);
+  background: var(--theme-accent);
+  color: var(--theme-primary);
   font-weight: 800;
   border-color: rgba(0,0,0,0.08);
 }
@@ -240,21 +240,21 @@ th.sortable.sorted-desc::after { content: " ↓"; }
 
 .offcanvas-title {
   font-family: "Recons";
-  color: var(--club-green);
+  color: var(--theme-primary);
 }
 
 .offcanvas-body a {
   display: block;
   padding: 0.75rem 0;
   font-weight: 600;
-  color: var(--club-green);
+  color: var(--theme-primary);
   text-decoration: none;
 }
 
-.offcanvas-body a:hover { color: var(--club-green-dark); }
+.offcanvas-body a:hover { color: var(--theme-primary-dark); }
 
 .offcanvas-body a.active {
-  color: var(--club-green-dark);
+  color: var(--theme-primary-dark);
   font-weight: 700;
 }
 
@@ -292,7 +292,7 @@ th.sortable.sorted-desc::after { content: " ↓"; }
 
 #app-header .logo-link:hover,
 #app-header .logo-link:focus {
-  color: var(--club-yellow) !important;
+  color: var(--theme-accent) !important;
   text-decoration: none !important;
 }
 
@@ -305,7 +305,7 @@ th.sortable.sorted-desc::after { content: " ↓"; }
 }
 
 .app-header a:hover {
-  color: var(--club-yellow); 
+  color: var(--theme-accent); 
   text-decoration: none;
 }
 
@@ -326,7 +326,7 @@ th.sortable.sorted-desc::after { content: " ↓"; }
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  background: var(--club-green);
+  background: var(--theme-primary);
   color: var(--card);
 }
 
@@ -389,8 +389,8 @@ th.sortable.sorted-desc::after { content: " ↓"; }
 }
 
 #app-header .top-tab.active{
-  background: var(--club-yellow);
-  color: var(--club-green);
+  background: var(--theme-accent);
+  color: var(--theme-primary);
 }
 
 /* Desktop */
@@ -406,7 +406,7 @@ th.sortable.sorted-desc::after { content: " ↓"; }
   border-radius: 10px;
   text-decoration: none;
   font-weight: 900;
-  color: var(--club-green);
+  color: var(--theme-primary);
 }
 
 #app-header .mobile-links .mobile-link{
@@ -417,8 +417,8 @@ th.sortable.sorted-desc::after { content: " ↓"; }
 }
 
 #app-header .mobile-links a.active{
-  background: var(--club-yellow);
-  color: var(--club-green);
+  background: var(--theme-accent);
+  color: var(--theme-primary);
 }
 
 /* =========================
@@ -426,7 +426,7 @@ th.sortable.sorted-desc::after { content: " ↓"; }
 ========================= */
 .app-version {
   font-size: 0.75rem;
-  color: var(--club-green);
+  color: var(--theme-primary);
   opacity: 0.7;
 }
 

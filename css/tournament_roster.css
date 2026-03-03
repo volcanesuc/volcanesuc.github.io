@@ -1,15 +1,15 @@
 /* css/tournament_roster.css */
 
 :root{
-  --volcanes-green: #19473f;
-  --volcanes-yellow: #e8ce26;
+  --roster-main: var(--theme-primary);
+  --roster-accent: var(--theme-accent);
 }
 
 .roster-hero{
   border-radius: 18px;
   padding: 16px;
-  background: rgba(25, 71, 63, 0.08);
-  border: 1px solid rgba(25, 71, 63, 0.14);
+  background: color-mix(in srgb, var(--roster-main) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--roster-main) 14%, transparent);
 }
 
 .roster-hero__kicker{
@@ -53,15 +53,16 @@
   padding: 6px 10px;
   border-radius: 999px;
   font-size: .85rem;
-  border: 1px solid rgba(25, 71, 63, 0.22);
-  background: rgba(25, 71, 63, 0.06);
+  border: 1px solid color-mix(in srgb, var(--roster-main) 22%, transparent);
+  background: color-mix(in srgb, var(--roster-main) 6%, transparent);
   white-space: nowrap;
 }
 
 .pill--yellow{
-  border-color: rgba(232, 206, 38, 0.55);
-  background: rgba(232, 206, 38, 0.18);
+  border-color: color-mix(in srgb, var(--roster-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--roster-accent) 18%, transparent);
 }
+
 
 .roster-row{
   border: 1px solid rgba(0,0,0,.08);
@@ -102,8 +103,8 @@
 }
 
 .btn-primary{
-  background: var(--volcanes-green);
-  border-color: var(--volcanes-green);
+  background: var(--roster-main);
+  border-color: var(--roster-main);
 }
 
 .btn-primary:hover{
@@ -111,12 +112,12 @@
 }
 
 .btn-outline-primary{
-  color: var(--volcanes-green);
-  border-color: rgba(25, 71, 63, 0.4);
+  color: var(--roster-main);
+  border-color: color-mix(in srgb, var(--roster-main) 40%, transparent);
 }
 
 .btn-outline-primary:hover{
-  background: rgba(25, 71, 63, 0.08);
+  background: color-mix(in srgb, var(--roster-main) 8%, transparent);
 }
 
 .player-pick{
@@ -151,9 +152,10 @@
   transform: translateY(-1px);
 }
 
-.legend-filter--active {
+.legend-filter.is-active{
   opacity: 1;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--roster-main) 35%, transparent);
 }
 
 .roster-filters {

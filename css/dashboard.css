@@ -50,14 +50,14 @@
   top: 0;
   bottom: 0;
   width: 6px;
-  background: var(--club-green);
+  background: var(--theme-primary);
 }
 
 /* números KPI */
 .dashboard-page .kpi-value{
   font-size: 2.6rem;
   font-weight: 900;
-  color: var(--club-green);
+  color: var(--theme-primary);
   line-height: 1;
   letter-spacing: -1px;
 }
@@ -98,7 +98,7 @@
 .dashboard-page .birthdays-card h3{
   font-size: 1.1rem;
   font-weight: 900;
-  color: var(--club-green);
+  color: var(--theme-primary);
   margin-bottom: 0.85rem;
 }
 
@@ -112,13 +112,13 @@
 
 /* ===== PRÓXIMO TORNEO (HOME) — destacado club ===== */
 .dashboard-page .next-tournament-card{
-  background: var(--club-green);
+  background: var(--theme-primary);
   color: #fff;
   border: none;
 }
 
 .dashboard-page .next-tournament-card h3{
-  color: var(--club-yellow);
+  color: var(--theme-accent);
 }
 
 .dashboard-page .next-tournament-card .t-date{
@@ -148,10 +148,10 @@
 }
 
 .dashboard-page .birthday-item.today{
-  background: var(--club-yellow);
-  color: var(--club-green);
+  background: var(--theme-accent);
+  color: var(--theme-primary);
   font-weight: 900;
-  border-color: color-mix(in srgb, var(--club-yellow) 60%, var(--border));
+  border-color: color-mix(in srgb, var(--theme-accent) 60%, var(--border));
 }
 
 .dashboard-page .birthday-item span{
@@ -198,7 +198,7 @@
 }
 
 .alert-warning{
-  border-left-color: var(--club-yellow);
+  border-left-color: var(--theme-accent);
   background: #fffbea;
 }
 
@@ -241,7 +241,7 @@
   top:0;
   bottom:0;
   width:6px;
-  background: var(--club-green);
+  background: var(--theme-primary);
   border-top-left-radius: 16px;
   border-bottom-left-radius: 16px;
 }
@@ -487,7 +487,7 @@ mark.search-hit {
 
 .top3-name{
   font-weight: 900;
-  color: var(--club-green);
+  color: var(--theme-primary);
 }
 
 .top3-meta{
@@ -506,7 +506,7 @@ mark.search-hit {
 
 .mini-bar > div{
   height: 100%;
-  background: var(--club-yellow);
+  background: var(--theme-accent);
   border-radius: 999px;
 }
 
@@ -540,7 +540,7 @@ mark.search-hit {
 }
 
 .attendance-item:active{
-  background: var(--club-gray);
+  background: var(--theme-gray);
 }
 
 .attendance-item input[type="checkbox"]{
@@ -563,7 +563,7 @@ mark.search-hit {
 ====================================================== */
 
 .attendance-page .table thead{
-  background: var(--club-green);
+  background: var(--theme-primary);
   color: #fff;
 }
 
@@ -593,7 +593,7 @@ mark.search-hit {
   font-weight:800;
   border: 1px solid var(--border);
   background: var(--bg-soft);
-  color: var(--club-green);
+  color: var(--theme-primary);
 }
 
 .pill--good{
@@ -601,7 +601,7 @@ mark.search-hit {
 }
 
 .pill--warn{
-  background: color-mix(in srgb, var(--club-yellow) 22%, white);
+  background: color-mix(in srgb, var(--theme-accent) 22%, white);
 }
 
 /* ======================================================
@@ -619,7 +619,7 @@ mark.search-hit {
 
 .mobile-card__title{
   font-weight: 900;
-  color: var(--club-green);
+  color: var(--theme-primary);
 }
 
 .mobile-card__sub{
@@ -642,7 +642,7 @@ mark.search-hit {
 }
 
 .progress.slim .progress-bar{
-  background: var(--club-yellow);
+  background: var(--theme-accent);
 }
 
 /* Pequena mejora del input search */
@@ -663,7 +663,7 @@ mark.search-hit {
 }
 
 .player-modal__header{
-  background: linear-gradient(90deg, var(--club-green), var(--club-green-dark));
+  background: linear-gradient(90deg, var(--theme-primary), var(--theme-primary-dark));
   border-bottom: 1px solid rgba(255,255,255,.12);
 }
 
@@ -694,13 +694,13 @@ mark.search-hit {
 
 .player-modal .form-control:focus,
 .player-modal .form-select:focus{
-  border-color: var(--club-yellow);
+  border-color: var(--theme-accent);
   box-shadow: 0 0 0 .2rem rgba(232,206,38,.18);
 }
 
 .player-modal .btn-warning{
-  background: var(--club-yellow);
-  border-color: var(--club-yellow);
+  background: var(--theme-accent);
+  border-color: var(--theme-accent);
   color: #1a1a1a;
   font-weight: 800;
 }
@@ -719,7 +719,7 @@ mark.search-hit {
 }
 
 .offcanvas-header{
-  background: var(--club-green);
+  background: var(--theme-primary);
   color: #fff;
 }
 
@@ -737,18 +737,18 @@ mark.search-hit {
   display: block;
   padding: 0.75rem 0;
   font-weight: 700;
-  color: var(--club-green);
+  color: var(--theme-primary);
   text-decoration: none;
   border-bottom: 1px solid var(--border);
 }
 
 .offcanvas-body a:hover{
-  color: var(--club-green-dark);
+  color: var(--theme-primary-dark);
 }
 
 .offcanvas-body a.active{
-  background: var(--club-yellow);
-  color: var(--club-green);
+  background: var(--theme-accent);
+  color: var(--theme-primary);
   border-radius: 10px;
   padding-left: 12px;
   padding-right: 12px;
@@ -779,8 +779,8 @@ mark.search-hit {
 /* Playbook tabs (estilo club, no azul) */
 #playbookTabs .nav-link{
   border-radius: 999px;
-  background: var(--club-gray);
-  color: var(--club-green);
+  background: var(--theme-gray);
+  color: var(--theme-primary);
   border: 1px solid var(--border);
   font-weight: 700;
 }
@@ -791,9 +791,9 @@ mark.search-hit {
 }
 
 #playbookTabs .nav-link.active{
-  background: var(--club-green);
+  background: var(--theme-primary);
   color: #fff;
-  border-color: var(--club-green);
+  border-color: var(--theme-primary);
 }
 
 /* Rutina: lista de ejercicios dentro del modal */
