@@ -361,7 +361,7 @@ form.onsubmit = async e => {
   const data = {
     firstName: fields.firstName.value.trim(),
     lastName: fields.lastName.value.trim(),
-    idNumber: (fields.idNumber.value || "").trim() || null,
+    idNumber: fields.idNumber.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()  || null,
     number: Number(fields.number.value) || null,
     gender: fields.gender.value || null,
     birthday: fields.birthday.value || null,
