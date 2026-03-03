@@ -252,23 +252,23 @@ async function hasActiveRole(uid) {
   }
 }
 
-async function ensureRole(uid) {
+// crea user_roles/{uid} SOLO si no existe (viewer por defecto)
+export async function ensureRole(uid) {
   const ref = doc(db, "user_roles", uid);
   const snap = await getDoc(ref);
 
-  // si ya existe, no lo tocamos (evita “intentos de upgrade” o conflictos)
+  // si ya existe, no tocarlo (puede ser admin)
   if (snap.exists()) return snap.data();
 
-  // crear SOLO viewer activo (compatible con tus rules)
   const payload = {
-    clubId: String(CLUB_ID || "default"),
+    clubId: APP_CONFIG.club.id,
     role: "viewer",
     active: true,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
 
-  await setDoc(ref, payload, { merge: false });
+  await setDoc(ref, payload);
   return payload;
 }
 
@@ -1017,10 +1017,11 @@ $.form?.addEventListener("submit", async (ev) => {
   };
 
   showLoader("Cargando…");
+  await step("Ensure access role (user_roles/{uid})", () => ensureRole(uid));
   try {
     if (!uid) throw new Error("No hay uid (login incompleto).");
 
-    // ✅ usuarios nuevos: garantizamos users/{uid} para que nada reviente después
+    // usuarios nuevos: garantizamos users/{uid} para que nada reviente después
     await step("Ensure users/{uid}", () => ensureUserDoc(uid, email));
 
     const { assocId, associateSnapshot } = await step("Upsert associate", () =>
@@ -1126,8 +1127,6 @@ $.form?.addEventListener("submit", async (ev) => {
       };
       return setDoc(uref, payload, { merge: true });
     });
-
-    await step("Ensure access role (user_roles/{uid})", () => ensureRole(uid));
 
     sessionStorage.removeItem("prefill_register");
 
