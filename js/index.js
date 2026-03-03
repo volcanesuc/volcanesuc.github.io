@@ -50,7 +50,7 @@ function applyIndexSettings(indexSettings = {}) {
   setSectionVisible("eventsSection", s.show_events);
   setSectionVisible("entrenamientos", s.show_trainings);
   setSectionVisible("honorsSection", s.show_honors);
-  console.error("honors section: ", s.show_honors);
+  console.log("honors section: ", s.show_honors);
   setSectionVisible("uniformsSection", s.show_uniforms);
 }
 
@@ -61,10 +61,12 @@ async function loadIndexSettings() {
 
     if (snap.exists()) {
       const data = snap.data();
-      applyIndexSettings(data.index_settings);
+      console.log("Firestore data:", data);
+      console.log("data.index_settings:", data.index_settings);
+      applyIndexSettings(data);
     } else {
       applyIndexSettings();
-      console.error("Error loading index settings from firebase");
+      console.error("No existe club_config/index_settings");
     }
   } catch (err) {
     console.error("Error loading index settings:", err);
