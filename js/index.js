@@ -50,6 +50,7 @@ function applyIndexSettings(indexSettings = {}) {
   setSectionVisible("eventsSection", s.show_events);
   setSectionVisible("entrenamientos", s.show_trainings);
   setSectionVisible("honorsSection", s.show_honors);
+  console.error("honors section: ", s.show_honors);
   setSectionVisible("uniformsSection", s.show_uniforms);
 }
 
@@ -63,6 +64,7 @@ async function loadIndexSettings() {
       applyIndexSettings(data.index_settings);
     } else {
       applyIndexSettings();
+      console.error("Error loading index settings from firebase");
     }
   } catch (err) {
     console.error("Error loading index settings:", err);
