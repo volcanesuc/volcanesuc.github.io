@@ -199,7 +199,7 @@ export const TOURNAMENT_STRINGS = {
   fields: {
     name: {
       label: "Nombre del torneo",
-      placeholder: "Ej: Torneo Pura Vida"
+      placeholder: "Ej: Torneo Cartaglow"
     },
     dateStart: {
       label: "Fecha inicio"
