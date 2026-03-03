@@ -1,3 +1,4 @@
+//js\roster.js
 /*************************************************
  * IMPORTS
  *************************************************/
@@ -41,6 +42,7 @@ const fields = {
   id: document.getElementById("playerId"),
   firstName: document.getElementById("firstName"),
   lastName: document.getElementById("lastName"),
+  idNumber: document.getElementById("idNumber"),
   number: document.getElementById("number"),
   gender: document.getElementById("gender"),
   birthday: document.getElementById("birthday"),
@@ -268,6 +270,7 @@ table.onclick = e => {
   fields.id.value = p.id;
   fields.firstName.value = p.firstName;
   fields.lastName.value = p.lastName;
+  fields.idNumber.value = p.idNumber ?? "";
   fields.number.value = p.number ?? "";
   fields.gender.value = p.gender ?? "";
   fields.birthday.value = p.birthday ?? "";
@@ -343,6 +346,7 @@ function updateSortIndicators() {
 document.getElementById("addPlayerBtn").onclick = () => {
   form.reset();
   fields.id.value = "";
+  fields.idNumber.value = "";
   fields.active.checked = true;
   modal.show();
 };
@@ -357,12 +361,18 @@ form.onsubmit = async e => {
   const data = {
     firstName: fields.firstName.value.trim(),
     lastName: fields.lastName.value.trim(),
+    idNumber: (fields.idNumber.value || "").trim() || null,
     number: Number(fields.number.value) || null,
     gender: fields.gender.value || null,
     birthday: fields.birthday.value || null,
     role: fields.role.value,
     active: fields.active.checked
   };
+
+  if (!data.idNumber) {
+    alert("Ingresa la cédula.");
+    return;
+  }
 
   if (fields.id.value) {
     await updateDoc(

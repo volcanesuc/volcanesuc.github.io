@@ -13,6 +13,7 @@ export class Player {
 
     this.firstName = data.firstName ?? "";
     this.lastName = data.lastName ?? "";
+    this.idNumber = data?.idNumber ?? null;
     this.number = data.number ?? null;
     this.gender = data.gender ?? null;
     this.birthday = data.birthday ?? null;
@@ -54,6 +55,7 @@ export class Player {
     return {
       firstName: this.firstName,
       lastName: this.lastName,
+      idNumber: this.idNumber,
       number: this.number,
       gender: this.gender,
       birthday: this.birthday,

@@ -129,8 +129,8 @@
           <!-- HEADER -->
           <div class="modal-header player-modal__header">
             <div>
-              <h5 class="modal-title mb-0" id="modalTitle">Jugador</h5>
-              <small class="player-modal__subtitle" id="playerModalSubtitle">Nuevo / Editar</small>
+              <h5 class="modal-title mb-0 text-white" id="modalTitle">Jugador</h5>
+              <small class="player-modal__subtitle text-white" id="playerModalSubtitle">Nuevo / Editar</small>
             </div>
 
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -150,6 +150,11 @@
               <div class="col-12 col-md-6">
                 <label class="form-label">Apellido</label>
                 <input type="text" id="lastName" class="form-control" required />
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label class="form-label">Documento de identidad</label>
+                <input type="text" id="idNumber" class="form-control" placeholder="Ej: 1-2345-6789" />
               </div>
 
               <div class="col-12 col-md-4">
@@ -196,7 +201,7 @@
             <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">
               Cancelar
             </button>
-            <button type="submit" class="btn btn-warning">
+            <button type="submit" class="btn btn-success">
               Guardar
             </button>
           </div>
