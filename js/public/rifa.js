@@ -1,4 +1,4 @@
-js\rifa.js
+// js\public/rifa.js
 import { initializeApp } from
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 
@@ -10,8 +10,8 @@ import {
 } from
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-import { APP_CONFIG } from "./config/config.js";
-import { showLoader, hideLoader } from "./ui/loader.js";
+import { APP_CONFIG } from "../config/config.js";
+import { showLoader, hideLoader } from "../ui/loader.js";
 
 showLoader();
 
