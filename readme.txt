@@ -12,3 +12,25 @@ roster.html - list of all the players* of the team
 tournaments.html - list of tournaments team is going to - includes track of payments
 playbook.html - list of drills and training plans to be done on training day
 tournament.html - landing goes here if tournament info button is clicked, shows info about this tournament hosted by team
+
+
+En Firebase:
+
+- Database:
+crear club_config collection con index_settings y public_registration
+
+- Authentication:
+habilitar el google sign in y el anonymous
+en settings autorizar dominios apropiados
+
+- Remote Config:
+crear el header tabs config file para mostrar/ocultar los tabs en el header
+
+- Storage:
+habilitar el storage SI se usa la seccion de asociación
+
+DNS:
+- agregar CNAMEs para www.subdomain y subdomain
+
+Google Cloud Storage:
+- agregar un auth2.0 con el url del subdominio
