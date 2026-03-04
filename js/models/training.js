@@ -2,7 +2,7 @@ export class Training {
   constructor(id = null, data = {}) {
     this.id = id;
 
-    this.clubId = data.clubId ?? "volcanes";
+    this.clubId = data.clubId ?? "Club";
 
     this.date = data.date ?? "";
     this.month = data.month ?? (this.date ? this.date.slice(0, 7) : "");

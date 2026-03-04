@@ -1,15 +1,15 @@
 // js/strings.js
 export const CLUB_DATA = {
   club: {
-    id: "volcanes",
-    shortName: "Volcanes",
-    name: "Volcanes Ultimate",
-    foundedYear: 2023
+    id: "Club",
+    shortName: "Club",
+    name: "Club Ultimate",
+    foundedYear: 2024
   },
 
   header: {
-    logoText: "Volcanes",
-    mobileTitle: "Volcanes Ultimate",
+    logoText: "Club",
+    mobileTitle: "Club Ultimate",
     cta: {
       login: {
         label: "Ingresar",
@@ -36,10 +36,10 @@ export const CLUB_DATA = {
 
   landing: {
     hero: {
-      title: "Más que un equipo, una comunidad",
-      image: "img/volcanes/campeones2025.jpg",
+      title: "Club: Frase muy pegajosa de tu club🥏",
+      image: "img/club/teamclub.jpeg",
       description:
-        "La misión del club es fortalecer la comunidad y promover el conocimiento y la práctica del deporte bajo el correcto espíritu de juego. Queremos crear espacios donde se practique de manera saludable el Ultimate.",
+        "En Club promovemos y difundimos el Ultimate Frisbee, continua el mensaje que quieres ver acá.",
       cta: {
         primary: {
             label: "Ver entrenamientos",
@@ -55,15 +55,15 @@ export const CLUB_DATA = {
     contacts: {
         whatsapp: {
             label: "Escribinos por WhatsApp",
-            phone: "+50670567463",
-            message: "Hola, quiero info sobre los entrenamientos de Volcanes"
+            phone: "+506XXXXXXXX",
+            message: "Hola, quiero info sobre los entrenamientos de Club"
         }
     },
 
     events: [
       {
-        id: "cartaglow",
-        name: "Cartaglow",
+        id: "torneo",
+        name: "c",
         edition: 2025,
         type: "hat-mixto",
         format: "un-dia",
@@ -75,9 +75,9 @@ export const CLUB_DATA = {
         description:
           "Torneo tipo hat mixto, de un solo día, enfocado en comunidad y espíritu de juego.",
         images: [
-          "img/cartaglow/cartaglow00.jpg",
-          "img/cartaglow/cartaglow01.jpg",
-          "img/cartaglow/cartaglow02.jpg"
+          "img/tournament/image_00.jpg",
+          "img/tournament/image_01.jpg",
+          "img/tournament/image_02.jpg"
         ]
       }
     ],
@@ -89,14 +89,13 @@ export const CLUB_DATA = {
           id: "trainings",
           name: "Entrenamientos",
           schedule: [
-            { day: "Domingos", time: "8:00 am – 10:30 am" },
-            { day: "Miércoles", time: "7:00 pm – 9:30 pm" }
+            { day: "Dia", time: "7:00 am – 9:00 am" }
           ]
         },
         {
           id: "games",
-          name: "Juegos y Torneos",
-          schedule: [{ day: "Martes", time: "8:00 pm – 10:00 pm" }]
+          name: "Juegos abiertos",
+          schedule: [{ day: "dia", time: "7:00 pm – 9:00 pm" }]
         }
       ]
     },
@@ -104,26 +103,26 @@ export const CLUB_DATA = {
     honors: {
       title: "Palmarés",
       items: [
-        {
+        /*{
           position: "Primer Lugar",
-          tournament: "Copa Invierno",
+          tournament: "Torneo",
           year: 2025
         },
         {
           position: "Tercer Lugar",
-          tournament: "Copa Verano",
-          year: 2025
+          tournament: "Torneo",
+          year: 2024
         },
         {
           position: "Primer Lugar",
-          tournament: "Espíritu Chorotega Primera Edición",
-          year: 2025
+          tournament: "Torneo",
+          year: 2023
         },
         {
           position: "Espíritu de Juego",
-          tournament: "Copa Invierno",
-          year: 2024
-        }
+          tournament: "Torneo",
+          year: 2022
+        }*/
       ]
     },
 
@@ -175,7 +174,7 @@ export const CLUB_DATA = {
   },
 
   footer: {
-    copyright: "© Volcanes Ultimate"
+    copyright: "© Club Ultimate"
   }
 };
 

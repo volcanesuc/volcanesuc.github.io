@@ -4,8 +4,8 @@ export const APP_CONFIG = {
   version: "0.3",
 
   club: {
-    id: "volcanes",
-    name: "Volcanes Ultimate",
+    id: "Club",
+    name: "Club Ultimate",
     playersCollection: "club_players",
     tournamentsCollection: "tournaments",
     trainingsCollection: "trainings"
@@ -14,11 +14,11 @@ export const APP_CONFIG = {
   //deben ser reemplazados tambien en: main.css -> root para que carguen por defecto
   theme: {
     colors: {
-      primary: "#19473f",
-      primaryDark: "#12352f",
-      primaryLight: "#2c6b61",
-      accent: "#e8ce26",
-      accentSoft: "#f4e47a",
+      primary: "#7c3aed38",
+      primaryDark: "#3a157938",
+      primaryLight: "#7c3aed",
+      accent: "#22d3ee",
+      accentSoft: "#66daec",
       clubGray: "#f4f4f4",
       bg: "#f5f6f8",
       bgSoft: "#fafafa",
@@ -29,22 +29,22 @@ export const APP_CONFIG = {
     },
 
     font: {
-      name: "Recons",
-      url: "/fonts/Recons-Regular.woff2",
-      ttf: "/fonts/Recons-Regular.ttf"
+      name: "ClubFont",
+      url: "/fonts/club-font.woff2",
+      ttf: "/fonts/club-font.ttf"
     },
 
-    logo: "/img/logos/volcano_logo.jpg"
+    logo: "/img/logos/club_logo.png"
   },
   // Firebase (centralizado)
   firebase: {
-    apiKey: "AIzaSyABSy5kImaF9VyNisu2vkihm2y4mfYGodw",
-    authDomain: "auth.volcanes.clubstudiohq.com",
-    projectId: "rifavolcanes",
-    storageBucket: "rifavolcanes.firebasestorage.app",
-    messagingSenderId: "991215068881",
-    appId: "1:991215068881:web:6fb46dab34bf1a572a47f0",
-    measurementId: "G-6ZYXBJW3JY"
+    apiKey: "TODO",
+    authDomain: "TODO",
+    projectId: "TODO",
+    storageBucket: "TODO",
+    messagingSenderId: "TODO",
+    appId: "TODO",
+    measurementId: "TODO"
   }
 };
 

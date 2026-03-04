@@ -1,23 +1,23 @@
 export const CARTAGLOW_DATA = {
   meta: {
-    title: "Cartaglow",
-    ogImage: "img/cartaglow/logo-cartaglow-dark.png"
+    title: "Torneo",
+    ogImage: "img/cartaglow/logo-Torneo-dark.png"
   },
 
   header: {
-    clubName: "Volcanes Ultimate",
-    instagramUrl: "https://instagram.com/cartaglow.hat"
+    clubName: "Club",
+    instagramUrl: "https://instagram.com/Club_ultimate"
   },
 
   hero: {
-    editionPill: "Cartaglow • Edición 2026",
-    title: "Cartaglow 2026",
+    editionPill: "Torneo • Edición 2026",
+    title: "Torneo 2026",
     subtitle: "Torneo Hat MIXTO 7v7 — vení a jugar revuelto, relajado y con sombrero 🧢",
-    image: "img/cartaglow/logo-cartaglow-dark.jpeg"
+    image: "img/Torneo/logo-Torneo-dark.jpeg"
   },
 
   registration: {
-    ctaLabel: "Registro Cartaglow 2026 (Próximamente)",
+    ctaLabel: "Registro Torneo 2026 (Próximamente)",
     enabled: false,                 // 🔒 queda listo pero deshabilitado
     url: "https://forms.gle/XXXXX",  // cuando habiliten, ponés el real
     disabledNote: "Registro 2026 aún no está abierto. En cuanto esté listo, activamos este botón."
