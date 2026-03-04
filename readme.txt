@@ -11,7 +11,7 @@ attendance.html - tab to check kpis related to attendance on trainings
 roster.html - list of all the players* of the team
 tournaments.html - list of tournaments team is going to - includes track of payments
 playbook.html - list of drills and training plans to be done on training day
-tournament.html - landing goes here if tournament info button is clicked, shows info about this tournament hosted by team
+public/tournament_info.html - landing goes here if tournament info button is clicked, shows info about this tournament hosted by team
 
 
 En Firebase:
